@@ -43,6 +43,20 @@ func _setup() -> void:
 
 
 func _populate() -> void:
+	# a side cave: a refuge. Its inner floor is too high to climb; a boulder on its lip, brought down
+	# with the sling, makes the step
+	var c3 := add_cave(3120.0, [[760.0, 0.0], [700.0, 150.0]])
+	add_embers(c3["x0"] + 280.0)
+	var step_at: float = c3["floors"][1] - 80.0
+	add_boulder(Vector2(c3["floors"][1] + 34.0, c3["base"] - 150.0), Rect2(step_at, c3["base"] - 72.0, 76.0, 72.0))      # it sits on the lip of the inner floor
+	add_light(Vector2(c3["floors"][1] + 34.0, c3["base"] - 190.0), 120.0)
+	var jar := "res://art/props/jar.png"
+	add_sprite(jar, on_ground(c3["floors"][1] + 420.0) + Vector2(0, 4), 0.3, 1, Color(0.7, 0.7, 0.8))
+	add_sprite(jar, on_ground(c3["floors"][1] + 452.0) + Vector2(0, 4), 0.24, 1, Color(0.7, 0.7, 0.8))
+	add_sprite(jar, on_ground(c3["floors"][1] + 560.0) + Vector2(0, 4), 0.27, 1, Color(0.7, 0.7, 0.8)).flip_h = true
+	add_embers(c3["floors"][1] + 500.0)
+	add_stone("wadi_refuge", on_ground(c3["floors"][1] + 640.0))
+	add_place("refuge", on_ground(c3["floors"][1] + 380.0), "The Refuge", "heart")
 	# off the path: beyond the leap, the bare crag where the wild goats go
 	var crag := add_perch(4650.0, 182.0, 220.0)
 	add_place("crag", crag, "The Goats' Crag", "feet")

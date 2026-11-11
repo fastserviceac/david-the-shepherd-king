@@ -180,7 +180,14 @@
    "stones": [
     "s1_start",
     "s1_step",
-    "s1_leap"
+    "s1_leap",
+    "s1_cave"
+   ],
+   "finds": [
+    [
+     "foldcave",
+     "The Fold Cave"
+    ]
    ]
   },
   "well": {
@@ -198,7 +205,14 @@
    "about": "A ravine where the farmland ends and the wilderness begins.",
    "stones": [
     "s2_brake",
-    "s2_trial"
+    "s2_trial",
+    "s2_cistern"
+   ],
+   "finds": [
+    [
+     "cistern",
+     "The Hewn Cistern"
+    ]
    ]
   },
   "wadi": {
@@ -208,12 +222,17 @@
    "stones": [
     "wadi_start",
     "wadi_shelf",
-    "wadi_leap"
+    "wadi_leap",
+    "wadi_refuge"
    ],
    "finds": [
     [
      "crag",
      "The Goats' Crag"
+    ],
+    [
+     "refuge",
+     "The Refuge"
     ]
    ]
   },

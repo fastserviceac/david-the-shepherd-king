@@ -60,7 +60,7 @@ func _populate() -> void:
 	# the gift of this place: the running leap. Both jackals driven off; then the rock step that needs it
 	add_gift("feet", 2330.0, func() -> bool: return (not is_instance_valid(j1) or j1.fleeing) and (not is_instance_valid(j2) or j2.fleeing), "Drive off the jackals on the slope")
 	add_block(Rect2(2575.0, on_ground(2500.0).y - 110.0, 90.0, 80.0))
-	add_trigger(2950.0, 3100.0, _start_lion)
+	add_trigger(2950.0, 3100.0, _start_lion, false)
 
 	# the lamb, waiting beyond the lion
 	lamb = add_sheep(3950.0, null, true)
@@ -74,6 +74,10 @@ func begin() -> void:
 
 func _start_lion() -> void:
 	if lion_started:
+		# he was beaten back to the watchfire and has come again: the ridge closes behind him once more
+		if arena_walls.is_empty() and is_instance_valid(lion) and not lion.fleeing:
+			arena_walls = [add_wall(2640.0), add_wall(4060.0)]
+			Game.music("battle", 0.8)
 		return
 	lion_started = true
 	arena_walls = [add_wall(2640.0), add_wall(4060.0)]
@@ -117,6 +121,9 @@ func _lion_defeated() -> void:
 func _on_respawn() -> void:
 	if is_instance_valid(lion) and not lion.fleeing:
 		lion.reset()
+		for w in arena_walls:      # the way back up to it must be open, or he is shut out of his own fight
+			w.queue_free()
+		arena_walls.clear()
 
 
 func _on_sheep(s) -> void:

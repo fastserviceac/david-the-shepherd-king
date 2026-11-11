@@ -47,6 +47,7 @@ var throw_t := 0.0
 var hurt_t := 0.0
 var act := ""             # story pose: "kneel", "kneel_up", "carry"
 var move_t := 0.0         # how long he has kept moving: he sets off at a walk and breaks into a run
+var carry_free := false   # while he carries the lamb, the player still chooses where he walks
 var calm := false         # a level can ask him to walk, not run (the road home, a house of mourning)
 var roll_t := 0.0         # time left in a dodge roll
 var roll_cd := 0.0
@@ -178,7 +179,7 @@ func _physics_process(delta: float) -> void:
 	if charging:
 		dir *= 0.35
 	if act == "carry" and not dead:
-		dir = 0.2          # walks on by himself with the lamb on his shoulders
+		dir = Input.get_axis("move_left", "move_right") if carry_free else 0.2          # the lamb on his shoulders: led by the player on the road home, by himself in a story scene
 	elif act != "":
 		dir = 0.0
 

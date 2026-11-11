@@ -44,3 +44,21 @@ Every prompt ends with:
 ## Part 3: story film shots (video)
 
 These are in `ART_SHEET.md`, Part D, with their opening message and closing line. Order: count_1, count_2, count_3, ridge_1, ridge_2, dawn_1, dawn_2, dawn_3, end_1, end_2, end_3, then wadi_1, wadi_2, den_1, den_2, watch_1, watch_2. (well_1 and well_2 are being made on Runway.)
+
+## Part 4: animals that still move like cut-outs (video)
+
+Paste first:
+
+> Use the Higgsfield connector. For each prompt I give you, generate one video with model seedance_2_0, 720p, 16:9, 5 seconds, no audio, on my unlimited allowance. Run them one at a time.
+
+Every prompt ends with:
+
+> Strict side-on profile view facing right, locked-off static camera, no zoom. The animal stays the same size, whole body visible with clear space on every side. Completely flat, even, pure blue screen background (#0047FF) with no gradient, no glow or rim light round the animal, no shadow on the floor, no dust, nothing else in the picture. Realistic painted look.
+
+| Name | Prompt |
+|---|---|
+| sheep_leap | One woolly white sheep with a dark face trots two steps, gathers itself and jumps forward over a small gap, landing on its front feet and trotting on. It stays in the middle of the frame as if the camera travels with it. |
+| bear_walk | A large Syrian brown bear walks on all fours on the spot as if on a treadmill, heavy shoulders rolling, head low and swinging. A full walking cycle, repeated. |
+| bear_slam | A large Syrian brown bear rears up on its hind legs, then drops and slams both front paws hard onto the ground in front of it, and settles back on all fours. |
+| lion_run | A lean lion runs flat out on the spot as if on a treadmill, body stretched low, a full galloping cycle repeated. |
+| lion_rake | A lean lion crouched low takes one fast swipe forward along the ground with a front paw, then draws back into its crouch. |

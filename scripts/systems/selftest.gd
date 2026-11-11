@@ -123,6 +123,13 @@ func _s1(lv) -> void:
 	for g in lv.gift_spots:
 		g["node"].queue_free()
 	lv.gift_spots.clear()
+	var cv: Dictionary = lv.caves[0]
+	await lv._cave_pass(cv)
+	await _frames(5)
+	_check(lv.in_cave != null and lv.player.global_position.x > lv.width and lv.dark_amount > 0.8, "a side cave is entered through its mouth, and it is dark inside")
+	await lv._cave_pass(null, cv)
+	await _frames(5)
+	_check(lv.in_cave == null and absf(lv.player.global_position.x - cv["door"]) < 30.0 and lv.dark_amount < 0.1, "and he comes out where he went in")
 	var had_places: Array = Game.places().duplicate()
 	Game.save["places"] = []
 	for pl in lv.finds:
@@ -140,7 +147,7 @@ func _s1(lv) -> void:
 		for e in mapd["places"][key].get("finds", []):
 			if Game.narration.has("n_place_" + e[0]) and Game.narration_pt.has("n_place_" + e[0]) and Game._ui_pt.has(e[1]):
 				told += 1
-	_check(told == 3, "each place off the path has its story in both languages (%d)" % told)
+	_check(told == 6, "each place off the path has its story in both languages (%d)" % told)
 	var kept: float = Game.craft_xp("hand")       # the player's own progress is put back afterwards
 	Game.save["growth"] = Game.save.get("growth", {})
 	Game.save["growth"]["hand"] = 0.0
@@ -303,7 +310,7 @@ func _wadi(lv) -> void:
 			n_b += 1
 			b.hit(1, 1, "stone")
 	await _frames(10)
-	_check(n_b == 4, "four perched boulders")
+	_check(n_b == 5, "five perched boulders, one of them in the side cave")
 	lv.player.position = Vector2(1268.0, 540.0)
 	lv.player.velocity = Vector2.ZERO
 	await _frames(30)
@@ -415,6 +422,10 @@ func _s3(lv) -> void:
 	await _frames(30)
 	_check(lv.player.hp == lv.player.max_hp and not lv.player.dead, "defeat returns David to the watchfire with full health")
 	_check(lv.lion.hp == lv.lion.max_hp, "lion fight resets")
+	_check(lv.arena_walls.is_empty(), "beaten back, he is not shut out of the lion's ground")
+	await _goto(3000.0)
+	await _frames(10)
+	_check(lv.arena_walls.size() == 2, "and it closes behind him when he comes again")
 	var lh: int = lv.lion.hp
 	lv.lion.state = "prowl"
 	lv.lion.hit(2, 1, "staff")
@@ -451,13 +462,36 @@ func _s3(lv) -> void:
 
 
 func _s4(lv) -> void:
-	await _goto(940.0)
+	await _goto(3780.0)
+	await _frames(20)
+	_check(not lv.met, "the servant does not take the flock while part of it is still out on the hill")
+	for sh in lv.get_children():
+		if sh.get("gatherable") != null and not sh.gathered:
+			lv.player.position = sh.position
+			lv.player.velocity = Vector2.ZERO
+			await _frames(10)
+	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 3, "the three strays are brought in")
+	await _goto(2100.0)
+	await _frames(10)
+	_check(not lv.ambush["walls"].is_empty(), "the jackals try the flock once more on the road")
+	for k in 12:
+		await _frames(8)
+		for n in tree.get_nodes_in_group("enemies"):
+			n.hit(9, 1, "staff")
+	_check(lv.ambush["cleared"], "and are driven off")
+	await _goto(2950.0)
+	await _frames(20)
+	_check(not is_nan(lv.lamb.stay), "the lamb lies down in the road")
+	lv.do_task(lv.tasks[lv.tasks.size() - 1])
+	await _frames(5)
+	_check(lv.player.act == "carry" and lv.carrying, "he lifts it and carries it")
+	await _goto(3780.0)
 	await _frames(30)
-	_check(not is_nan(lv.followers[0].stay), "the flock is left with the servant")
-	await _goto(2000.0)
+	_check(lv.met and lv.player.act == "" and lv.lamb.visible and not is_nan(lv.followers[0].stay), "at the servant he sets it down, and the flock is left there")
+	await _goto(4900.0)
 	await _frames(90)
-	_check(absf(lv.followers[0].global_position.x - 1060.0) < 200.0, "the flock stays with the servant when David goes on")
-	await _goto(3050.0)
+	_check(absf(lv.followers[0].global_position.x - 3800.0) < 260.0, "the flock stays with the servant when David goes on")
+	await _goto(5890.0)
 	await _frames(20)
 
 
@@ -526,7 +560,7 @@ func placeshots(m, dir: String) -> void:
 	Game.cinematic = false
 	Game.save["places"] = []
 	Game.save["has_sling"] = true
-	for name in ["section1", "well", "section2", "wadi", "den", "section3", "watch", "section4"]:
+	for name in ([] if OS.has_environment("CAVES_ONLY") else ["section1", "well", "section2", "wadi", "den", "section3", "watch", "section4"]):
 		await m.load_level(_index(name), 0)
 		var lv = m.level
 		Game.cinematic = false
@@ -546,6 +580,35 @@ func placeshots(m, dir: String) -> void:
 		await _frames(70)
 		await _snap(dir, name + "_b_found")
 		Game.fast = true
+	# the side caves: at the mouth outside, just inside, and at the back with a torch lit
+	Game.save["places"] = []
+	m.overlay.visible = false
+	for name in ["section1", "section2", "wadi"]:
+		await m.load_level(_index(name), 0)
+		var lc = m.level
+		Game.cinematic = false
+		var cv: Dictionary = lc.caves[0]
+		lc.player.global_position = lc.on_ground(cv["door"] - 150.0)
+		lc.player.cam.reset_smoothing()
+		await _frames(50)
+		await _snap(dir, name + "_cave_1_mouth")
+		lc._cave_state(cv)
+		lc.player.global_position = lc.on_ground(cv["x0"] + 240.0)
+		lc.player.cam.reset_smoothing()
+		await _frames(50)
+		await _snap(dir, name + "_cave_2_inside")
+		lc.light_torch()
+		lc.player.global_position = lc.on_ground(cv["x0"] + 600.0)
+		lc.player.cam.reset_smoothing()
+		await _frames(50)
+		await _snap(dir, name + "_cave_3_step")
+		lc.player.global_position = lc.on_ground(cv["x1"] - 330.0)
+		lc.player.cam.reset_smoothing()
+		await _frames(40)
+		await _snap(dir, name + "_cave_4_back")
+	print("PLACESHOTS done")
+	tree.quit()
+	return
 	# the gift in the Pastures: waiting, ready, and being given
 	m.hud.place_t = 0.0
 	m.overlay.visible = false
@@ -881,7 +944,7 @@ func flow(m, dir: String) -> void:
 	m.start_section(Game.sections().size() - 1)
 	await _wait(7.0)
 	await _skip_story(15.0)
-	await _goto(3050.0)
+	await _goto(5890.0)
 	await _wait(1.0)
 	if snap:
 		await _wait(2.0)

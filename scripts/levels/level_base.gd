@@ -59,6 +59,8 @@ var respawning := false
 var done := false
 var rng := RandomNumberGenerator.new()
 var gift_spots: Array = []    # where a gift waits: {id, x, ready, wait, node, near}
+var caves: Array = []         # side caves: rooms off the path, built far beyond the level's end and entered through a cave mouth
+var in_cave = null
 var finds: Array = []         # places off the path, not yet come upon: {id, at, name, craft, glow}
 var keepsakes: Array = []     # smooth stones still lying here: [node, id]
 var ambush := {}              # a pack closing in: walls, beasts and the trigger that starts it
@@ -396,7 +398,8 @@ func _skin_ground(poly: PackedVector2Array, top: PackedVector2Array, parent: Nod
 	shade.z_index = z
 	parent.add_child(shade)
 
-	_grass_edge(top, parent)
+	if not barren:
+		_grass_edge(top, parent)
 
 
 func _grass_edge(top: PackedVector2Array, parent: Node) -> void:
@@ -488,7 +491,8 @@ func add_block(r: Rect2, visible_rock: bool = true) -> StaticBody2D:
 			Vector2(hw * 0.5, hh + 9.0), Vector2(-hw * 0.4, hh + 5.0), Vector2(-hw + 5.0, hh * 0.3)])
 		var top_line := PackedVector2Array([Vector2(-hw, -hh), Vector2(hw, -hh)])
 		if _outcrop(r):
-			_grass_edge(top_line, body)
+			if r.position.x < width:      # nothing grows on a ledge underground
+				_grass_edge(top_line, body)
 		else:
 			_skin_ground(shape, top_line, body, 2)
 	return body
@@ -998,6 +1002,150 @@ func _give(id: String, x: float, node: Node2D) -> void:
 		show_tip(str(info["key"]), 8.0)
 
 
+## A side cave: a room off the path with its own floor, dark inside, entered through a cave mouth at `door_x`.
+## `floors` is a list of [length, height of this floor above the first]: each new floor is a step up or down.
+## The room is built far past the level's right edge, so the level itself is untouched. Returns
+## {"x0", "x1", "floors": [x where each floor starts], "base"}; build what is inside it with the usual calls.
+func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55, 0.72)) -> Dictionary:
+	var x0 := width + 4000.0 + caves.size() * 4000.0
+	var base := 600.0
+	var cave := {"x0": x0, "door": door_x, "floors": [], "base": base, "dark": 0.94}
+	var was_barren := barren
+	barren = true
+	var x := x0
+	for fl in floors:
+		var seg := make_ground(x, x + float(fl[0]), base - float(fl[1]), 4.0, x * 0.01)
+		segments.append(seg)
+		var poly := PackedVector2Array(seg)
+		poly.append(Vector2(seg[seg.size() - 1].x, 1300.0))
+		poly.append(Vector2(seg[0].x, 1300.0))
+		var body := StaticBody2D.new()
+		body.collision_layer = 1
+		body.collision_mask = 0
+		var cp := CollisionPolygon2D.new()
+		cp.polygon = poly
+		body.add_child(cp)
+		add_child(body)
+		_skin_ground(poly, seg)
+		cave["floors"].append(x)
+		x += float(fl[0])
+	barren = was_barren
+	cave["x1"] = x
+	add_wall(x0 - 12.0)
+	add_wall(x + 12.0)
+	# the rock all round: a dark wall behind everything, and the cave's own formations standing along it
+	var wall := Polygon2D.new()
+	wall.polygon = PackedVector2Array([Vector2(x0 - 1400, -1200), Vector2(x + 1400, -1200), Vector2(x + 1400, 1400), Vector2(x0 - 1400, 1400)])
+	wall.color = Color(0.035, 0.035, 0.06)
+	wall.z_index = -30
+	add_child(wall)
+	if ResourceLoader.exists("res://art/den_backdrop.png"):      # one painting of a cave's inside, standing behind the whole room
+		var tex: Texture2D = load("res://art/den_backdrop.png")
+		var sp := Sprite2D.new()
+		sp.texture = tex
+		sp.centered = false
+		var span := (x - x0) + 1500.0
+		var msc := maxf(span / tex.get_width(), 1000.0 / tex.get_height())
+		sp.scale = Vector2(msc, msc)
+		sp.position = Vector2(x0 - 750.0, base + 170.0 - tex.get_height() * msc)
+		sp.modulate = Color(0.62, 0.62, 0.74)
+		sp.z_index = -20
+		add_child(sp)
+	# the mouth outside, on the path; and the same mouth seen from within, with the day behind it
+	_cave_mouth(on_ground(door_x), false, mouth_tint)
+	_cave_mouth(on_ground(x0 + 110.0), true, mouth_tint)
+	add_light(on_ground(x0 + 110.0) + Vector2(0, -70), 300.0)
+	var go_in := add_task(door_x, "go in", 0.35, func() -> void: _cave_pass(cave), 46.0)
+	go_in["again"] = true
+	var go_out := add_task(x0 + 110.0, "go out", 0.35, func() -> void: _cave_pass(null, cave), 46.0)
+	go_out["again"] = true
+	caves.append(cave)
+	return cave
+
+
+func _cave_mouth(at: Vector2, inside: bool, tint: Color) -> void:
+	if inside:      # from within, the mouth is only the evening coming in: a soft pale light low on the wall
+		var day := add_glow(at + Vector2(-30, -70), Color(0.62, 0.66, 0.85, 0.5), 330.0)
+		day.z_index = 0
+		return
+	add_painter(at, 0, func(ci: CanvasItem) -> void:
+		for k in 6:          # the opening: darkness deepening inward
+			var f := 1.0 - k / 6.0
+			var pts := PackedVector2Array()
+			for i in 25:
+				var a := TAU * i / 24.0
+				pts.append(Vector2(-10.0 + cos(a) * 124.0 * f, -78.0 + sin(a) * 82.0 * f))
+			ci.draw_colored_polygon(pts, Color(0.01, 0.01, 0.03, 0.55)))
+	var arch := add_sprite("res://art/props/cave_arch.png", at + Vector2(0, 14), 1.0, 1, tint)
+	arch.scale = Vector2(0.72, 0.72)
+
+
+## Through the mouth, either way: a moment of black, and he is on the other side of it.
+func _cave_pass(into, out_of = null) -> void:
+	if respawning or Game.cinematic:
+		return
+	Game.cinematic = true
+	player.velocity = Vector2.ZERO
+	await Game.main.overlay.fade_to(1.0, 0.3)
+	if into != null:
+		_cave_state(into)
+		player.global_position = on_ground(into["x0"] + 110.0)
+	else:
+		_cave_state(null)
+		player.global_position = on_ground(out_of["door"])
+	player.velocity = Vector2.ZERO
+	player.cam.reset_smoothing()
+	await Game.main.overlay.fade_to(0.0, 0.35)
+	Game.cinematic = false
+
+
+## What changes with being inside: where the camera may go, how dark it is, whether a torch can burn,
+## and the flock, which waits at the mouth and does not follow him underground.
+func _cave_state(cave) -> void:
+	if cave != null:
+		if in_cave == null:
+			set_meta("out_dark", dark_amount)
+			set_meta("out_torch", torch_max)
+		in_cave = cave
+		set_dark(float(cave["dark"]))
+		torch_max = maxf(torch_max, 50.0)
+		player.cam.limit_left = int(cave["x0"])
+		player.cam.limit_right = int(cave["x1"])
+		for i in followers.size():
+			followers[i].stay = float(cave["door"]) - 40.0 - i * 34.0
+		Game.ambience("")
+	else:
+		if in_cave == null:
+			return
+		in_cave = null
+		set_dark(float(get_meta("out_dark", 0.0)))
+		torch_max = float(get_meta("out_torch", 0.0))
+		torch_t = 0.0
+		if torch_max <= 0.0 and torch_node != null:
+			for f in torch_node.get_node("fire").get_children():
+				f.emitting = false
+			torch_node.get_node("g").visible = false
+			torch_node.get_node("stick").visible = false
+			player_light = 0.0
+		player.cam.limit_left = 0
+		player.cam.limit_right = int(width)
+		for sh in followers:
+			sh.stay = NAN
+		Game.ambience(ambience)
+
+
+## A hearth of live embers where a torch can be lit (inside a cave, or anywhere it is dark).
+func add_embers(x: float) -> void:
+	var at := on_ground(x)
+	add_light(at + Vector2(0, -20), 150.0)
+	add_glow(at + Vector2(0, -8), Color(1.0, 0.45, 0.15, 0.7), 150.0)
+	var hearth := add_sprite("res://art/props/embers.png", at + Vector2(0, 9), 1.0, 3)
+	var wide := 84.0 / hearth.texture.get_width()
+	hearth.scale = Vector2(wide, wide * 0.5)
+	var tk := add_task(x, "light a torch at the embers", 0.7, light_torch)
+	tk["again"] = true
+
+
 ## A rock shelf added off the path, standing on its own outcrop. Returns the middle of its top.
 func add_perch(x: float, up: float, w: float) -> Vector2:
 	var r := ledge(x, up, w)
@@ -1189,6 +1337,8 @@ func respawn() -> void:
 	await Game.main.overlay.fade_to(1.0, 0.35)
 	if not is_instance_valid(player):
 		return
+	if in_cave != null:
+		_cave_state(null)
 	player.reset_to(on_ground(checkpoints[cp_index]))
 	if not ambush.is_empty() and not ambush["cleared"] and not ambush["walls"].is_empty():
 		ambush["run"] += 1          # the pack melts back into the dark; it will come again
@@ -1480,14 +1630,15 @@ func light_torch() -> void:
 func _update_dark(delta: float) -> void:
 	if torch_max > 0.0:
 		if torch_node == null:
-			torch_node = add_painter(Vector2.ZERO, 5, func(ci: CanvasItem) -> void:
-				if torch_t <= 0.0:
-					return
-				var f := clampf(torch_t / (torch_max * 0.3), 0.25, 1.0)
-				var flick := sin(Time.get_ticks_msec() * 0.02) * 1.5
-				ci.draw_circle(Vector2(flick * 0.3, -6), 9.0 * f, Color(1.0, 0.55, 0.15, 0.85))
-				ci.draw_circle(Vector2(flick * 0.5, -10), 5.5 * f, Color(1.0, 0.85, 0.4, 0.95))
-				ci.draw_circle(Vector2(flick, -15.0), 3.0 * f, Color(1.0, 0.97, 0.8, 0.9)), true)
+			torch_node = Node2D.new()
+			torch_node.z_index = 5
+			add_child(torch_node)
+			# a real flame, the same fire as the watchfires but small: it streams back as he runs and gutters in a draught
+			var fire := _flames()
+			fire.name = "fire"
+			fire.scale = Vector2.ONE * 0.42
+			fire.position = Vector2(0, -18)
+			torch_node.add_child(fire)
 			var g := Game.glow(Color(1.0, 0.65, 0.3, 0.55), 260.0)
 			g.name = "g"
 			torch_node.add_child(g)
@@ -1502,6 +1653,11 @@ func _update_dark(delta: float) -> void:
 		torch_node.position = player.global_position + Vector2(player.facing * 22.0, -92.0)
 		torch_node.get_node("g").visible = torch_t > 0.0
 		torch_node.get_node("stick").visible = torch_t > 0.0
+		var low := clampf(torch_t / (torch_max * 0.3), 0.3, 1.0) * (0.7 if draught > 1.5 else 1.0)
+		for f in torch_node.get_node("fire").get_children():
+			f.emitting = torch_t > 0.0
+			f.scale_amount_max = (0.05 if f.amount < 20 else 0.3) * low
+		torch_node.get_node("g").modulate.a = 0.75 + 0.25 * sin(Time.get_ticks_msec() * 0.013) * sin(Time.get_ticks_msec() * 0.0071)
 		if torch_t > 0.0 and not Game.cinematic and not respawning:
 			torch_t = maxf(0.0, torch_t - delta * draught)
 			if torch_t <= 0.0:

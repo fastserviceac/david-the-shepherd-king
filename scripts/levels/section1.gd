@@ -29,6 +29,15 @@ func _setup() -> void:
 
 
 func _populate() -> void:
+	# a side cave: where shepherds pen a flock in bad weather. Embers at the mouth, a climb in the dark, and the back of it
+	var c1 := add_cave(2900.0, [[1500.0, 0.0]], Color(1.75, 1.2, 0.72))
+	add_embers(c1["x0"] + 300.0)
+	add_perch(c1["x0"] + 620.0, 64.0, 150.0)
+	var c1b := add_perch(c1["x0"] + 820.0, 128.0, 170.0)
+	add_stone("s1_cave", c1b + Vector2(20, 0))
+	add_sprite("res://art/props/bones.png", on_ground(c1["x0"] + 1290.0) + Vector2(0, 5), 0.07, 2, Color(0.6, 0.6, 0.7))
+	add_light(on_ground(c1["x0"] + 1330.0) + Vector2(0, -60), 110.0)
+	add_place("foldcave", on_ground(c1["x0"] + 1340.0), "The Fold Cave", "voice")
 	for tx in [120.0, 860.0, 1560.0, 2600.0, 2760.0, 3020.0, 4420.0]:
 		add_tree(tx, rng.randf_range(0.8, 1.3), rng.randf() < 0.4)
 

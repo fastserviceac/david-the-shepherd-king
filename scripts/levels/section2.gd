@@ -38,6 +38,16 @@ func _setup() -> void:
 
 
 func _populate() -> void:
+	# a side cave: a cistern cut in the rock. The back of it stands a man's height above the floor:
+	# a fallen block, shoved to the foot of the step, is the way up. A jackal has made the place its own
+	var c2 := add_cave(3420.0, [[820.0, 0.0], [640.0, 118.0]], Color(1.5, 1.0, 0.82))
+	add_embers(c2["x0"] + 290.0)
+	add_pushable(c2["x0"] + 470.0, 58.0, 50.0, "res://art/props/rock_low.png", c2["x0"] + 400.0, c2["floors"][1] - 32.0)
+	add_jackal(c2["x0"] + 640.0, c2["x0"] + 380.0, c2["floors"][1] - 80.0)
+	add_sprite("res://art/props/well.png", on_ground(c2["floors"][1] + 380.0) + Vector2(0, 8), 0.3, 1, Color(0.6, 0.6, 0.72))
+	add_light(on_ground(c2["floors"][1] + 380.0) + Vector2(0, -50), 130.0)
+	add_stone("s2_cistern", on_ground(c2["floors"][1] + 560.0))
+	add_place("cistern", on_ground(c2["floors"][1] + 300.0), "The Hewn Cistern", "heart")
 	for tx in [300.0, 900.0, 2250.0, 2700.0, 3400.0, 4500.0, 5150.0]:
 		add_tree(tx, rng.randf_range(0.8, 1.4), rng.randf() < 0.6)
 

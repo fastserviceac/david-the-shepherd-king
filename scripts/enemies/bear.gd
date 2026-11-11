@@ -15,6 +15,8 @@ var chain := 0
 var wary := 0.0
 var waves: Array = []     # shock running along the ground after a slam: {"x", "d", "left"}
 var glances := 0
+var landed := false      # its last attack found him: there is no opening after a blow he failed to answer
+var open_hits := 0        # blows taken in this opening; it will not stand for more than three
 
 
 func _init_enemy() -> void:
@@ -27,6 +29,23 @@ func _init_enemy() -> void:
 	body_r = 24.0
 	touch_r = 34.0
 	stagger = 0.0
+
+
+func _on_touch() -> void:
+	landed = true
+
+
+## An attack is over. If he answered it (it missed him), the bear is spent and open; if it struck him, it presses on.
+func _spent(seconds: float) -> void:
+	next = ""
+	open_hits = 0
+	if landed:
+		landed = false
+		state = "walk"
+		st = 0.0
+	else:
+		state = "rest"
+		st = seconds
 
 
 func is_open() -> bool:
@@ -62,6 +81,15 @@ func hit(dmg: int, from_dir: int, kind: String) -> void:
 		var behind := from_dir == dir                # the blow travels the way it faces: he is at its back
 		if is_open() or behind or player.opening_t > 0.0:
 			super.hit(dmg, from_dir, kind)
+			open_hits += 1
+			if open_hits >= 3 and is_open() and not fleeing:      # it has had enough: it heaves up and throws him off
+				open_hits = 0
+				state = "walk"
+				next = ""
+				Game.sfx("bear_growl", -1.0)
+				if is_instance_valid(player):
+					player.velocity = Vector2(-from_dir * 380.0, -220.0)
+					player.stun = maxf(player.stun, 0.3)
 		else:
 			_glance(from_dir)
 	else:
@@ -112,10 +140,10 @@ func _claw(kind: String) -> void:
 	var ahead := to_player() * dir
 	if ahead > -10.0 and ahead < 125.0 and absf(player.global_position.y - global_position.y) < 100.0:
 		if kind == "low":
-			if player.is_on_floor():      # the sweep comes along the ground: jump it, or be out of reach
-				player.hurt(1, global_position.x, "low")
-		else:
-			player.hurt(1, global_position.x, "high")      # the swipe comes down from above: duck under it
+			if player.is_on_floor() and player.hurt(1, global_position.x, "low"):      # the sweep comes along the ground: jump it, or be out of reach
+				landed = true
+		elif player.hurt(1, global_position.x, "high"):      # the swipe comes down from above: duck under it
+			landed = true
 	level.player.shake = maxf(level.player.shake, 4.0)
 
 
@@ -136,6 +164,10 @@ func _update_waves(delta: float) -> void:
 		elif player.is_on_floor() and absf(player.global_position.x - w["x"]) < 24.0 and absf(player.global_position.y - global_position.y) < 40.0:
 			if player.hurt(1, w["x"] - w["d"] * 10.0, "low"):      # jump it: on the ground it throws him
 				waves.erase(w)
+				if state == "rest":      # caught by the shock while it rested: the opening is gone
+					state = "walk"
+				else:
+					landed = true
 
 
 func _ai(delta: float) -> void:
@@ -156,6 +188,7 @@ func _ai(delta: float) -> void:
 				if wary > 1.1:
 					wary = 0.0
 					state = "brace"
+					landed = false
 					Game.sfx("bear_growl", 0.0)
 					st = 0.7 * warn
 			else:
@@ -170,15 +203,18 @@ func _ai(delta: float) -> void:
 					next = ""
 					wary = 0.0
 					state = "brace"
+					landed = false
 					Game.sfx("bear_growl", 0.0)
 					st = 0.7 * warn
 				elif absf(dx) < 105.0:
 					Game.sfx("bear_growl", -2.0)
 					if next == "slam":
 						state = "slam_up"
+						landed = false
 						st = 0.9 * warn
 					else:
 						state = "rear"
+						landed = false
 						st = 0.75 * warn
 		"brace":
 			velocity.x = move_toward(velocity.x, -dir * 45.0, 500.0 * delta)
@@ -202,11 +238,11 @@ func _ai(delta: float) -> void:
 					chain = 1
 					face_player()
 					state = "brace"
+					landed = false
 					st = 0.45 * warn
 				else:
 					chain = 0
-					state = "rest"
-					st = 1.0 / quick
+					_spent(1.0 / quick)
 		"rear":
 			velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
 			if st <= 0.0:
@@ -222,17 +258,13 @@ func _ai(delta: float) -> void:
 					state = "swipe2"         # it does not straighten: a second blow is coming, low
 					st = 0.45 * warn
 				else:
-					next = ""
-					state = "rest"
-					st = 1.1 / quick
+					_spent(1.1 / quick)
 		"swipe2":
 			velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
 			if st <= 0.0:
 				_claw("low")
 				Game.sfx("bear_roar", -5.0)
-				next = ""
-				state = "rest"
-				st = 1.25 / quick
+				_spent(1.25 / quick)
 		"slam_up":
 			velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
 			if st <= 0.0:
@@ -242,9 +274,7 @@ func _ai(delta: float) -> void:
 		"slam":
 			velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
 			if st <= 0.0:
-				next = ""
-				state = "rest"
-				st = 1.5 / quick
+				_spent(1.5 / quick)
 		"rest", "stunned", "reel", "roar":
 			velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
 			if st <= 0.0:

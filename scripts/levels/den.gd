@@ -78,7 +78,7 @@ func _populate() -> void:
 		var bones := add_sprite("res://art/props/bones.png", on_ground(bx) + Vector2(0, 5), 1.0, 2, Color(0.62, 0.62, 0.72))
 		bones.scale = Vector2.ONE * (92.0 / bones.texture.get_width())
 		bones.flip_h = bx > 4000.0
-	add_trigger(3380.0, 3500.0, _start_bear)
+	add_trigger(3380.0, 3500.0, _start_bear, false)
 	add_light(Vector2(4980.0, 470.0), 330.0)      # the way out, and the night beyond it
 	add_trigger(4880.0, 4990.0, _out, false)
 
@@ -97,6 +97,9 @@ func _light() -> void:
 
 func _start_bear() -> void:
 	if bear_started:
+		if walls.is_empty() and is_instance_valid(bear) and not bear.fleeing:      # come again after being beaten back
+			walls = [add_wall(3270.0), add_wall(4540.0)]
+			Game.music("battle", 0.8)
 		return
 	bear_started = true
 	walls = [add_wall(3270.0), add_wall(4540.0)]
@@ -134,6 +137,9 @@ func _on_respawn() -> void:
 	if is_instance_valid(bear) and not bear.fleeing:
 		bear.reset()
 		bear.position = on_ground(4250.0)
+		for w in walls:      # the way back in must be open, or he is shut out of his own fight
+			w.queue_free()
+		walls.clear()
 
 
 func _process(delta: float) -> void:
