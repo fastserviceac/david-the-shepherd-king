@@ -15,6 +15,7 @@ const GATE := 3840.0
 var stone: Dictionary
 var fulcrum: Dictionary
 var lever_task: Dictionary
+var pack := {"run": 0, "beasts": [], "warning": 1.0}
 var back_task: Dictionary
 var draw_task: Dictionary
 var pour_tasks: Array = []
@@ -264,7 +265,12 @@ func _open_well() -> void:
 	Game.sfx("bridge", -4.0)
 	if not mixed_up:
 		_run_ahead()
-	await give_here("hand")        # the stone moved: the gift of this place
+	if not Game.has("hand"):       # the trial of this place: the water has been smelt, and he must hold the well with what he has
+		show_tip("Something has smelt the water", 4.0)
+		Game.music("battle", 0.8)
+		await send_wave(WELL_X - 560.0, WELL_X + 520.0, 3, true, true, pack)
+		Game.music(mood, 2.0)
+	await give_here("hand")        # held: the gift of this place
 	_hint(WELL_X - 150.0, 265.0, "Q  call your own")
 	await say(["n_well_stone", "n_well_voice", "n_well_draw"])
 

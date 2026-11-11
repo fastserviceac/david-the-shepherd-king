@@ -43,8 +43,12 @@ func _populate() -> void:
 
 	add_sheep(700.0)
 	add_sheep(0.0, Vector2(1320.0, platforms[1].position.y))
+	# two nervous ones in the meadow: they bolt from a running boy, and must be walked up to
+	for nx in [1640.0, 1935.0]:
+		var shy = add_sheep(nx)
+		shy.skittish = true
 	var ewe = add_sheep(2420.0)
-	ewe.skittish = true
+	ewe.wild = true          # and one that no hand will reach: she is what the gift is for
 	add_stone("s1_start", on_ground(46.0))                                    # behind where he begins
 	add_stone("s1_step", Vector2(1485.0, platforms[5].position.y))
 	add_stone("s1_leap", Vector2(2080.0, platforms[6].position.y))
@@ -64,7 +68,8 @@ func _populate() -> void:
 		add_hint(2760.0, 150.0, "Tab  his growth")
 
 	# the gift of this place: his voice. Two brought in by hand first; then the ewe that will not be caught
-	add_gift("voice", 2180.0, func() -> bool: return sheep_count >= 2, "Bring in the sheep behind you first")
+	add_gift("voice", 2180.0, func() -> bool: return sheep_count >= 4, "Bring in all four behind you.  The nervous ones will not stand for running")
+	add_hint(1560.0, 150.0, "Shift  walk softly")
 	_build_fold(4800.0)
 	add_trigger(2500.0, 2700.0, func() -> void: say(["ps23_1"]))
 	add_trigger(4720.0, 4900.0, _at_fold, false)

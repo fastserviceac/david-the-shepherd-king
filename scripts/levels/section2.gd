@@ -54,8 +54,12 @@ func _populate() -> void:
 
 	# the gift of this place: the sling, by the brook. A jackal has the bank; it must be driven off first
 	if not Game.has("sling"):
-		var keeper = add_jackal(1180.0, 800.0, 1460.0)
-		add_gift("sling", 1250.0, func() -> bool: return not is_instance_valid(keeper) or keeper.fleeing, "Drive the jackal from the brook")
+		var keepers: Array = [add_jackal(980.0, 800.0, 1460.0), add_jackal(1180.0, 800.0, 1460.0), add_jackal(1360.0, 800.0, 1460.0)]
+		add_gift("sling", 1250.0, func() -> bool:
+			for k in keepers:
+				if is_instance_valid(k) and not k.fleeing:
+					return false
+			return true, "A pack holds the brook.  Drive off all three")
 		Game.gifted.connect(func(id: String) -> void:
 			if id == "sling" and is_inside_tree():
 				say(["n_s2_sling"]))

@@ -55,10 +55,11 @@ func _populate() -> void:
 	add_hint(1150.0, 150.0, "↓  duck")
 	add_hint(1420.0, 150.0, "E  seize a spent beast")
 	# the ridge's own scavengers, drawn by the lion's kill
-	var j1 = add_jackal(1800.0, 1400.0, 2400.0)
-	var j2 = add_jackal(2150.0, 1400.0, 2400.0)
-	# the gift of this place: the running leap. Both jackals driven off; then the rock step that needs it
-	add_gift("feet", 2330.0, func() -> bool: return (not is_instance_valid(j1) or j1.fleeing) and (not is_instance_valid(j2) or j2.fleeing), "Drive off the jackals on the slope")
+	add_jackal(1800.0, 1400.0, 2400.0)
+	add_jackal(2150.0, 1400.0, 2400.0)
+	# the gift of this place: the running leap. Its trial is a run: from the watchfire to the light before it fades,
+	# with the jackals in the way. There is no time to fight them; they have to be got past
+	add_gift("feet", 2330.0, func() -> bool: return run_ok, "The light fades.  Reach it from the watchfire at a run")
 	add_block(Rect2(2575.0, on_ground(2500.0).y - 110.0, 90.0, 80.0))
 	add_trigger(2950.0, 3100.0, _start_lion, false)
 
@@ -66,6 +67,40 @@ func _populate() -> void:
 	lamb = add_sheep(3950.0, null, true)
 	lamb.gatherable = false
 	sheep_total = 0
+
+
+const RUN_FROM := 1340.0
+const RUN_TO := 2290.0
+const RUN_TIME := 6.0
+var run_ok := false
+var run_t := -1.0          # seconds left of the run; below zero when he is not running it
+var run_spent := false     # he has failed this attempt and must go back to begin again
+
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	if run_ok or Game.has("feet") or not is_instance_valid(player) or Game.cinematic or respawning:
+		return
+	var px: float = player.global_position.x
+	if px < RUN_FROM - 40.0:            # back at the watchfire: the next crossing starts a new run
+		run_spent = false
+		run_t = -1.0
+	elif run_t < 0.0 and not run_spent and px >= RUN_FROM and px < RUN_FROM + 120.0 and player.velocity.x > 60.0:
+		run_t = RUN_TIME
+		Game.sfx("gather", -8.0, 0.0)
+	elif run_t >= 0.0:
+		run_t -= delta
+		if px >= RUN_TO:
+			run_ok = true
+			run_t = -1.0
+			show_tip("In time", 2.5)
+			Game.sfx("gather", -3.0, 0.0)
+		elif run_t <= 0.0:
+			run_t = -1.0
+			run_spent = true
+			show_tip("Too slow.  Go back to the watchfire and run it again", 5.0)
+		else:
+			show_tip(Game.t("Run!") + "   %d" % int(ceil(run_t)), 0.3)
 
 
 func begin() -> void:

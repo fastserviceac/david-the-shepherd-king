@@ -16,6 +16,7 @@ var face := 1.0
 var t := 0.0
 var hop := 0.0
 var moving := false
+var wild := false         # will not let him near at any pace: only his call brings it
 var skittish := false     # bolts if he comes at a run: walk up to it, or call it
 var called := 0.0         # seconds it keeps coming to his call
 var bolt := 0.0
@@ -55,8 +56,9 @@ func _process(delta: float) -> void:
 			called -= delta
 			if absf(to) > 30.0:
 				_walk(signf(to) * 120.0, delta)
-		elif skittish and absf(to) < 150.0 and absf(player.global_position.y - global_position.y) < 90.0 \
-				and absf(player.velocity.x) > 175.0:
+		elif (wild and absf(to) < 170.0 and absf(player.global_position.y - global_position.y) < 90.0) \
+				or (skittish and absf(to) < 150.0 and absf(player.global_position.y - global_position.y) < 90.0 \
+				and absf(player.velocity.x) > 175.0):
 			bolt = 0.75
 			bolt_dir = -signf(to) if absf(global_position.x - home_x) < 330.0 else signf(home_x - global_position.x)
 			hop = 1.0

@@ -163,7 +163,7 @@ func _s1(lv) -> void:
 			lv.player.position = s.position
 			lv.player.velocity = Vector2.ZERO
 			await _frames(10)
-	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 5, "all five sheep gathered")
+	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 7, "all seven sheep gathered")
 	for b in tree.get_nodes_in_group("hittable"):
 		b.hit(1, 1, "staff")
 		b.hit(1, 1, "staff")
@@ -240,6 +240,7 @@ func _index(script_name: String) -> int:
 
 ## The Well: lever the stone, call his own out of the crowd, water them while other sheep steal, count them in.
 func _well(lv) -> void:
+	Game.save["gifts"] = Game.save.get("gifts", []).filter(func(g): return g != "hand")      # so the trial of the well runs
 	_check(not lv.draw_task["on"] and lv.stone["on"] == (Game.rank("hand") >= 2), "the stone is too heavy until his hand has grown, and no water can be drawn")
 	await _goto(2100.0)
 	var x0: float = lv.fulcrum["body"].position.x
@@ -252,6 +253,15 @@ func _well(lv) -> void:
 	lv.do_task(lv.lever_task)
 	await _frames(5)
 	_check(lv.opened and lv.draw_task["on"], "the well is open")
+	var came := 0
+	for k in 10:            # the pack that comes for the water: driven off, as the trial asks
+		await _frames(6)
+		for n in tree.get_nodes_in_group("enemies"):
+			if not n.fleeing:
+				came += 1
+				n.hit(9, 1, "staff")
+	await _frames(20)
+	_check(came >= 3 and Game.has("hand"), "a pack comes for the water, and the strong hand is given when it is driven off")
 	_check(lv.own[0]["state"] == "mixed", "his sheep have run in among the other flocks")
 	lv.shepherd_call(lv.on_ground(2560.0), 600.0, false)
 	_check(lv.own[0]["state"] == "led" and lv.others[0]["state"] == "idle", "his own come to his voice; the others do not")
@@ -311,6 +321,12 @@ func _wadi(lv) -> void:
 			b.hit(1, 1, "stone")
 	await _frames(10)
 	_check(n_b == 5, "five perched boulders, one of them in the side cave")
+	var n_j := 0
+	for b in tree.get_nodes_in_group("hittable"):
+		if b.has_signal("struck"):
+			n_j += 1
+			b.hit(1, 1, "stone")
+	_check(n_j == 3 or eye_before, "three jars hang in the dead tree for the trial of the eye")
 	lv.player.position = Vector2(1268.0, 540.0)
 	lv.player.velocity = Vector2.ZERO
 	await _frames(30)
@@ -410,6 +426,22 @@ func m_reload(i: int) -> void:
 
 
 func _s3(lv) -> void:
+	# the trial of the feet: an unhindered run from the watchfire must beat the fading light with room to spare
+	var had_feet: bool = Game.has("feet")
+	Game.save["gifts"] = Game.save.get("gifts", []).filter(func(g): return g != "feet")
+	lv.run_ok = false
+	await _goto(1250.0)
+	Input.action_press("move_right")
+	var took := 0
+	while took < 600 and not lv.run_ok:
+		lv.player.invuln = 5.0
+		await _frames(1)
+		took += 1
+	Input.action_release("move_right")
+	print("  the run took %.1f s unhindered, of %.1f allowed" % [took / 60.0, lv.RUN_TIME])
+	_check(lv.run_ok and took / 60.0 < lv.RUN_TIME - 1.2, "the run to the light can be made in time")
+	if had_feet:
+		Game.give("feet", true)
 	for n in tree.get_nodes_in_group("enemies"):
 		n.hit(9, 1, "staff")
 	await _goto(3000.0)
