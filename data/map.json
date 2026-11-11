@@ -277,7 +277,13 @@
    "lat": 31.7046,
    "lon": 35.201,
    "about": "Bethlehem, the town of Jesse, on the ridge road eight kilometres south of Jebus.",
-   "stones": []
+   "stones": [],
+   "finds": [
+    [
+     "rachel",
+     "Rachel's Pillar"
+    ]
+   ]
   }
  }
 }

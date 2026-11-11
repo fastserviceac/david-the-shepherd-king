@@ -130,18 +130,21 @@ func _populate() -> void:
 
 	draw_task = add_task(WELL_X - 14.0, "draw water", 1.3, _drew, 50.0)
 	draw_task["again"] = true
+	draw_task["anim"] = "draw"          # he hauls the rope up hand over hand
 	draw_task["on"] = false
 	for x in TROUGHS:
 		var tk := add_task(x, "pour it into the trough", 0.5, _poured.bind(pour_tasks.size()))
 		tk["again"] = true
 		tk["on"] = false
+		tk["anim"] = "pour"
+		tk["hold"] = 0.9
 		pour_tasks.append(tk)
 
 	var char_tint: Color = pal["char"]
 	var bucket: Texture2D = load("res://art/props/bucket.png")      # the leather bucket from the well painting
 	# the bucket: carried low at his side by its strap, in the far hand, so his body passes in front of it
 	add_painter(Vector2.ZERO, 4, func(ci: CanvasItem) -> void:
-		if not carrying:
+		if not carrying or (task_now != null and float(task_now["t"]) > 0.0):      # while he tips it, the bucket is in his hands, in his own frames
 			return
 		var walking := clampf(absf(player.velocity.x) / 120.0, 0.0, 1.0)
 		var swing := sin(Time.get_ticks_msec() * 0.009) * (0.12 + 0.9 * walking)

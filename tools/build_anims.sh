@@ -54,6 +54,9 @@ run $V/n_call $D call mode=range a=14 b=118 step=4 hframe=0 soft=1 steady=999 wi
 python3 tools/anchor.py call 0
 run $V/n2_clinch $D clinch mode=range a=20 b=132 step=4 hframe=0 soft=1 steady=3 wide=1.8     # seizing a spent beast: arms locked, braced
 python3 tools/anchor.py clinch 0
+run $V/n_draw $D draw mode=range a=22 b=100 step=3 hframe=0 soft=1 steady=999 wide=1.8     # hauling the bucket up out of the well
+run $V/n_draw $D pour mode=range a=104 b=144 step=2 hframe=0 soft=1 steady=999 wide=1.8    # tipping it into the trough
+python3 tools/anchor.py draw 0 pour 0
 # kneeling: one cut of the whole clip, dealt into going down, staying down and rising (tools/kneel_split.py)
 mkdir -p $V/kn_cut; run $V/n_kneel $V/kn_cut kn mode=range a=16 b=188 step=2 hframe=0 soft=1 steady=999 wide=2.0
 python3 tools/kneel_split.py $V/kn_cut

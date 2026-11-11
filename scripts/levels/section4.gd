@@ -103,6 +103,12 @@ func _populate() -> void:
 	# Third: the lamb, a night on the hills behind it, can go no farther. He carries it the rest of the way
 	add_trigger(2900.0, 2990.0, _lamb_tires)
 
+	# beside the road between the flock and the town: the pillar on Rachel's grave
+	var grave := on_ground(4680.0)
+	var pillar := add_sprite("res://art/props/pillar.png", grave + Vector2(0, 8), 1.0, 1, pal.get("char", Color(1, 1, 1)))
+	pillar.scale = Vector2.ONE * (120.0 / pillar.texture.get_width())
+	add_place("rachel", grave + Vector2(-70, 0), "Rachel's Pillar", "heart")
+
 	# the servant sent to fetch him
 	add_actor("servant", on_ground(3900.0) + Vector2(0, 4), 0.31)
 	add_trigger(3720.0, 3840.0, _meet_servant, false)

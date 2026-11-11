@@ -672,6 +672,10 @@ func _current_frame() -> Texture2D:
 	if level != null and level.get("push_t") != null and level.push_t > 0.0 and not FA.frames("david", "push").is_empty():
 		return FA.pingpong(FA.frames("david", "push"), idle_clock, 9.0)
 	# working with his hands (drawing water, setting a lever, lighting a torch): he bends to it as the work goes on
+	# a task with its own movement (hauling the rope, tipping the bucket) plays it across the time the key is held
+	if level != null and level.get("task_now") != null and float(level.task_now["t"]) > 0.0 and level.task_now.has("anim") \
+			and not FA.frames("david", str(level.task_now["anim"])).is_empty():
+		return _one_shot(str(level.task_now["anim"]), clampf(float(level.task_now["t"]) / float(level.task_now["hold"]), 0.0, 1.0))
 	if level != null and level.get("task_now") != null and float(level.task_now["t"]) > 0.0 and not FA.frames("david", "pickup").is_empty():
 		return _one_shot("pickup", clampf(float(level.task_now["t"]) / 0.45, 0.0, 1.0))
 	if clinch_t > 0.0:                    # seizes the beast, then the blow
