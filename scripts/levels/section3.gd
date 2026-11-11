@@ -104,7 +104,8 @@ func _process(delta: float) -> void:
 
 
 func begin() -> void:
-	await say(["n_s3_intro"])
+	if not Game.main.intro.has_story("ridge"):      # the film before this section speaks the line itself
+		await say(["n_s3_intro"])
 
 
 func _start_lion() -> void:

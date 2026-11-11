@@ -98,7 +98,8 @@ func _populate() -> void:
 
 
 func begin() -> void:
-	await say(["n_watch_intro"])
+	if not Game.main.intro.has_story("watch"):      # the film before this section speaks the line itself
+		await say(["n_watch_intro"])
 
 
 ## The whole night, from whichever watch he had reached.
