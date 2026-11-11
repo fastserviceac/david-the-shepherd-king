@@ -664,6 +664,16 @@ func _current_frame() -> Texture2D:
 		return FA.pingpong(FA.frames("david", "kneel_hold"), act_t, 8.0)
 	if act == "kneel_up":
 		return _one_shot("kneel_up", act_t / 1.6)
+	if act.begins_with("lyre") and not FA.frames("david", "lyre").is_empty():
+		# seated with the kinnor: he sits down, plays with his head bowed, then lifts his face and plays on
+		var ly: Array = FA.frames("david", "lyre")
+		if act == "lyre_rise":
+			return ly[clampi(8 - int(act_t / 1.0 * 8.0), 0, 8)]
+		if act == "lyre_up":
+			return FA.pingpong(ly.slice(34, ly.size()), act_t, 6.0)
+		if act_t < 1.3:
+			return ly[clampi(int(act_t / 1.3 * 9.0), 0, 8)]
+		return FA.pingpong(ly.slice(9, 34), act_t - 1.3, 6.0)
 	if act == "carry":
 		var c: Array = FA.frames("david", "carry")
 		return c[int(ph * c.size()) % c.size()]

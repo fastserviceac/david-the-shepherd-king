@@ -147,7 +147,7 @@ func _s1(lv) -> void:
 		for e in mapd["places"][key].get("finds", []):
 			if Game.narration.has("n_place_" + e[0]) and Game.narration_pt.has("n_place_" + e[0]) and Game._ui_pt.has(e[1]):
 				told += 1
-	_check(told == 7, "each place off the path has its story in both languages (%d)" % told)
+	_check(told == 8, "each place off the path has its story in both languages (%d)" % told)
 	var kept: float = Game.craft_xp("hand")       # the player's own progress is put back afterwards
 	Game.save["growth"] = Game.save.get("growth", {})
 	Game.save["growth"]["hand"] = 0.0

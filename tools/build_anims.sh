@@ -57,6 +57,7 @@ python3 tools/anchor.py clinch 0
 run $V/n_draw $D draw mode=range a=22 b=100 step=3 hframe=0 soft=1 steady=999 wide=1.8     # hauling the bucket up out of the well
 run $V/n_draw $D pour mode=range a=104 b=144 step=2 hframe=0 soft=1 steady=999 wide=1.8    # tipping it into the trough
 python3 tools/anchor.py draw 0 pour 0
+run $V/n_lyre $D lyre mode=range a=0 b=192 step=4 href=603 soft=1 steady=999 wide=1.6     # sitting down with the kinnor, playing, lifting his face
 # kneeling: one cut of the whole clip, dealt into going down, staying down and rising (tools/kneel_split.py)
 mkdir -p $V/kn_cut; run $V/n_kneel $V/kn_cut kn mode=range a=16 b=188 step=2 hframe=0 soft=1 steady=999 wide=2.0
 python3 tools/kneel_split.py $V/kn_cut

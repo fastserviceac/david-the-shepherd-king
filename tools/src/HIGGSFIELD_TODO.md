@@ -62,3 +62,17 @@ Every prompt ends with:
 | bear_slam | A large Syrian brown bear rears up on its hind legs, then drops and slams both front paws hard onto the ground in front of it, and settles back on all fours. |
 | lion_run | A lean lion runs flat out on the spot as if on a treadmill, body stretched low, a full galloping cycle repeated. |
 | lion_rake | A lean lion crouched low takes one fast swipe forward along the ground with a front paw, then draws back into its crouch. |
+
+## Part 5: cave mouths painted for each scene (images)
+
+The cave mouth now in the game is one grey rock arch reused everywhere, and it does not belong to the scenes it stands in. These replace it. Same opening message as Part 2. Attach `tools/src/style_s1.jpg` for the first, `style_s2.jpg` for the second.
+
+Every prompt ends with:
+
+> One object only, centred, seen exactly side-on at eye level, with its base flat along the bottom so it can stand on level ground. Detailed painterly realism. The background is a completely flat pure magenta (#FF00FF) that fills the whole picture edge to edge: no ground plane, no landscape, no horizon, no sky, no shadow, no gradient. No people, no animals, no text.
+
+| Name | Prompt |
+|---|---|
+| mouth_pastures | The mouth of a small natural cave in a low outcrop of pale cream limestone, about twice a man's height and four times as wide, its top rounded and grown with dry grass, thyme and a little olive scrub, boulders tumbled at both ends so it tapers into the ground. The opening is a low dark arch in the middle, deep black inside. Warm golden late-afternoon light from the left. |
+| mouth_ravine | The mouth of a cave in a broken outcrop of rose and violet-grey limestone, about twice a man's height and four times as wide, thorn bushes and a dead branch at its foot, boulders tumbled at both ends so it tapers into the ground. The opening is a low dark arch in the middle, deep black inside. Dusk light: violet shadow with a last warm rim from the left. |
+| mouth_wadi | The mouth of a cave in water-worn pale limestone, layered and smooth, about twice a man's height and four times as wide, a broom bush at one side, rounded boulders at both ends so it tapers into the ground. The opening is a low dark arch in the middle, deep black inside. Cool blue-violet twilight. |

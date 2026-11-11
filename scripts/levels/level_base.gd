@@ -1009,7 +1009,7 @@ func _give(id: String, x: float, node: Node2D) -> void:
 func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55, 0.72)) -> Dictionary:
 	var x0 := width + 4000.0 + caves.size() * 4000.0
 	var base := 600.0
-	var cave := {"x0": x0, "door": door_x, "floors": [], "base": base, "dark": 0.94}
+	var cave := {"x0": x0, "door": door_x, "floors": [], "base": base, "dark": 0.9}
 	var was_barren := barren
 	barren = true
 	var x := x0
@@ -1048,9 +1048,26 @@ func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55,
 		var msc := maxf(span / tex.get_width(), 1000.0 / tex.get_height())
 		sp.scale = Vector2(msc, msc)
 		sp.position = Vector2(x0 - 750.0, base + 170.0 - tex.get_height() * msc)
-		sp.modulate = Color(0.62, 0.62, 0.74)
+		sp.modulate = Color(0.8, 0.8, 0.92)
 		sp.z_index = -20
 		add_child(sp)
+	if ResourceLoader.exists("res://art/den_mid.png"):      # and the same standing formations as the bear's den, along the foot of the wall
+		var mtex: Texture2D = load("res://art/den_mid.png")
+		var k := 0.75 * 1280.0 / mtex.get_width()
+		var tx := x0 - 300.0
+		var flip := false
+		while tx < x + 300.0:
+			var ms := Sprite2D.new()
+			ms.texture = mtex
+			ms.centered = false
+			ms.flip_h = flip
+			ms.scale = Vector2(k, k)
+			ms.position = Vector2(tx, base + 60.0 - mtex.get_height() * k)
+			ms.modulate = Color(0.6, 0.56, 0.7)
+			ms.z_index = -10
+			add_child(ms)
+			tx += mtex.get_width() * k - 1.0
+			flip = not flip
 	# the mouth outside, on the path; and the same mouth seen from within, with the day behind it
 	_cave_mouth(on_ground(door_x), false, mouth_tint)
 	_cave_mouth(on_ground(x0 + 110.0), true, mouth_tint)
@@ -1076,8 +1093,18 @@ func _cave_mouth(at: Vector2, inside: bool, tint: Color) -> void:
 				var a := TAU * i / 24.0
 				pts.append(Vector2(-10.0 + cos(a) * 124.0 * f, -78.0 + sin(a) * 82.0 * f))
 			ci.draw_colored_polygon(pts, Color(0.01, 0.01, 0.03, 0.55)))
-	var arch := add_sprite("res://art/props/cave_arch.png", at + Vector2(0, 14), 1.0, 1, tint)
-	arch.scale = Vector2(0.72, 0.72)
+	# warm scenes get the arch in the warm limestone of their own rocks; dusk and night keep the blue one
+	var warm := tint.r > tint.b * 1.15
+	var arch := add_sprite("res://art/props/cave_arch_warm.png" if warm else "res://art/props/cave_arch.png", at + Vector2(0, 20), 1.0, 1,
+			pal.get("char", Color(1, 1, 1)) * Color(1.22, 1.14, 1.02) if warm else tint)
+	arch.scale = Vector2(0.64, 0.64)
+	# set into the hillside, not stood on it: boulders and scrub banked against its feet
+	for d in [[-168.0, "rock_low", 150.0], [172.0, "rock_mid", 130.0], [-118.0, "d_shrub", 70.0], [126.0, "d_boulder", 78.0], [-196.0, "d_grass", 60.0], [214.0, "d_stones", 70.0]]:
+		var path := "res://art/props/%s.png" % str(d[1])
+		if ResourceLoader.exists(path):
+			var dress := add_sprite(path, at + Vector2(float(d[0]), 12), 1.0, 2, pal.get("char", Color(1, 1, 1)))
+			dress.scale = Vector2.ONE * (float(d[2]) / dress.texture.get_width())
+			dress.flip_h = float(d[0]) > 0.0
 
 
 ## Through the mouth, either way: a moment of black, and he is on the other side of it.

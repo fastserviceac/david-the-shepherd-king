@@ -67,6 +67,11 @@ func _setup() -> void:
 
 
 func _populate() -> void:
+	# beside the road down to the well: a threshing floor, with its winnowing fork and jars
+	var tf := on_ground(1470.0)
+	var floor_sp := add_sprite("res://art/props/threshing.png", tf + Vector2(0, 16), 1.0, 1, pal.get("char", Color(1, 1, 1)))
+	floor_sp.scale = Vector2.ONE * (250.0 / floor_sp.texture.get_width())
+	add_place("threshing", tf + Vector2(60, 0), "The Threshing Floor", "hand")
 	# his own flock comes down with him: four ewes and the lamb
 	for i in 5:
 		var s = add_sheep(130.0 - i * 30.0, null, i == 4)

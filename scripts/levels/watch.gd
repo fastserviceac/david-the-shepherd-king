@@ -6,6 +6,8 @@ const BASE := 575.0
 const FOLD := 1500.0
 const FIRE := 1720.0
 const SEAT := 1290.0
+var seat_rock: Sprite2D
+var lyre_prop: Sprite2D
 const X0 := 520.0
 const X1 := 2480.0
 
@@ -76,6 +78,7 @@ func _populate() -> void:
 	fire_light = add_light(fp + Vector2(0, -40), 520.0)
 	# a flat stone to sit on
 	var seat := add_sprite("res://art/props/rock_low.png", on_ground(SEAT) + Vector2(0, 8), 0.2, 2, pal["char"])
+	seat_rock = seat
 	seat.scale = Vector2(70.0 / seat.texture.get_width(), 30.0 / seat.texture.get_height())
 
 	fire_task = add_task(FIRE - 50.0, "feed the fire", 1.3, func() -> void:
@@ -86,6 +89,7 @@ func _populate() -> void:
 	fire_task["on"] = false
 	var lyre := add_sprite("res://art/props/lyre.png", on_ground(SEAT + 58.0) + Vector2(0, 4), 1.0, 3, Color(0.7, 0.7, 0.85))      # his kinnor, laid down by the stone
 	lyre.scale = Vector2.ONE * (64.0 / lyre.texture.get_width())
+	lyre_prop = lyre
 	rest_task = add_task(SEAT, "sit, and look up", 2.0, _rest)
 	rest_task["on"] = false
 
@@ -184,15 +188,25 @@ func shepherd_call(from: Vector2, reach: float, startle: bool) -> void:
 func _rest() -> void:
 	Game.cinematic = true
 	player.facing = 1
-	player.act = "kneel"
+	# he sits on the stone, takes up the kinnor and plays; at the psalm he lifts his face to the stars
+	player.global_position = on_ground(SEAT + 22.0)
+	player.velocity = Vector2.ZERO
+	seat_rock.visible = false          # the stone he sits on is in his own frames
+	lyre_prop.visible = false
+	player.act = "lyre"
 	player.act_t = 0.0
 	Game.music("theme_tender", 3.0)
-	await say(["n_watch_stars", "ps8_3"])
-	player.act = "kneel_up"
+	await say(["n_watch_stars"])
+	player.act = "lyre_up"
+	player.act_t = 0.0
+	await say(["ps8_3"])
+	player.act = "lyre_rise"
 	player.act_t = 0.0
 	if not Game.fast:
-		await get_tree().create_timer(1.6).timeout
+		await get_tree().create_timer(1.0).timeout
 	player.act = ""
+	seat_rock.visible = true
+	lyre_prop.visible = true
 	player.hp = player.max_hp
 	Game.cinematic = false
 	rested = true
