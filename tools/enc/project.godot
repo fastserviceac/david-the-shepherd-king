@@ -1,0 +1,21 @@
+; Throwaway project: shows a folder of frames with a sound track so Godot's movie writer can save them as Ogg Theora.
+config_version=5
+
+[application]
+config/name="Film encoder"
+run/main_scene="res://enc.tscn"
+
+[display]
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/dpi/allow_hidpi=false
+
+[editor]
+movie_writer/fps=24
+movie_writer/video_quality=0.9
+movie_writer/audio_quality=0.7
+movie_writer/ogv/encoding_speed=1
+movie_writer/ogv/keyframe_interval=48
+
+[rendering]
+renderer/rendering_method="gl_compatibility"

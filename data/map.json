@@ -1,0 +1,264 @@
+{
+ "source": "Relief drawn from open elevation data (Terrain Tiles on AWS; chiefly SRTM). Town positions are those of the accepted ancient sites, to within about a kilometre. Scripture does not say where on the hills David met the lion and the bear; the places of this story are set where the ground fits it.",
+ "views": {
+  "hills": {
+   "lon0": 35.125,
+   "lon1": 35.355,
+   "lat0": 31.612,
+   "lat1": 31.722,
+   "title": "The hills of Bethlehem",
+   "km": 21.8
+  },
+  "land": {
+   "lon0": 34.66,
+   "lon1": 35.72,
+   "lat0": 31.41,
+   "lat1": 31.93,
+   "title": "Judah, from the lowland to the Salt Sea",
+   "km": 100.4
+  }
+ },
+ "towns": [
+  {
+   "name": "Bethlehem",
+   "lat": 31.7054,
+   "lon": 35.2024,
+   "views": [
+    "hills",
+    "land"
+   ]
+  },
+  {
+   "name": "Tekoa",
+   "lat": 31.636,
+   "lon": 35.214,
+   "views": [
+    "hills",
+    "land"
+   ]
+  },
+  {
+   "name": "Jebus (Jerusalem)",
+   "lat": 31.7767,
+   "lon": 35.2345,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Gibeah of Saul",
+   "lat": 31.8232,
+   "lon": 35.231,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Ramah",
+   "lat": 31.85,
+   "lon": 35.232,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Jericho",
+   "lat": 31.871,
+   "lon": 35.444,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Hebron",
+   "lat": 31.5326,
+   "lon": 35.0998,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Adullam",
+   "lat": 31.65,
+   "lon": 35.002,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Socoh",
+   "lat": 31.682,
+   "lon": 34.973,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Azekah",
+   "lat": 31.7,
+   "lon": 34.936,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "Gath",
+   "lat": 31.7,
+   "lon": 34.847,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "name": "En Gedi",
+   "lat": 31.461,
+   "lon": 35.392,
+   "views": [
+    "land"
+   ]
+  }
+ ],
+ "labels": [
+  {
+   "text": "The Wilderness of Judah",
+   "lat": 31.665,
+   "lon": 35.315,
+   "views": [
+    "hills"
+   ]
+  },
+  {
+   "text": "Wadi Khareitun",
+   "lat": 31.652,
+   "lon": 35.268,
+   "views": [
+    "hills"
+   ],
+   "small": true
+  },
+  {
+   "text": "The Salt Sea",
+   "lat": 31.56,
+   "lon": 35.48,
+   "views": [
+    "land"
+   ]
+  },
+  {
+   "text": "Valley of Elah",
+   "lat": 31.695,
+   "lon": 34.99,
+   "views": [
+    "land"
+   ],
+   "small": true
+  },
+  {
+   "text": "Wilderness of Judah",
+   "lat": 31.6,
+   "lon": 35.33,
+   "views": [
+    "land"
+   ],
+   "small": true
+  },
+  {
+   "text": "The Shephelah",
+   "lat": 31.58,
+   "lon": 34.9,
+   "views": [
+    "land"
+   ],
+   "small": true
+  }
+ ],
+ "places": {
+  "section1": {
+   "lat": 31.7035,
+   "lon": 35.23,
+   "about": "The open fields east of the town, where its shepherds have always grazed.",
+   "stones": [
+    "s1_start",
+    "s1_step",
+    "s1_leap"
+   ]
+  },
+  "well": {
+   "lat": 31.7076,
+   "lon": 35.2075,
+   "about": "The well by the gate of Bethlehem (2 Samuel 23:15).",
+   "stones": [
+    "well_start",
+    "well_terrace"
+   ]
+  },
+  "section2": {
+   "lat": 31.6835,
+   "lon": 35.242,
+   "about": "A ravine where the farmland ends and the wilderness begins.",
+   "stones": [
+    "s2_brake",
+    "s2_trial"
+   ]
+  },
+  "wadi": {
+   "lat": 31.661,
+   "lon": 35.2515,
+   "about": "A dry riverbed cutting down through the wilderness toward the Salt Sea.",
+   "stones": [
+    "wadi_start",
+    "wadi_shelf",
+    "wadi_leap"
+   ],
+   "finds": [
+    [
+     "crag",
+     "The Goats' Crag"
+    ]
+   ]
+  },
+  "den": {
+   "lat": 31.639,
+   "lon": 35.258,
+   "about": "The wadi's limestone walls are full of caves, some of them very large.",
+   "stones": [
+    "den_pocket"
+   ]
+  },
+  "section3": {
+   "lat": 31.649,
+   "lon": 35.279,
+   "about": "A bare ridge above the wadi, looking east over the wilderness.",
+   "stones": [
+    "s3_start",
+    "s3_leap"
+   ],
+   "finds": [
+    [
+     "outlook",
+     "The Outlook"
+    ]
+   ]
+  },
+  "watch": {
+   "lat": 31.6985,
+   "lon": 35.2215,
+   "about": "The fold on the hillside below the town.",
+   "stones": [
+    "watch_far"
+   ],
+   "finds": [
+    [
+     "stars",
+     "The Star Rock"
+    ]
+   ]
+  },
+  "section4": {
+   "lat": 31.7046,
+   "lon": 35.201,
+   "about": "Bethlehem, the town of Jesse, on the ridge road eight kilometres south of Jebus.",
+   "stones": []
+  }
+ }
+}

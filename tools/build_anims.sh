@@ -1,0 +1,59 @@
+#!/bin/zsh
+# Re-cuts every animation set from the source clips. usage: build_anims.sh <folder holding the extracted clip frames>
+V=$1; A="tools/anim.py"; D=art/david/anim
+run() { python3 $A "$@" 2>&1 | grep frames }
+# the older clips film David about 5% larger than the newer ones (idle, walk, run), so they are cut at a larger reference height to match
+david() { run "$@" href=630 soft=1 }
+run $V/run2 $D run mode=loop double=1 href=608 soft=1 steady=40
+# his idle is the calm side-on stance at the end of the look-about clip, so it matches his walk and roll
+run $V/idle2 $D idle mode=range a=214 b=241 step=2 href=628 soft=1
+run $V/n_jumpb $D jump mode=range a=20 b=100 step=2 hframe=0 feet=each soft=1 steady=999
+run $V/n_attack1 $D attack mode=range a=90 b=108 step=1 hframe=60 soft=1 wide=2.6 steady=999
+run $V/n_attack3 $D attack2 mode=range a=14 b=30 step=1 hframe=0 soft=1 wide=2.6 steady=999   # low sweep
+run $V/n_attack3 $D attack3 mode=range a=22 b=40 step=1 hframe=0 soft=1 wide=2.6 tall=2.1 steady=999   # rising blow
+run $V/n_attack2 $D attack4 mode=range a=18 b=36 step=1 hframe=0 soft=1 wide=2.6 tall=2.1 steady=999   # overhead smash, the end of a chain
+run $V/n_sling $D sling mode=range a=48 b=95 step=2 hframe=0 soft=1 steady=999     # the whirl, looped while he winds up
+run $V/n_sling $D throw mode=range a=100 b=132 step=2 hframe=0 soft=1 steady=999    # the release and follow-through, from the same clip
+david $V/hurt $D hurt mode=range a=20 b=56 step=2 hframe=160
+run $V/n_carry $D carry mode=loop double=1 href=604 soft=1 steady=40 tall=2.1     # the lamb across his shoulders
+run $V/walk $D walk mode=loop double=1 href=605 step=2 soft=1 steady=40 rim=6
+run $V/roll $D roll mode=range a=18 b=68 step=2 hframe=0 soft=1
+run $V/duck $D duck mode=range a=40 b=136 step=6 hframe=0 soft=1 steady=999
+# looking about when left standing; this clip shows him larger (about 628 px)
+run $V/idle2 $D idle2 mode=range a=0 b=239 step=3 href=628 soft=1
+run $V/sheep art/sheep/anim walk key=blue mode=loop double=1 wide=1.5 tall=1.4 size=110 erode=9
+run $V/graze art/sheep/anim graze key=blue mode=range a=0 b=188 step=4 hframe=0 wide=1.5 tall=1.4 size=110 erode=9
+python3 tools/rim_clean.py art/sheep/anim      # the sheep clips carry an orange glow round the animal: eat it off the outline
+run $V/jackal art/jackal/anim walk mode=loop double=1 wide=1.8 tall=1.4 size=110 erode=3
+run $V/lunge art/jackal/anim lunge mode=range a=64 b=134 step=2 hframe=0 wide=1.8 tall=1.8 size=110 feet=each erode=3
+run $V/bear art/bear/anim walk mode=loop double=1 wide=1.5 tall=1.4 size=150
+run $V/lion art/lion/anim walk mode=loop double=1 wide=1.8 tall=1.4 size=150 halo=0 erode=3
+run $V/pounce art/lion/anim crouch mode=range a=16 b=64 step=4 hframe=0 halo=0 wide=1.8 tall=1.4 size=150 erode=3
+run $V/pounce art/lion/anim pounce mode=range a=96 b=156 step=2 hframe=0 halo=0 wide=1.8 tall=1.8 size=150 feet=each erode=3
+run $V/roar art/lion/anim roar mode=range a=40 b=132 step=4 hframe=0 halo=0 wide=1.8 tall=1.8 size=150 erode=3
+run $V/roar art/lion/anim pant mode=range a=140 b=188 step=4 hframe=0 halo=0 wide=1.8 tall=1.4 size=150 erode=3
+
+# the bear's rear-up comes from a clip upscaled to 1440p, so its pixel settings are doubled
+run $V/rear2x art/bear/anim rear mode=range a=24 b=64 step=4 hframe=0 wide=1.5 tall=2.3 size=150 white=1 erode=9 inner=16
+run $V/rear2x art/bear/anim swipe mode=range a=80 b=118 step=2 hframe=0 wide=1.5 tall=2.3 size=150 white=1 erode=9 inner=16
+python3 tools/bear_fix.py 2>&1 | grep tidied
+echo ALL DONE
+# Samuel anointing. The 1440p upscale of the clip has the detail but a pink cast, so colour comes from the original clip:
+#   python3 tools/anim.py $V/pour3 /tmp/an1 anoint key=magenta mode=range a=0 b=239 step=3 href=314 size=138 res=2 wide=0.9 tall=1.45 erode=3 inner=6
+#   python3 tools/anim.py $V/pour3x art/samuel/anim anoint key=magenta mode=range a=0 b=239 step=3 href=628 size=276 res=2 wide=0.9 tall=1.45 erode=5 inner=12
+#   python3 tools/anoint_colour.py /tmp/an1 && python3 tools/anoint_fix.py
+run $V/sway $D sway mode=range a=10 b=56 step=2 hframe=0 soft=1 wide=1.6 steady=999
+run $V/n_throw $D pickup mode=range a=8 b=34 step=2 hframe=0 soft=1 steady=999     # bending to the ground: shown while he works with his hands
+run $V/n_throw $D toss mode=range a=46 b=98 step=2 hframe=0 soft=1 steady=999       # an overhand throw; not used yet
+run $V/n_hurt $D flinch mode=range a=48 b=66 step=1 hframe=0 soft=1 steady=999 wide=2.0     # knocked back by a blow
+run $V/n_clinch $D push mode=range a=40 b=92 step=4 hframe=0 soft=1 steady=999 wide=1.6     # braced against something heavy (the clip asked for a clinch; it came with a boulder)
+python3 tools/push_fix.py
+run $V/n_hop $D hop mode=range a=13 b=40 step=1 hframe=0 soft=1 steady=3     # the skip backwards: he travels in the clip, so each frame is centred on him
+python3 tools/anchor.py hop 27
+run $V/n_call $D call mode=range a=14 b=118 step=4 hframe=0 soft=1 steady=999 wide=1.6     # hand to his mouth, then beckoning
+python3 tools/anchor.py call 0
+# kneeling: one cut of the whole clip, dealt into going down, staying down and rising (tools/kneel_split.py)
+mkdir -p $V/kn_cut; run $V/n_kneel $V/kn_cut kn mode=range a=16 b=188 step=2 hframe=0 soft=1 steady=999 wide=2.0
+python3 tools/kneel_split.py $V/kn_cut
+# his feet stay on one spot when the game changes from one move to another
+python3 tools/anchor.py jump 0 attack 0 attack2 0 attack3 18 attack4 0 sway 0 idle2 0 sling 4 throw 0 pickup 0 toss 26 flinch 0

@@ -1,0 +1,88 @@
+{
+  "chapters": [
+    {
+      "number": "One",
+      "title": "The Shepherd",
+      "scripture": "1 Samuel 16 – 17",
+      "available": true,
+      "narration": "res://data/narration/chapter1.json",
+      "sections": [
+        {
+          "title": "The Pastures",
+          "script": "res://scripts/levels/section1.gd"
+        },
+        {
+          "title": "The Well",
+          "script": "res://scripts/levels/well.gd",
+          "film": "well"
+        },
+        {
+          "title": "The Lost Lamb",
+          "script": "res://scripts/levels/section2.gd",
+          "film": "count"
+        },
+        {
+          "title": "The Wadi",
+          "script": "res://scripts/levels/wadi.gd",
+          "film": "wadi"
+        },
+        {
+          "title": "The Bear's Den",
+          "script": "res://scripts/levels/den.gd",
+          "film": "den"
+        },
+        {
+          "title": "The Lion's Ridge",
+          "script": "res://scripts/levels/section3.gd",
+          "film": "ridge"
+        },
+        {
+          "title": "The Night Watch",
+          "script": "res://scripts/levels/watch.gd",
+          "film": "watch"
+        },
+        {
+          "title": "The Anointing",
+          "script": "res://scripts/levels/section4.gd",
+          "film": "dawn"
+        }
+      ]
+    },
+    {
+      "number": "Two",
+      "title": "The Harp",
+      "scripture": "1 Samuel 16:14–23",
+      "available": false
+    },
+    {
+      "number": "Three",
+      "title": "The Valley of Elah",
+      "scripture": "1 Samuel 17",
+      "available": false
+    },
+    {
+      "number": "Four",
+      "title": "The Fugitive",
+      "scripture": "1 Samuel 19 – 26",
+      "available": false
+    },
+    {
+      "number": "Five",
+      "title": "The King",
+      "scripture": "2 Samuel 2 – 7",
+      "available": false
+    },
+    {
+      "number": "Six",
+      "title": "Fall and Restoration",
+      "scripture": "2 Samuel 11 – 12, Psalm 51",
+      "available": false
+    },
+    {
+      "number": "Seven",
+      "title": "The Return",
+      "scripture": "2 Samuel 15 – 19",
+      "available": false
+    }
+  ]
+}

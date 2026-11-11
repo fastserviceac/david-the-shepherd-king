@@ -1,0 +1,237 @@
+{
+ "translation": "World English Bible British Edition (public domain)",
+ "lines": {
+  "n_s1_intro": {
+   "text": "In the hills of Bethlehem, the youngest son of Jesse kept his father's sheep."
+  },
+  "ps78_70": {
+   "text": "He also chose David his servant, and took him from the sheepfolds.",
+   "ref": "Psalm 78:70"
+  },
+  "ps23_1": {
+   "text": "The LORD is my shepherd; I shall lack nothing.",
+   "ref": "Psalm 23:1"
+  },
+  "n_s1_missing": {
+   "text": "Some of the flock are still out on the hills."
+  },
+  "ps23_2": {
+   "text": "He makes me lie down in green pastures. He leads me beside still waters.",
+   "ref": "Psalm 23:2"
+  },
+  "n_s1_end": {
+   "text": "But when he counted the flock that evening, one lamb was missing."
+  },
+  "n_s2_intro": {
+   "text": "As the light faded, David went out to look for the one that was lost."
+  },
+  "n_s2_sling": {
+   "text": "By the brook he found his sling, and smooth stones for it."
+  },
+  "ps23_4": {
+   "text": "Even though I walk through the valley of the shadow of death, I will fear no evil, for you are with me. Your rod and your staff, they comfort me.",
+   "ref": "Psalm 23:4"
+  },
+  "n_s2_tracks": {
+   "text": "Tufts of wool, and tracks in the dust. They led up to the ridge, and they were not a lamb's alone."
+  },
+  "n_s3_intro": {
+   "text": "Night had fallen on the ridge. Somewhere above, the lamb was crying."
+  },
+  "1sam17_34": {
+   "text": "Your servant was keeping his father’s sheep; and when a lion or a bear came and took a lamb out of the flock, I went out after him, struck him, and rescued it out of his mouth.",
+   "ref": "1 Samuel 17:34–35"
+  },
+  "n_s3_remember": {
+   "text": "Years later, standing before a king, David would remember this night."
+  },
+  "1sam17_37": {
+   "text": "The LORD, who delivered me out of the paw of the lion and out of the paw of the bear, will deliver me out of the hand of this Philistine.",
+   "ref": "1 Samuel 17:37"
+  },
+  "n_s3_end": {
+   "text": "He lifted the lamb onto his shoulders and carried it home."
+  },
+  "n_s4_intro": {
+   "text": "At dawn he came down from the hills with the whole flock."
+  },
+  "n_s4_messenger": {
+   "text": "A servant came running. “David! Your father is calling for you. The prophet Samuel has come to Bethlehem.”"
+  },
+  "n_s4_brothers": {
+   "text": "Seven sons of Jesse had passed before the prophet. Not one of them was chosen."
+  },
+  "1sam16_7": {
+   "text": "For man looks at the outward appearance, but the LORD looks at the heart.",
+   "ref": "1 Samuel 16:7"
+  },
+  "1sam16_11": {
+   "text": "There remains yet the youngest. Behold, he is keeping the sheep.",
+   "ref": "1 Samuel 16:11"
+  },
+  "1sam16_12": {
+   "text": "The LORD said, “Arise! Anoint him, for this is he.”",
+   "ref": "1 Samuel 16:12"
+  },
+  "1sam16_13": {
+   "text": "Then Samuel took the horn of oil and anointed him in the middle of his brothers. Then the LORD’s Spirit came mightily on David from that day forward.",
+   "ref": "1 Samuel 16:13"
+  },
+  "n_s2_ewe": {
+   "text": "In the thorn brake a ewe stood trembling. She bore another man’s mark. And there were eyes in the dark around her."
+  },
+  "n_s2_ewe_safe": {
+   "text": "She pressed against his legs, and after that she followed him as if she had always been his."
+  },
+  "n_five_stones": {
+   "text": "He chose for himself five smooth stones out of the brook, and put them in the pouch of his shepherd’s bag which he had.",
+   "ref": "1 Samuel 17:40"
+  },
+  "d_servant_1": {
+   "who": "Servant",
+   "text": "David! Your father calls for you. The prophet Samuel has come to Bethlehem, and he will not sit down to the feast until you come."
+  },
+  "d_david_1": {
+   "who": "David",
+   "text": "Samuel? What would the prophet want with me?"
+  },
+  "d_servant_2": {
+   "who": "Servant",
+   "text": "I do not know. But he has seen all seven of your brothers, and still he asks if there is another. Go. I will stay with the sheep."
+  },
+  "d_david_2": {
+   "who": "David",
+   "text": "Keep them from the ravine. And there is a lamb among them that must not walk far."
+  },
+  "d_jesse_1": {
+   "who": "Jesse",
+   "text": "My lord, this is David, my youngest. He was with the sheep."
+  },
+  "n_s1_to_well": {
+   "text": "The day was cooling. He led the flock down toward the town, to the well."
+  },
+  "n_well_intro": {
+   "text": "Sheep must be watered every evening, and in the hills of Judah there are few places to do it."
+  },
+  "n_well_custom": {
+   "text": "A great stone lay over the mouth of the well, to keep the water clean and to keep it shared. It was rolled away when the flocks had gathered, and rolled back when they had drunk.",
+   "ref": "The custom is described in Genesis 29:2–3"
+  },
+  "n_well_stone": {
+   "text": "With the staff under it and a block to bear on, the great stone turned."
+  },
+  "n_well_draw": {
+   "text": "Sheep cannot reach down a well. Every mouthful a flock drinks, its shepherd has drawn for it by hand."
+  },
+  "n_well_stray": {
+   "text": "While his back was bent to the rope, two of them wandered off after the grass."
+  },
+  "n_well_jackal": {
+   "text": "The light was going. Something had come down from the hills to see what the flocks had left unguarded."
+  },
+  "n_well_back": {
+   "text": "When the last of them had drunk, there was the stone to roll back to its place."
+  },
+  "n_wadi_intro": {
+   "text": "The tracks left the ravine and climbed a wadi: a riverbed that runs only in the winter rains, and for the rest of the year lies dry as bone."
+  },
+  "n_wadi_boulder": {
+   "text": "Each winter's flood leaves boulders perched where a touch will bring them down."
+  },
+  "n_wadi_fork": {
+   "text": "Here the trail divided. A shepherd learns to read the ground. The broad pad of a great cat is not the narrow foot of a jackal, and wool does not climb rocks by itself."
+  },
+  "n_wadi_false": {
+   "text": "Jackal sign, and old. But from up here he could see what waited in the riverbed below, and what hung over it."
+  },
+  "n_wadi_wool": {
+   "text": "Wool on the thorns. It had been carried this way, and not long since."
+  },
+  "n_wadi_cave": {
+   "text": "The tracks went in under the rock. The hills of Judah are limestone, hollow with caves, and the beasts know every one of them."
+  },
+  "n_den_intro": {
+   "text": "It was black inside, and it smelt of an animal."
+  },
+  "n_den_torch": {
+   "text": "Someone had sheltered here not long before. The embers were still alive, and he lit a branch from them."
+  },
+  "n_den_draught": {
+   "text": "A wind came through the rock here. The flame leaned over, and shrank."
+  },
+  "n_den_bear": {
+   "text": "There were bears in these hills in David's day, the brown bear of Syria. It does not hunt men. But it will not give up its cave."
+  },
+  "n_den_out": {
+   "text": "The bear went out into the night. But the lamb was not here. The tracks went on and up, to the ridge."
+  },
+  "n_watch_intro": {
+   "text": "He carried the lamb down to the fold. There were hours of the night still to keep."
+  },
+  "n_watch_fold": {
+   "text": "A fold was a ring of loose stone topped with thorn, with a gap left for a gate. At night the shepherd lay down across the gap himself. He was the door."
+  },
+  "n_watch_stir": {
+   "text": "The flock had the smell of the lion on them still. Two of them broke from the fold."
+  },
+  "n_watch_fire": {
+   "text": "The fire had burned low. Beasts keep back from a fire, for as long as it burns."
+  },
+  "n_watch_stars": {
+   "text": "Between the watches he sat, and looked up."
+  },
+  "ps8_3": {
+   "text": "When I consider your heavens, the work of your fingers, the moon and the stars, which you have ordained; what is man, that you think of him? What is the son of man, that you care for him?",
+   "ref": "Psalm 8:3–4"
+  },
+  "n_watch_dawn": {
+   "text": "Then the east went grey, and the hills came back out of the dark. Not one was lost."
+  },
+  "n_well_heavy": {
+   "text": "He set his shoulder to it. It did not move. But a staff is a lever too, if it has a stone to bear on."
+  },
+  "n_well_voice": {
+   "text": "The flocks had run together at the water. It did not matter. Sheep know one voice, and will not come to a stranger's.",
+   "ref": "Compare John 10:4–5"
+  },
+  "n_well_count": {
+   "text": "At the gate of the fold he held his staff across the gap, and they passed in under it one by one. So a flock was counted.",
+   "ref": "Leviticus 27:32"
+  },
+  "n_well_count_wrong": {
+   "text": "A ewe with another man's mark had gone in among them. He turned them all out, and began again."
+  },
+  "n_place_landmark": {
+   "text": "A heap of stones on the height, older than anyone living: a landmark, set up by the fathers to part one family's field from the next. The law forbade any man to move it.",
+   "ref": "Deuteronomy 19:14"
+  },
+  "n_place_threshing": {
+   "text": "A threshing floor, on high ground where the evening wind carries off the chaff. On such a floor at Bethlehem Boaz winnowed his barley; and Ruth bore him Obed, the father of Jesse, the father of David.",
+   "ref": "Ruth 3:2; 4:17"
+  },
+  "n_place_cistern": {
+   "text": "A cistern cut into the rock by hands long dead. No river runs in these hills: the winter rain is caught and kept, and a land is counted rich by its cisterns.",
+   "ref": "Deuteronomy 6:11"
+  },
+  "n_place_crag": {
+   "text": "A crag above the wadi, where the wild goats climb and the rock badgers lie in the sun. David would hide among such rocks one day, at En Gedi, the spring of the kid.",
+   "ref": "Psalm 104:18; 1 Samuel 24:1-2"
+  },
+  "n_place_refuge": {
+   "text": "Jars and an old hearth, far back in the cave. When raiders came up against Israel, the people made their homes in the dens and caves of the mountains.",
+   "ref": "Judges 6:2"
+  },
+  "n_place_outlook": {
+   "text": "From here the land falls away eastward, more than a thousand metres down through bare wilderness to the Salt Sea, the lowest shore on earth. Beyond it rise the mountains of Moab, where Ruth was born.",
+   "ref": "Ruth 1:1-4"
+  },
+  "n_place_stars": {
+   "text": "A flat rock under the open sky. Shepherds told the seasons by the stars: the Pleiades rising before dawn, Orion in the winter night. A herdsman of Tekoa would one day say that their Maker is the one to seek.",
+   "ref": "Amos 1:1; 5:8"
+  },
+  "n_place_rachel": {
+   "text": "A pillar of stones beside the road. Here Jacob buried Rachel, who died giving birth to Benjamin on the way to Ephrath, which is Bethlehem; and he set up a pillar on her grave.",
+   "ref": "Genesis 35:19-20"
+  }
+ }
+}
