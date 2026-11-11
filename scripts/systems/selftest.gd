@@ -138,6 +138,10 @@ func _s1(lv) -> void:
 	Game.save["stones"] = kept_stones
 	Game.fill_pouch()
 	_check(Game.stones_total >= 17 and Game.places_total >= 8, "the journal knows how many stones and places there are (%d, %d)" % [Game.stones_total, Game.places_total])
+	Game.pad = true
+	_check(Game.keys("J  staff") == "X  staff" and Game.keys("Run, then Space") == "Run, then A" and Game.keys("A D  move") == "Stick  move", "with a controller in hand the prompts name its buttons")
+	Game.pad = false
+	_check(Game.keys("J  staff") == "J  staff", "and with the keyboard they name keys")
 	var had_places: Array = Game.places().duplicate()
 	Game.save["places"] = []
 	for pl in lv.finds:

@@ -162,7 +162,7 @@ func _draw() -> void:
 				if not names.is_empty():
 					line += ":  " + ", ".join(names)
 				draw_string(f, Vector2(980, 622), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1.0, 0.86, 0.6, 0.9))
-			draw_string(f, Vector2(980, 680), Game.t("Enter:  go there"), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 1, 1, 0.7))
+			draw_string(f, Vector2(980, 680), Game.keys(Game.t("Enter:  go there")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 1, 1, 0.7))
 		else:
 			draw_string(f, Vector2(60, 646), Game.t("%d.  A place he has not yet come to") % (index + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color(1, 1, 1, 0.5))
 	# title, scale bar, keys
@@ -178,5 +178,7 @@ func _draw() -> void:
 	draw_line(Vector2(1218, 150), Vector2(1218, 96), ink, 2.5)
 	draw_colored_polygon(PackedVector2Array([Vector2(1218, 90), Vector2(1212, 104), Vector2(1224, 104)]), ink)
 	var keys := Game.t("← →  choose a place      Tab  the wider land      M or Esc  close" if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close")
+	if Game.pad:
+		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
 	var ky := 590.0 if view == "hills" else 700.0
 	_text(Vector2(640, ky), keys, 17, Color(ink.r, ink.g, ink.b, 0.8))

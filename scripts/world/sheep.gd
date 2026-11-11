@@ -73,7 +73,8 @@ func _process(delta: float) -> void:
 	elif leap >= 0.0:         # in the air over a gap
 		leap += delta / leap_dur
 		var u := minf(leap, 1.0)
-		global_position = leap_a.lerp(leap_b, u) + Vector2(0, -sin(u * PI) * (26.0 + absf(leap_b.x - leap_a.x) * 0.22))
+		# the jump itself is in its frames now (it gathers, springs and lands); the path only carries it across
+		global_position = leap_a.lerp(leap_b, u) + Vector2(0, -sin(u * PI) * (8.0 + absf(leap_b.x - leap_a.x) * 0.08))
 		moving = true
 		if leap >= 1.0:
 			leap = -1.0
@@ -134,6 +135,11 @@ func _walk(vx: float, delta: float) -> void:
 func _draw() -> void:
 	var lift := -absf(sin(hop * PI)) * 9.0 * hop      # one small start, not a bounce
 	var tex: Texture2D
+	var jump: Array = FA.frames("sheep", "leap")
+	if leap >= 0.0 and not jump.is_empty():
+		tex = jump[clampi(int(clampf(leap, 0.0, 1.0) * (jump.size() - 1)), 0, jump.size() - 1)]
+		FA.draw(self, tex, face, 0.46 * size, wool, 2.7, 0.0, Vector2.ZERO, Vector2.ONE, lift)
+		return
 	if moving:
 		var arr: Array = FA.frames("sheep", "walk")
 		gait += get_process_delta_time() * clampf(8.0 + pace * 0.16, 10.0, 46.0)      # legs keep time with the ground covered

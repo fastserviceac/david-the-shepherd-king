@@ -30,7 +30,7 @@ func _setup() -> void:
 
 func _populate() -> void:
 	# a side cave: where shepherds pen a flock in bad weather. Embers at the mouth, a climb in the dark, and the back of it
-	var c1 := add_cave(2900.0, [[1500.0, 0.0]], Color(1.75, 1.2, 0.72))
+	var c1 := add_cave(2900.0, [[1500.0, 0.0]], Color(1.75, 1.2, 0.72), "res://art/props/mouth_s1.png")
 	add_embers(c1["x0"] + 300.0)
 	add_perch(c1["x0"] + 620.0, 64.0, 150.0)
 	var c1b := add_perch(c1["x0"] + 820.0, 128.0, 170.0)

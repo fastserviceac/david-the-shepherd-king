@@ -14,6 +14,7 @@ var main: Node = null
 
 var stones_total := 0     # every smooth stone and every place there is to find, counted from the map
 var places_total := 0
+var pad := false          # the last thing touched was a controller: prompts name its buttons, not keys
 var gifting := false     # a gift is being given: the world holds still, but its name is shown
 var cinematic := false   # story scene playing: player and enemies hold still
 var backdrop := false    # level is only a background for the menu
@@ -90,6 +91,37 @@ func _setup_resources() -> void:
 
 	add_mat = CanvasItemMaterial.new()
 	add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.5):
+		pad = true
+	elif event is InputEventKey:
+		pad = false
+
+
+const PAD_KEYS := {"Space": "A", "Espaço": "A", "J": "X", "K": "B", "E": "Y", "L": "RB", "Shift": "LB", "Q": "LS", "Tab": "Back", "M": "RS",
+		"Enter": "A", "Esc": "Start", "A": "", "D": "Stick"}
+const PAD_WORDS := {"Space": "A", "Espaço": "A", "Shift": "LB", "Tab": "Back", "Enter": "A", "Esc": "Start"}
+
+## A prompt as it should read for whatever the player is holding. Text is written for the keyboard ("J  staff");
+## with a controller in hand the key at the front, and any key named in the words, becomes its button.
+func keys(s: String) -> String:
+	if not pad:
+		return s
+	var cut := s.find("  ")
+	var head := s.substr(0, cut) if cut > 0 and cut <= 14 else ""
+	var rest := s.substr(cut) if head != "" else s
+	if head != "":
+		var out: Array = []
+		for tok in head.split(" ", false):
+			var b: String = PAD_KEYS.get(tok, tok)
+			if b != "" and not (b in out and b == "Stick"):
+				out.append(b)
+		head = " ".join(out)
+	for w in PAD_WORDS:
+		rest = rest.replace(w, PAD_WORDS[w])
+	return head + rest
 
 
 func _setup_input() -> void:

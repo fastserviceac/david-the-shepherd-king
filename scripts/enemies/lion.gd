@@ -260,12 +260,18 @@ func _draw() -> void:
 		"lurk":     # nothing of it but two eyes in the dark
 			eye(Vector2(dir * 26.0 - 6.0, -30.0), 2.8, 0.7 + 0.3 * sin(t * 7.0))
 			eye(Vector2(dir * 26.0 + 6.0, -30.0), 2.8, 0.7 + 0.3 * sin(t * 7.0))
-		"crouch", "rake":   # sinks low, haunches bunched: the warning before the spring
+		"crouch":   # sinks low, haunches bunched: the warning before the spring
 			show_frame(action_frame("crouch", u * 1.6), 0.66, 1.4)
+		"rake":     # drops its chest and sweeps a forepaw along the ground
+			show_frame(action_frame("rake", u), 0.66, 1.4)
+		"slink":    # away into the dark at a run
+			var sl: Array = FA.frames("lion", "run")
+			show_frame(sl[int(dist / 330.0 * sl.size()) % sl.size()] if not sl.is_empty() else walk_frame(), 0.66, 1.4)
 		"pounce":   # the leap itself
 			show_frame(action_frame("pounce", air_t / 0.6, 3, 21), 0.66, 1.8)
-		"rush":     # low and long, eating the ground
-			show_frame(walk_frame(), 0.66, 1.4, Vector2(1.12, 0.86))
+		"rush":     # flat out, low and long
+			var rn: Array = FA.frames("lion", "run")
+			show_frame(rn[int(dist / 330.0 * rn.size()) % rn.size()] if not rn.is_empty() else walk_frame(), 0.66, 1.4)
 		"recover":  # lands, then stands panting: the moment to strike
 			if u < 0.25:
 				show_frame(action_frame("pounce", u / 0.25, 21, 30), 0.66, 1.8)

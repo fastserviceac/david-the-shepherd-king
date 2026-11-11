@@ -94,7 +94,7 @@ func play(film: String = FILM, cue_file: String = CUES) -> void:
 	var local := cue_file.replace(".json", ".%s.json" % Game.lang())      # the subtitles in the player's language, if they exist
 	if Game.lang() != "en" and FileAccess.file_exists(local):
 		cue_file = local
-	hint.text = Game.t("Enter: skip")
+	hint.text = Game.keys(Game.t("Enter: skip"))
 	under.text = Game.t("The Shepherd King")
 	if FileAccess.file_exists(cue_file):
 		var d = JSON.parse_string(FileAccess.get_file_as_string(cue_file))

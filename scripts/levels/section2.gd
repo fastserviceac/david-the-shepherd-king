@@ -40,7 +40,7 @@ func _setup() -> void:
 func _populate() -> void:
 	# a side cave: a cistern cut in the rock. The back of it stands a man's height above the floor:
 	# a fallen block, shoved to the foot of the step, is the way up. A jackal has made the place its own
-	var c2 := add_cave(3420.0, [[820.0, 0.0], [640.0, 118.0]], Color(1.5, 1.0, 0.82))
+	var c2 := add_cave(3420.0, [[820.0, 0.0], [640.0, 118.0]], Color(1.5, 1.0, 0.82), "res://art/props/mouth_s2.png")
 	add_embers(c2["x0"] + 290.0)
 	add_pushable(c2["x0"] + 470.0, 58.0, 50.0, "res://art/props/rock_low.png", c2["x0"] + 400.0, c2["floors"][1] - 32.0)
 	add_jackal(c2["x0"] + 640.0, c2["x0"] + 380.0, c2["floors"][1] - 80.0)

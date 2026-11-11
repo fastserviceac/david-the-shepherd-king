@@ -120,4 +120,4 @@ func _draw() -> void:
 	if mode == "difficulty" and index < Game.DIFFICULTY.size():
 		draw_string(f, Vector2(0, 290), Game.t(Game.DIFFICULTY[index]["about"]), HORIZONTAL_ALIGNMENT_CENTER, 1280, 22, Color(1.0, 0.82, 0.55))
 	if mode == "main":
-		draw_string(f, Vector2(0, 690), Game.t("↑ ↓ to choose    ·    Enter to select"), HORIZONTAL_ALIGNMENT_CENTER, 1280, 18, Color(1, 1, 1, 0.5))
+		draw_string(f, Vector2(0, 690), Game.keys(Game.t("↑ ↓ to choose    ·    Enter to select")), HORIZONTAL_ALIGNMENT_CENTER, 1280, 18, Color(1, 1, 1, 0.5))

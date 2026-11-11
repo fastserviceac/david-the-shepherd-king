@@ -307,17 +307,19 @@ func _draw() -> void:
 		"swipe", "slam":       # crashes forward and down
 			show_frame(action_frame("swipe", u, 0, 12), 0.68, 2.3)
 		"swipe2":              # stays low, shoulders bunched, for the second blow
-			show_frame(walk_frame(), 0.68, 1.4, Vector2(1.06, 0.86 + 0.03 * sin(t * 34.0)))
+			show_frame(action_frame("brace", 1.0), 0.68, 1.4)
 		"rest":                # back on all fours, heaving
 			if u < 0.2:
 				show_frame(action_frame("swipe", u / 0.2, 12, 18), 0.68, 2.3)
 			else:
 				show_frame(walk_frame(), 0.68, 1.4, Vector2(1.0, 1.0 + sin(t * 9.0) * 0.025))
-		"reel":                # staggered by the stone: it shakes its head and gives ground
-			show_frame(walk_frame(), 0.68, 1.4, Vector2(1.0 + sin(t * 30.0) * 0.03, 0.95))
-		"stunned":             # dazed against the rock, head down
-			show_frame(walk_frame(), 0.68, 1.4, Vector2(1.03, 0.88 + sin(t * 5.0) * 0.02))
-		"brace":               # sinks low before the charge
-			show_frame(walk_frame(), 0.68, 1.4, Vector2(1.04, 0.9 + 0.04 * sin(t * 30.0)))
+		"reel", "stunned":     # staggered or dazed: it stands and shakes its head
+			var dz: Array = FA.frames("bear", "daze")
+			show_frame(FA.pingpong(dz, t, 14.0) if not dz.is_empty() else walk_frame(), 0.68, 1.4)
+		"brace":               # sinks low on its forelegs before the charge
+			show_frame(action_frame("brace", u * 1.3), 0.68, 1.4)
+		"charge":              # a bounding run
+			var rn: Array = FA.frames("bear", "run")
+			show_frame(rn[int(dist / 300.0 * rn.size()) % rn.size()] if not rn.is_empty() else walk_frame(), 0.68, 1.4)
 		_:
 			show_frame(walk_frame(), 0.68, 1.4)

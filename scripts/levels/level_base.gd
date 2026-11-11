@@ -1006,7 +1006,7 @@ func _give(id: String, x: float, node: Node2D) -> void:
 ## `floors` is a list of [length, height of this floor above the first]: each new floor is a step up or down.
 ## The room is built far past the level's right edge, so the level itself is untouched. Returns
 ## {"x0", "x1", "floors": [x where each floor starts], "base"}; build what is inside it with the usual calls.
-func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55, 0.72)) -> Dictionary:
+func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55, 0.72), mouth_art: String = "") -> Dictionary:
 	var x0 := width + 4000.0 + caves.size() * 4000.0
 	var base := 600.0
 	var cave := {"x0": x0, "door": door_x, "floors": [], "base": base, "dark": 0.9}
@@ -1069,7 +1069,11 @@ func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55,
 			tx += mtex.get_width() * k - 1.0
 			flip = not flip
 	# the mouth outside, on the path; and the same mouth seen from within, with the day behind it
-	_cave_mouth(on_ground(door_x), false, mouth_tint)
+	if mouth_art != "" and ResourceLoader.exists(mouth_art):      # painted for this scene, opening and all
+		var mp := add_sprite(mouth_art, on_ground(door_x) + Vector2(0, 12), 1.0, 1)
+		mp.scale = Vector2.ONE * (350.0 / mp.texture.get_width())
+	else:
+		_cave_mouth(on_ground(door_x), false, mouth_tint)
 	_cave_mouth(on_ground(x0 + 110.0), true, mouth_tint)
 	add_light(on_ground(x0 + 110.0) + Vector2(0, -70), 300.0)
 	var go_in := add_task(door_x, "go in", 0.35, func() -> void: _cave_pass(cave), 46.0)
@@ -1802,14 +1806,18 @@ func _update_prompt(delta: float) -> void:
 	if not Game.cinematic and not respawning:
 		if task_now != null:
 			show = true
-			prompt_key = "E"
+			prompt_key = "Y" if Game.pad else "E"
 			prompt_words = Game.t(str(task_now["text"]))
 			prompt_bar = clampf(task_now["t"] / task_now["hold"], 0.0, 1.0)
 		elif tip_t > 0.0:
 			tip_t -= delta
 			show = true
 			prompt_key = ""
-			prompt_words = Game.t(tip)
+			prompt_words = Game.keys(Game.t(tip))
+			var tcut := prompt_words.find("  ")
+			if tcut > 0 and tcut <= 6 and not "." in prompt_words.substr(0, tcut):      # a tip that names a key leads with its cap
+				prompt_key = prompt_words.substr(0, tcut)
+				prompt_words = prompt_words.substr(tcut).strip_edges()
 		else:
 			var seen: Dictionary = Game.save.get("seen", {})
 			var best = null
@@ -1819,7 +1827,7 @@ func _update_prompt(delta: float) -> void:
 						best = h
 			if best != null:
 				show = true
-				var txt := Game.t(str(best["text"]))
+				var txt := Game.keys(Game.t(str(best["text"])))
 				var cut := txt.find("  ")
 				if cut > 0 and cut <= 6:
 					prompt_key = txt.substr(0, cut)

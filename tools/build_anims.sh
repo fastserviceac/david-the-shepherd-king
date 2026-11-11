@@ -63,3 +63,11 @@ mkdir -p $V/kn_cut; run $V/n_kneel $V/kn_cut kn mode=range a=16 b=188 step=2 hfr
 python3 tools/kneel_split.py $V/kn_cut
 # his feet stay on one spot when the game changes from one move to another
 python3 tools/anchor.py jump 0 attack 0 attack2 0 attack3 18 attack4 0 sway 0 idle2 0 sling 4 throw 0 pickup 0 toss 26 flinch 0
+# animal moves made later, each started from a frame of the animal's own first clip so it is the same beast
+run $V/r_sheep_leap art/sheep/anim leap key=blue mode=range a=42 b=104 step=2 hframe=0 wide=1.5 tall=2.7 size=110 erode=9
+python3 tools/rim_clean.py art/sheep/anim
+run $V/r_bear_run art/bear/anim run mode=range a=48 b=118 step=2 hframe=0 wide=1.8 tall=1.4 size=150
+run $V/r_bear_daze art/bear/anim daze mode=range a=16 b=76 step=3 hframe=0 wide=1.8 tall=1.4 size=150 steady=999
+run $V/r_bear_daze art/bear/anim brace mode=range a=78 b=120 step=3 hframe=0 wide=1.8 tall=1.4 size=150 steady=999
+run $V/r_lion_run art/lion/anim run mode=range a=30 b=118 step=2 hframe=0 halo=0 erode=3 wide=2.2 tall=1.4 size=150
+run $V/r_lion_rake art/lion/anim rake mode=range a=20 b=52 step=2 hframe=0 halo=0 erode=3 wide=2.2 tall=1.4 size=150 steady=999
