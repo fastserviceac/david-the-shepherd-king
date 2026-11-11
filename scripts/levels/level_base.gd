@@ -1085,26 +1085,29 @@ func _cave_mouth(at: Vector2, inside: bool, tint: Color) -> void:
 		var day := add_glow(at + Vector2(-30, -70), Color(0.62, 0.66, 0.85, 0.5), 330.0)
 		day.z_index = 0
 		return
+	# An outcrop of the same painted limestone as every ledge in the game, so it belongs to whatever scene it stands in:
+	# two piers, a cap rock across them, the dark between, and rubble and scrub banked against its feet.
+	var rock: Color = pal.get("char", Color(1, 1, 1))
 	add_painter(at, 0, func(ci: CanvasItem) -> void:
-		for k in 6:          # the opening: darkness deepening inward
-			var f := 1.0 - k / 6.0
-			var pts := PackedVector2Array()
-			for i in 25:
-				var a := TAU * i / 24.0
-				pts.append(Vector2(-10.0 + cos(a) * 124.0 * f, -78.0 + sin(a) * 82.0 * f))
-			ci.draw_colored_polygon(pts, Color(0.01, 0.01, 0.03, 0.55)))
-	# warm scenes get the arch in the warm limestone of their own rocks; dusk and night keep the blue one
-	var warm := tint.r > tint.b * 1.15
-	var arch := add_sprite("res://art/props/cave_arch_warm.png" if warm else "res://art/props/cave_arch.png", at + Vector2(0, 20), 1.0, 1,
-			pal.get("char", Color(1, 1, 1)) * Color(1.22, 1.14, 1.02) if warm else tint)
-	arch.scale = Vector2(0.64, 0.64)
-	# set into the hillside, not stood on it: boulders and scrub banked against its feet
-	for d in [[-168.0, "rock_low", 150.0], [172.0, "rock_mid", 130.0], [-118.0, "d_shrub", 70.0], [126.0, "d_boulder", 78.0], [-196.0, "d_grass", 60.0], [214.0, "d_stones", 70.0]]:
-		var path := "res://art/props/%s.png" % str(d[1])
-		if ResourceLoader.exists(path):
-			var dress := add_sprite(path, at + Vector2(float(d[0]), 12), 1.0, 2, pal.get("char", Color(1, 1, 1)))
-			dress.scale = Vector2.ONE * (float(d[2]) / dress.texture.get_width())
-			dress.flip_h = float(d[0]) > 0.0
+		var pts := PackedVector2Array([Vector2(-78, 10), Vector2(-78, -70)])
+		for i in 13:          # a low rounded opening
+			var a := PI + PI * i / 12.0
+			pts.append(Vector2(cos(a) * 78.0, -70.0 + sin(a) * 58.0))
+		pts.append(Vector2(78, 10))
+		ci.draw_colored_polygon(pts, Color(0.012, 0.01, 0.02))
+		for k in 5:           # the rock just inside the mouth still catches a little of the day
+			var w := 78.0 - k * 9.0
+			ci.draw_rect(Rect2(-w, -8.0 - k * 3.0, w * 2.0, 18.0), Color(rock.r, rock.g, rock.b, 0.035)))
+	var parts := [["rock_mid", -128.0, 6.0, 168.0, false, 1], ["rock_mid", 128.0, 6.0, 172.0, true, 1],
+			["rock_low", 0.0, -96.0, 400.0, false, 1], ["d_boulder", -212.0, 10.0, 96.0, false, 2], ["d_boulder", 216.0, 10.0, 84.0, true, 2],
+			["d_shrub", -168.0, 12.0, 74.0, false, 2], ["d_stones", 168.0, 12.0, 62.0, false, 2], ["d_grass", 238.0, 12.0, 52.0, true, 2]]
+	for d in parts:
+		var path := "res://art/props/%s.png" % str(d[0])
+		if not ResourceLoader.exists(path):
+			continue
+		var sp := add_sprite(path, at + Vector2(float(d[1]), float(d[2])), 1.0, int(d[5]), rock)
+		sp.scale = Vector2.ONE * (float(d[3]) / sp.texture.get_width())
+		sp.flip_h = bool(d[4])
 
 
 ## Through the mouth, either way: a moment of black, and he is on the other side of it.
