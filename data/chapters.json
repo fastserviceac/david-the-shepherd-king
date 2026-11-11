@@ -9,42 +9,58 @@
       "sections": [
         {
           "title": "The Pastures",
-          "script": "res://scripts/levels/section1.gd"
+          "script": "res://scripts/levels/section1.gd",
+          "aim": "Bring the flock into the fold before dark.",
+          "why": "They are his father's sheep, not his own. A shepherd answers for every one of them."
         },
         {
           "title": "The Well",
           "script": "res://scripts/levels/well.gd",
-          "film": "well"
+          "film": "well",
+          "aim": "Water the flock at the well, and count them in.",
+          "why": "Sheep not watered at evening will not last the next day's heat. And the count is how a shepherd learns that one is gone."
         },
         {
           "title": "The Lost Lamb",
           "script": "res://scripts/levels/section2.gd",
-          "film": "count"
+          "film": "count",
+          "aim": "Find the lamb that is missing.",
+          "why": "A hired man would call it one lamb in a flock. The flock is his father's, and he will have to answer for it."
         },
         {
           "title": "The Wadi",
           "script": "res://scripts/levels/wadi.gd",
-          "film": "wadi"
+          "film": "wadi",
+          "aim": "Follow the tracks up the dry riverbed.",
+          "why": "The prints beside the lamb's are a great cat's. Every hour makes it less likely the lamb is alive."
         },
         {
           "title": "The Bear's Den",
           "script": "res://scripts/levels/den.gd",
-          "film": "den"
+          "film": "den",
+          "aim": "Go through the cave the tracks lead into.",
+          "why": "There is no way round it. Whatever lives in here, the lamb was carried this way."
         },
         {
           "title": "The Lion's Ridge",
           "script": "res://scripts/levels/section3.gd",
-          "film": "ridge"
+          "film": "ridge",
+          "aim": "Take the lamb back from the lion.",
+          "why": "This is the night he will tell a king about, when no one believes a boy can fight: \"I went out after it.\""
         },
         {
           "title": "The Night Watch",
           "script": "res://scripts/levels/watch.gd",
-          "film": "watch"
+          "film": "watch",
+          "aim": "Keep the flock through the night.",
+          "why": "A flock that has smelt a lion breaks from the fold at a sound. The night is when a shepherd earns his keep."
         },
         {
           "title": "The Anointing",
           "script": "res://scripts/levels/section4.gd",
-          "film": "dawn"
+          "film": "dawn",
+          "aim": "Bring the whole flock home.",
+          "why": "He does not know yet that a prophet is waiting in his father's house, or what this day will make of him."
         }
       ]
     },

@@ -3,6 +3,7 @@ extends Control
 
 const D = preload("res://scripts/systems/draw_util.gd")
 const FA = preload("res://scripts/systems/frame_anim.gd")
+const STONE = preload("res://art/props/smooth_stone.png")
 
 
 func _ready() -> void:
@@ -134,14 +135,17 @@ func _draw() -> void:
 		draw_arc(s + Vector2(0, -6), 12.0, 0.3, PI - 0.3, 12, Game.CREAM, 2.5, true)
 		draw_circle(s + Vector2(0, 5), 4.0, Game.CREAM)
 
-	# smooth stones: shown for a moment when one is found
+	# the pouch: one small stone for each it can hold, bright while it is in there. Always in the same place,
+	# so nothing jumps; a found stone is announced by one line under it that comes and goes softly
 	var cream := Game.CREAM
-	if stone_t > 0.0 or panel > 0.0:
-		var sa := maxf(clampf(stone_t, 0.0, 1.0), panel)
-		var sp := Vector2(1150.0, 40.0)
-		var st: Texture2D = load("res://art/props/smooth_stone.png")
-		draw_texture_rect(st, Rect2(sp.x - 17.0, sp.y - 13.0, 34.0, 34.0 * st.get_height() / st.get_width()), false, Color(1, 1, 1, sa))
-		draw_string(Game.serif, sp + Vector2(16, 8), "%d" % Game.stones().size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(cream.r, cream.g, cream.b, sa))
+	var cap := Game.pouch_max()
+	for k in cap:
+		var at := Vector2(1196.0 - k * 21.0, 31.0)
+		var full: bool = k < Game.pouch()
+		draw_texture_rect(STONE, Rect2(at.x - 9.0, at.y, 18.0, 18.0 * STONE.get_height() / STONE.get_width()), false, Color(1, 1, 1, 0.95) if full else Color(0.5, 0.5, 0.6, 0.3))
+	if stone_t > 0.0:
+		var sa := clampf(minf(stone_t, 4.0 - stone_t) * 1.5, 0.0, 1.0)
+		draw_string(Game.serif, Vector2(880.0, 78.0), Game.t("Smooth stone  %d of %d") % [Game.stones().size(), Game.stones_total], HORIZONTAL_ALIGNMENT_RIGHT, 370.0, 17, Color(1.0, 0.88, 0.6, sa))
 
 	# a place come upon: its name, quietly, under the top edge
 	if place_t > 0.0:
@@ -190,32 +194,10 @@ func _draw() -> void:
 			draw_circle(tp + Vector2(tw + 16.0 + k * 13.0, -6.0), 3.6, Color(1.0, 0.86, 0.5, ta) if k < int(tt[1]) else Color(1, 1, 1, 0.25 * ta))
 		draw_string(Game.serif, tp + Vector2(0, 22), Game.t(tc["gifts"][int(tt[1]) - 1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(cream.r, cream.g, cream.b, 0.85 * ta))
 
-	# the growth page
+	# the journal, held open with Tab: what he is doing and why, what has been given him and what has not,
+	# how his crafts stand, and what the stones and places he has found are worth
 	if panel > 0.01:
-		var x0 := 330.0
-		var y0 := 190.0
-		draw_rect(Rect2(x0 - 30.0, y0 - 50.0, 680.0, 400.0), Color(0.03, 0.03, 0.07, 0.78 * panel))
-		draw_string(Game.serif, Vector2(x0, y0 - 14.0), Game.t("The making of a shepherd"), HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(1.0, 0.85, 0.5, panel))
-		for i in Game.CRAFT_ORDER.size():
-			var id: String = Game.CRAFT_ORDER[i]
-			var c: Dictionary = Game.CRAFTS[id]
-			var r: int = Game.rank(id)
-			var y := y0 + 30.0 + i * 64.0
-			var his: bool = Game.has(c["gift"])       # not yet given: shown faint
-			draw_string(Game.serif, Vector2(x0, y), Game.t(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(cream.r, cream.g, cream.b, panel * (1.0 if his else 0.4)))
-			for k in 3:
-				draw_circle(Vector2(x0 + 214.0 + k * 20.0, y - 7.0), 6.0, Color(1.0, 0.8, 0.4, panel) if k < r else Color(1, 1, 1, 0.16 * panel))
-			# how far towards the next mark
-			var marks: Array = c["marks"]
-			var lo: float = 0.0 if r == 0 else float(marks[r - 1])
-			var hi: float = float(marks[mini(r, 2)])
-			var f := 1.0 if r >= 3 else clampf((Game.craft_xp(id) - lo) / maxf(hi - lo, 0.001), 0.0, 1.0)
-			draw_rect(Rect2(x0 + 290.0, y - 12.0, 300.0, 8.0), Color(1, 1, 1, 0.12 * panel))
-			draw_rect(Rect2(x0 + 290.0, y - 12.0, 300.0 * f, 8.0), Color(1.0, 0.8, 0.4, 0.9 * panel))
-			var line: String = (Game.t("Grows by %s.") % Game.t(c["by"])) if r == 0 else Game.t(c["gifts"][r - 1])
-			if not his:
-				line = Game.t("Not yet given.")
-			draw_string(Game.serif, Vector2(x0, y + 22.0), line, HORIZONTAL_ALIGNMENT_LEFT, 620.0, 16, Color(cream.r, cream.g, cream.b, 0.7 * panel))
+		_journal(panel)
 
 	var boss = level.boss
 	if boss != null and is_instance_valid(boss):
@@ -226,3 +208,73 @@ func _draw() -> void:
 		draw_rect(Rect2(x, 646, w * float(boss.hp) / float(boss.max_hp), 10), Color(1.0, 0.72, 0.25))
 		for f in [0.33, 0.66]:      # where the fight changes
 			draw_rect(Rect2(x + w * f - 1.0, 644, 2.0, 14), Color(0.05, 0.04, 0.08, 0.9))
+
+
+func _journal(a: float) -> void:
+	var f := Game.serif
+	var cream := Game.CREAM
+	var gold := Color(1.0, 0.85, 0.5, a)
+	var ink := Color(cream.r, cream.g, cream.b, a)
+	var dim := Color(cream.r, cream.g, cream.b, 0.62 * a)
+	draw_rect(Rect2(50, 46, 1180, 628), Color(0.03, 0.03, 0.07, 0.9 * a))
+	draw_rect(Rect2(50, 46, 1180, 628), Color(1.0, 0.85, 0.5, 0.25 * a), false, 1.5)
+	draw_string(f, Vector2(86, 94), Game.t("The shepherd's journal"), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, gold)
+	draw_line(Vector2(86, 108), Vector2(1194, 108), Color(1.0, 0.85, 0.5, 0.3 * a), 1.0)
+
+	# --- where he is, what he is doing there, and why
+	var x := 86.0
+	var sec: Dictionary = Game.sections()[clampi(Game.main.section_idx, 0, Game.sections().size() - 1)]
+	draw_string(f, Vector2(x, 142), Game.t("What he is doing").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
+	draw_string(f, Vector2(x, 172), Game.t(sec["title"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
+	draw_multiline_string(f, Vector2(x, 198), Game.t(str(sec.get("aim", ""))), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 18, 3, ink)
+	draw_string(f, Vector2(x, 272), Game.t("Why").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
+	draw_multiline_string(f, Vector2(x, 296), Game.t(str(sec.get("why", ""))), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 17, 6, dim)
+
+	# --- what he has found, and what it is worth to him
+	draw_line(Vector2(x, 430), Vector2(x + 320, 430), Color(1.0, 0.85, 0.5, 0.2 * a), 1.0)
+	draw_texture_rect(STONE, Rect2(x, 446, 22, 22.0 * STONE.get_height() / STONE.get_width()), false, Color(1, 1, 1, a))
+	draw_string(f, Vector2(x + 32, 464), Game.t("Smooth stones  %d of %d") % [Game.stones().size(), Game.stones_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, ink)
+	draw_string(f, Vector2(x + 32, 488), Game.t("In the pouch  %d of %d") % [Game.pouch(), Game.pouch_max()], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, gold)
+	draw_multiline_string(f, Vector2(x, 512), Game.t("For every three found, the pouch holds one more. A full-wound shot spends one: it strikes harder and staggers any beast. Watchfires refill it."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 5, dim)
+	draw_string(f, Vector2(x, 612), Game.t("Places found  %d of %d") % [Game.places().size(), Game.places_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, ink)
+	draw_multiline_string(f, Vector2(x, 634), Game.t("Each place found makes him whole and strengthens a craft."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 2, dim)
+
+	# --- the six gifts: given, or still to earn and where
+	x = 452.0
+	draw_string(f, Vector2(x, 142), Game.t("Gifts").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
+	for i in Game.GIFT_ORDER.size():
+		var g: Dictionary = Game.GIFTS[Game.GIFT_ORDER[i]]
+		var y := 174.0 + i * 82.0
+		var his: bool = Game.has(Game.GIFT_ORDER[i])
+		draw_circle(Vector2(x + 8, y - 7), 7.0, Color(1.0, 0.82, 0.45, a) if his else Color(1, 1, 1, 0.14 * a))
+		if not his:
+			draw_arc(Vector2(x + 8, y - 7), 7.0, 0.0, TAU, 20, Color(1, 1, 1, 0.4 * a), 1.2, true)
+		draw_string(f, Vector2(x + 26, y), Game.t(g["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, ink if his else dim)
+		if his:
+			draw_multiline_string(f, Vector2(x + 26, y + 20), Game.t(g["line"]) + "  " + Game.t(g["why"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 14, 3, dim)
+		else:
+			draw_string(f, Vector2(x + 26, y + 20), Game.t("Still to earn").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.85, 0.5, 0.75 * a))
+			draw_multiline_string(f, Vector2(x + 26, y + 38), Game.t(g["how"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 15, 2, ink)
+
+	# --- the five crafts: slow strengthening of what he has
+	x = 866.0
+	draw_string(f, Vector2(x, 142), Game.t("Crafts").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
+	for i in Game.CRAFT_ORDER.size():
+		var id: String = Game.CRAFT_ORDER[i]
+		var c: Dictionary = Game.CRAFTS[id]
+		var r: int = Game.rank(id)
+		var y := 174.0 + i * 96.0
+		var his: bool = Game.has(c["gift"])
+		draw_string(f, Vector2(x, y), Game.t(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, ink if his else dim)
+		for k in 3:
+			draw_circle(Vector2(x + 270.0 + k * 18.0, y - 7.0), 5.5, Color(1.0, 0.8, 0.4, a) if k < r else Color(1, 1, 1, 0.16 * a))
+		var marks: Array = c["marks"]
+		var lo: float = 0.0 if r == 0 else float(marks[r - 1])
+		var hi: float = float(marks[mini(r, 2)])
+		var fill := 1.0 if r >= 3 else clampf((Game.craft_xp(id) - lo) / maxf(hi - lo, 0.001), 0.0, 1.0)
+		draw_rect(Rect2(x, y + 10.0, 320.0, 6.0), Color(1, 1, 1, 0.12 * a))
+		draw_rect(Rect2(x, y + 10.0, 320.0 * fill, 6.0), Color(1.0, 0.8, 0.4, 0.9 * a))
+		var line: String = (Game.t("Grows by %s.") % Game.t(c["by"])) if r == 0 else Game.t(c["gifts"][r - 1])
+		if not his:
+			line = Game.t("Not yet given.")
+		draw_multiline_string(f, Vector2(x, y + 36.0), line, HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 2, dim)

@@ -1370,6 +1370,7 @@ func respawn() -> void:
 	if in_cave != null:
 		_cave_state(null)
 	player.reset_to(on_ground(checkpoints[cp_index]))
+	Game.fill_pouch()
 	if not ambush.is_empty() and not ambush["cleared"] and not ambush["walls"].is_empty():
 		ambush["run"] += 1          # the pack melts back into the dark; it will come again
 		_clear_ambush()
@@ -1392,6 +1393,7 @@ func _physics_process(_delta: float) -> void:
 		if px >= checkpoints[i]:
 			cp_index = i
 			player.hp = player.max_hp
+			Game.fill_pouch()
 			if cp_fires[i] != null:
 				cp_fires[i].visible = true
 				cp_cairns[i].modulate = Color(1, 1, 1)
@@ -1410,6 +1412,10 @@ func _physics_process(_delta: float) -> void:
 			ks[0].queue_free()
 			ks[2].queue_free()
 			Game.find_stone(ks[1])
+			if Game.stones().size() == 3:
+				show_tip("Three smooth stones: one for the pouch.  A full-wound shot with it staggers any beast", 8.0)
+			elif Game.stones().size() % 3 == 0 and Game.stones().size() <= 15:
+				show_tip("The pouch holds one more", 4.0)
 			if Game.stones().size() == 5:
 				say(["n_five_stones"])
 

@@ -164,7 +164,7 @@ func start_section(idx: int, checkpoint: int = 0) -> void:
 	if checkpoint == 0:
 		var ch: Dictionary = Game.chapters[0]
 		Game.cinematic = true
-		await overlay.title_card(Game.t("Chapter %s  ·  %s") % [Game.t(ch["number"]), Game.t(ch["title"])], Game.t(Game.sections()[idx]["title"]))
+		await overlay.title_card(Game.t("Chapter %s  ·  %s") % [Game.t(ch["number"]), Game.t(ch["title"])], Game.t(Game.sections()[idx]["title"]), Game.t(str(Game.sections()[idx].get("aim", ""))))
 		Game.cinematic = false
 		if is_instance_valid(level) and section_idx == idx:
 			level.begin()

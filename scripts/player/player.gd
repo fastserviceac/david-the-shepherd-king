@@ -409,6 +409,10 @@ func _fire() -> void:
 	var s = Stone.new()
 	s.vel = _aim_velocity()
 	s.dmg = (3 if Game.rank("eye") >= 3 else 2) if charge >= 0.75 else 1
+	if charge >= 0.75 and Game.pouch() > 0:      # a smooth stone from the pouch
+		Game.save["pouch"] = Game.pouch() - 1
+		s.smooth = true
+		s.dmg += 2
 	s.tint = tint.lerp(Color(1, 1, 1), 0.35)
 	get_parent().add_child(s)
 	s.global_position = global_position + _hand()

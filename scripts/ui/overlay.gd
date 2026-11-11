@@ -203,7 +203,7 @@ func title_card(top: String, title: String, sub: String = "") -> void:
 	var tw := create_tween()
 	for l in [card_top, card_title, card_sub]:
 		tw.parallel().tween_property(l, "modulate:a", 1.0, 0.9)
-	tw.tween_interval(1.8)
+	tw.tween_interval(1.8 if sub == "" else 3.4)      # long enough to read what he is here to do
 	for l in [card_top, card_title, card_sub]:
 		tw.parallel().tween_property(l, "modulate:a", 0.0, 0.8)
 	await tw.finished

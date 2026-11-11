@@ -55,7 +55,12 @@ func can_clinch() -> bool:
 func hit(dmg: int, from_dir: int, kind: String) -> void:
 	if fleeing or state == "roar" or state == "lurk":
 		return
-	if kind == "stone":
+	if kind == "smooth":          # a smooth stone from the pouch: whatever it was doing, it reels
+		state = "reel"
+		st = 1.5
+		Game.sfx("lion_roar", -6.0)
+		super.hit(dmg, from_dir, "stone")
+	elif kind == "stone":
 		match state:
 			"crouch", "rake":           # caught as it gathers: the spring is broken
 				state = "reel"

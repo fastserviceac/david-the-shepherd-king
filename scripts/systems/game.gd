@@ -12,6 +12,8 @@ var _ui_pt: Dictionary = {}
 var save: Dictionary = {}
 var main: Node = null
 
+var stones_total := 0     # every smooth stone and every place there is to find, counted from the map
+var places_total := 0
 var gifting := false     # a gift is being given: the world holds still, but its name is shown
 var cinematic := false   # story scene playing: player and enemies hold still
 var backdrop := false    # level is only a background for the menu
@@ -161,6 +163,10 @@ func _load_data() -> void:
 			narration.merge(_read_json(ch["narration"]).get("lines", {}))
 			narration_pt.merge(_read_json(str(ch["narration"]).replace(".json", ".pt.json")).get("lines", {}))
 	_ui_pt = _read_json("res://data/ui.pt.json")
+	var places: Dictionary = _read_json("res://data/map.json").get("places", {})
+	for k in places:
+		stones_total += (places[k].get("stones", []) as Array).size()
+		places_total += (places[k].get("finds", []) as Array).size()
 
 
 ## Sections of the playable chapter.
@@ -186,6 +192,8 @@ func load_game() -> void:
 		for pair in [["voice", 1], ["feet", 2], ["eye", 2], ["heart", 1]]:
 			if rank(pair[0]) >= int(pair[1]):
 				give(pair[0], true)
+	if not on_disk.has("pouch"):      # a journey begun before the pouch: it starts full
+		fill_pouch()
 	save["section"] = int(save["section"])
 	save["checkpoint"] = int(save["checkpoint"])
 	save["unlocked"] = int(save["unlocked"])
@@ -228,12 +236,12 @@ signal stone_found(total: int)
 signal place_found(name: String)
 
 const GIFTS := {
-	"voice": {"name": "The Shepherd's Voice", "line": "Sheep that hear his call come to him.", "key": "Q  call", "craft": "voice", "after": 0},
-	"hand": {"name": "The Strong Hand", "line": "Blow follows blow: strike again as each one lands.", "key": "J  J  J  chain the blows", "craft": "hand", "after": 1},
-	"sling": {"name": "The Sling", "line": "A stone, whirled and let fly.", "key": "K  hold, then release", "craft": "eye", "after": 2},
-	"eye": {"name": "The Sure Eye", "line": "He sees the whole flight of the stone before he lets it go.", "key": "↑ ↓  aim as he winds", "craft": "eye", "after": 3},
-	"heart": {"name": "The Steady Heart", "line": "One more heart.", "key": "", "craft": "heart", "after": 4},
-	"feet": {"name": "The Swift Feet", "line": "The running leap: jump at a full run to go higher and farther.", "key": "Run, then Space", "craft": "feet", "after": 5},
+	"voice": {"name": "The Shepherd's Voice", "line": "Sheep that hear his call come to him.", "key": "Q  call", "craft": "voice", "why": "A flock is led, not driven. The shepherd goes ahead, and they follow his voice.", "how": "In the Pastures: bring in four sheep by hand.", "after": 0},
+	"hand": {"name": "The Strong Hand", "line": "Blow follows blow: strike again as each one lands.", "key": "J  J  J  chain the blows", "craft": "hand", "why": "His staff is all there is between the flock and what hunts it.", "how": "At the Well: move the stone, and hold the water.", "after": 1},
+	"sling": {"name": "The Sling", "line": "A stone, whirled and let fly.", "key": "K  hold, then release", "craft": "eye", "why": "It reaches what the staff cannot.", "how": "In the ravine: drive the pack from the brook.", "after": 2},
+	"eye": {"name": "The Sure Eye", "line": "He sees the whole flight of the stone before he lets it go.", "key": "↑ ↓  aim as he winds", "craft": "eye", "why": "A stone that misses is a stone wasted, and the beast is already moving.", "how": "In the Wadi: break the three jars, and bring every boulder down.", "after": 3},
+	"heart": {"name": "The Steady Heart", "line": "One more heart.", "key": "", "craft": "heart", "why": "He stood where he could have run. That is kept.", "how": "In the Bear's Den: drive off the bear.", "after": 4},
+	"feet": {"name": "The Swift Feet", "line": "The running leap: jump at a full run to go higher and farther.", "key": "Run, then Space", "craft": "feet", "why": "A lamb in a lion's mouth is lost in the time it takes to walk.", "how": "On the Ridge: reach the light at a run.", "after": 5},
 }
 const GIFT_ORDER := ["voice", "hand", "sling", "eye", "heart", "feet"]
 
@@ -320,6 +328,22 @@ func gifts_for(section_idx: int) -> void:
 		save["has_sling"] = true
 
 
+## The shepherd's pouch. Smooth stones are what the sling was made for: for every three he has found, the pouch
+## holds one more (five at most, as at the brook of Elah). A full-wound shot takes a smooth stone from the pouch
+## if there is one: it flies true, strikes harder, and staggers even a bear or a lion. The pouch is filled again
+## at every watchfire.
+func pouch_max() -> int:
+	return mini(5, stones().size() / 3)
+
+
+func pouch() -> int:
+	return clampi(int(save.get("pouch", 0)), 0, pouch_max())
+
+
+func fill_pouch() -> void:
+	save["pouch"] = pouch_max()
+
+
 func stones() -> Array:
 	return save.get("stones", [])
 
@@ -330,6 +354,8 @@ func find_stone(id: String) -> void:
 		return
 	list.append(id)
 	save["stones"] = list
+	if list.size() % 3 == 0 and list.size() <= 15:      # the pouch has grown: it is filled on the spot
+		fill_pouch()
 	grow("eye", 1.0)
 	save_game()
 	stone_found.emit(list.size())

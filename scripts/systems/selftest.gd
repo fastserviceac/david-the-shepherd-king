@@ -130,6 +130,14 @@ func _s1(lv) -> void:
 	await lv._cave_pass(null, cv)
 	await _frames(5)
 	_check(lv.in_cave == null and absf(lv.player.global_position.x - cv["door"]) < 30.0 and lv.dark_amount < 0.1, "and he comes out where he went in")
+	var kept_stones: Array = Game.stones().duplicate()
+	Game.save["stones"] = ["a", "b"]
+	_check(Game.pouch_max() == 0, "two smooth stones do not yet fill a pouch")
+	Game.find_stone("c")
+	_check(Game.pouch_max() == 1 and Game.pouch() == 1, "the third smooth stone puts one in the pouch")
+	Game.save["stones"] = kept_stones
+	Game.fill_pouch()
+	_check(Game.stones_total >= 17 and Game.places_total >= 8, "the journal knows how many stones and places there are (%d, %d)" % [Game.stones_total, Game.places_total])
 	var had_places: Array = Game.places().duplicate()
 	Game.save["places"] = []
 	for pl in lv.finds:
@@ -592,6 +600,19 @@ func placeshots(m, dir: String) -> void:
 	Game.cinematic = false
 	Game.save["places"] = []
 	Game.save["has_sling"] = true
+	if OS.has_environment("JOURNAL_ONLY"):
+		await m.load_level(_index("section2"), 0)
+		Game.cinematic = false
+		for lg in ["en", "pt"]:
+			Game.save["lang"] = lg
+			Input.action_press("growth")
+			await _frames(40)
+			await _snap(dir, "journal_" + lg)
+			Input.action_release("growth")
+			await _frames(20)
+		print("PLACESHOTS done")
+		tree.quit()
+		return
 	for name in ([] if OS.has_environment("CAVES_ONLY") else ["section1", "well", "section2", "wadi", "den", "section3", "watch", "section4"]):
 		await m.load_level(_index(name), 0)
 		var lv = m.level

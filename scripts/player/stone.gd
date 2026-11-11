@@ -10,6 +10,7 @@ var trail: Array = []
 var tex: Texture2D
 var spin := 0.0
 var tint := Color(1, 1, 1)
+var smooth := false      # one of the smooth stones from his pouch: it staggers what it strikes
 
 
 func _ready() -> void:
@@ -32,7 +33,10 @@ func _physics_process(delta: float) -> void:
 		var c: Vector2 = n.global_position + Vector2(0, -n.hit_h * 0.5)
 		var reach: float = n.hit_r + 7.0
 		if absf(c.x - to.x) < reach and absf(c.y - to.y) < maxf(reach, n.hit_h * 0.5 + 7.0):
-			n.hit(dmg, 1 if vel.x >= 0.0 else -1, "stone")
+			n.hit(dmg, 1 if vel.x >= 0.0 else -1, "smooth" if smooth and n.has_method("is_open") else "stone")
+			if smooth:
+				Game.hitstop(0.09)
+				Game.burst(get_parent(), to, Color(1.0, 0.95, 0.8, 0.95), 16, 190.0)
 			Game.grow("eye", 1.0)
 			_end(to)
 			return
