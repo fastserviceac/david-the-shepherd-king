@@ -52,6 +52,8 @@ run $V/n_hop $D hop mode=range a=13 b=40 step=1 hframe=0 soft=1 steady=3     # t
 python3 tools/anchor.py hop 27
 run $V/n_call $D call mode=range a=14 b=118 step=4 hframe=0 soft=1 steady=999 wide=1.6     # hand to his mouth, then beckoning
 python3 tools/anchor.py call 0
+run $V/n2_clinch $D clinch mode=range a=20 b=132 step=4 hframe=0 soft=1 steady=3 wide=1.8     # seizing a spent beast: arms locked, braced
+python3 tools/anchor.py clinch 0
 # kneeling: one cut of the whole clip, dealt into going down, staying down and rising (tools/kneel_split.py)
 mkdir -p $V/kn_cut; run $V/n_kneel $V/kn_cut kn mode=range a=16 b=188 step=2 hframe=0 soft=1 steady=999 wide=2.0
 python3 tools/kneel_split.py $V/kn_cut

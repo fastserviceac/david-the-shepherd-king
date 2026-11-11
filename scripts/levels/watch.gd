@@ -84,6 +84,8 @@ func _populate() -> void:
 		Game.sfx("fire", -2.0)
 		Game.burst(self, fp + Vector2(0, -30), Color(1.0, 0.7, 0.3, 0.9), 18, 160.0))
 	fire_task["on"] = false
+	var lyre := add_sprite("res://art/props/lyre.png", on_ground(SEAT + 58.0) + Vector2(0, 4), 1.0, 3, Color(0.7, 0.7, 0.85))      # his kinnor, laid down by the stone
+	lyre.scale = Vector2.ONE * (64.0 / lyre.texture.get_width())
 	rest_task = add_task(SEAT, "sit, and look up", 2.0, _rest)
 	rest_task["on"] = false
 
