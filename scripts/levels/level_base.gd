@@ -1287,9 +1287,9 @@ func add_bridge(x0: float, x1: float, y: float) -> Callable:
 	return func() -> void:
 		body.visible = true
 		cs.set_deferred("disabled", false)
-		Game.sfx("bridge", 0.0)
 		if Game.fast:
 			return
+		get_tree().create_timer(0.42).timeout.connect(func() -> void: Game.sfx("logs", 1.0, 0.04))      # heard as the logs land, not as they start to fall
 		sp.position = Vector2(0, -280)
 		sp.rotation = -0.45
 		var tw := create_tween().set_parallel(true)

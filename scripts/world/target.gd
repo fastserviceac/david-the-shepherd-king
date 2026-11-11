@@ -25,7 +25,7 @@ func hit(_dmg: int, _dir: int, kind: String) -> void:
 		Game.sfx("stone_hit", -8.0, 0.1)
 		return
 	Game.burst(get_parent(), global_position, Color(1.0, 0.8, 0.5, 0.9), 20, 220.0)
-	Game.sfx("jar", -2.0)
+	Game.sfx("jar", -9.0)
 	struck.emit()
 	queue_free()
 
