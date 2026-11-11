@@ -45,7 +45,7 @@ func _setup() -> void:
 func _populate() -> void:
 	# a side cave: a refuge. Its inner floor is too high to climb; a boulder on its lip, brought down
 	# with the sling, makes the step
-	var c3 := add_cave(3120.0, [[760.0, 0.0], [700.0, 150.0]], Color(0.6, 0.55, 0.72), "res://art/props/mouth_wadi.png")
+	var c3 := add_cave(3120.0, [[760.0, 0.0], [700.0, 150.0]], Color(0.6, 0.55, 0.72), "res://art/props/mouth_wadi_hf.png")
 	add_embers(c3["x0"] + 280.0)
 	var step_at: float = c3["floors"][1] - 80.0
 	add_boulder(Vector2(c3["floors"][1] + 34.0, c3["base"] - 150.0), Rect2(step_at, c3["base"] - 72.0, 76.0, 72.0))      # it sits on the lip of the inner floor

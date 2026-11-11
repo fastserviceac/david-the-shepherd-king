@@ -1071,7 +1071,8 @@ func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55,
 	# the mouth outside, on the path; and the same mouth seen from within, with the day behind it
 	if mouth_art != "" and ResourceLoader.exists(mouth_art):      # painted for this scene, opening and all
 		var mp := add_sprite(mouth_art, on_ground(door_x) + Vector2(0, 12), 1.0, 1)
-		mp.scale = Vector2.ONE * (350.0 / mp.texture.get_width())
+		# wide enough to read as an outcrop, and never so low that he could not walk in
+		mp.scale = Vector2.ONE * maxf(350.0 / mp.texture.get_width(), 124.0 / mp.texture.get_height())
 	else:
 		_cave_mouth(on_ground(door_x), false, mouth_tint)
 	_cave_mouth(on_ground(x0 + 110.0), true, mouth_tint)
