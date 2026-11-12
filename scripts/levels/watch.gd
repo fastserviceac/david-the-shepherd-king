@@ -47,6 +47,7 @@ func _setup() -> void:
 
 var gap_shut := false       # the gap in the fold wall, stopped with cut thorn for the night
 var has_thorn := false
+var watch_run := -1
 
 
 ## Before the watch: thorn is cut from the brake beyond the fire and the gap in the wall is stopped with it.
@@ -63,6 +64,8 @@ func _thorn_gate() -> void:
 	var stop := add_task(FOLD - 110.0, "stop the gap with thorn", 1.2, func() -> void:
 		if not has_thorn:
 			show_tip("Nothing to stop it with.  There is a thorn brake beyond the fire", 6.0)
+			return
+		if gap_shut:
 			return
 		gap_shut = true
 		Game.sfx("gather", -8.0, 0.0)
@@ -134,6 +137,9 @@ func _keep_watch() -> void:
 	if not gap_shut:          # the fold is not ready: a gap in a wall is a door for anything
 		show_tip("The gap of the fold stands open.  Cut thorn and stop it before the watch", 6.0)
 		return
+	if watch_run == int(holder["run"]):      # the watch is already being kept: one night, not two at once
+		return
+	watch_run = holder["run"]
 	var run: int = holder["run"]
 	if hour == 0:
 		for s in followers:          # the lamb goes in with the rest
@@ -264,3 +270,32 @@ func _process(delta: float) -> void:
 	fire_light["r"] = 210.0 + 330.0 * fire_level
 	fire_glow.scale = Vector2.ONE * (0.6 + 0.6 * fire_level) * (1.0 + sin(Time.get_ticks_msec() * 0.012) * 0.06)
 	holder["warning"] = 0.7 + 0.6 * fire_level        # a good fire shows their eyes sooner
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if not gap_shut:
+		if has_thorn:
+			return "Stop the gap in the fold wall, west"
+		return "Cut thorn at the brake, beyond the fire"
+	match hour:
+		0, 1:
+			return "Hold the fold against the beasts"
+		2:
+			return "Call the strayed sheep back (Q)"
+		3:
+			return "Hold the fold against the second wave"
+		4:
+			if not fed:
+				return "Feed the watchfire"
+			if not rested:
+				return "Sit on the stone and look up"
+			return "Keep the watch"
+	return "Keep the watch until dawn"

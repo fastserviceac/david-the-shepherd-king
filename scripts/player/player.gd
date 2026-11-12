@@ -362,7 +362,10 @@ func _staff_hit() -> void:
 		var ahead: float = (n.global_position.x - global_position.x) * facing
 		var dy: float = absf((n.global_position.y - n.hit_h * 0.5) - (global_position.y - 30.0))
 		if ahead > -18.0 and ahead < reach + n.hit_r and dy < 60.0 + n.hit_h * 0.5:
-			n.hit(dmg * (2 if opening_t > 0.0 else 1), facing, "staff")
+			var d := dmg
+			if n.get("lesser") == true:      # on a jackal the blow is as strong as he has grown
+				d = Game.blow("staff") + dmg - 1
+			n.hit(d * (2 if opening_t > 0.0 else 1), facing, "staff")
 			if combo == 2 and hand >= 2 and n.get("kb") != null:      # thrown back
 				n.kb = maxf(n.kb, 0.35)
 				n.velocity.x = facing * 300.0
@@ -413,6 +416,7 @@ func _fire() -> void:
 		Game.save["pouch"] = Game.pouch() - 1
 		s.smooth = true
 		s.dmg += 3 if Game.all_stones() else 2
+	s.lesser_dmg = Game.blow("stone", charge >= 0.75) + (3 if s.smooth else 0)
 	s.tint = tint.lerp(Color(1, 1, 1), 0.35)
 	get_parent().add_child(s)
 	s.global_position = global_position + _hand()
@@ -463,6 +467,9 @@ func _escaped(from_x: float) -> void:
 ## Seizing a beast. Only one that is spent (panting after its own attack) can be held;
 ## any other throws him off.
 func _try_clinch() -> void:
+	var lv = get_parent()
+	if lv != null and lv.get("task_now") != null:      # E is for the work at his feet, not for the beast beside him
+		return
 	var best = null
 	var best_d := 96.0
 	for n in get_tree().get_nodes_in_group("hittable"):

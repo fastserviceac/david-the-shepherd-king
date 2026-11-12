@@ -9,7 +9,8 @@ var worrying := 0.0      # seconds since it was last at a sheep's side
 func _init_enemy() -> void:
 	anim = "jackal"
 	stride = 170.0
-	hp = 2
+	hp = 6          # five blows of a boy's staff; two when his hand is strong (Game.blow)
+	lesser = true
 	speed = 95.0
 	hit_r = 24.0
 	hit_h = 30.0
@@ -64,8 +65,8 @@ func _worry(_delta: float, dx: float, dy: float) -> bool:
 	var prey = null
 	var best := 420.0
 	for s in get_tree().get_nodes_in_group("sheep"):
-		if not is_instance_valid(s) or not (s.gathered or s.gatherable or s.prey) or s.leap >= 0.0:
-			continue
+		if not is_instance_valid(s) or not (s.gathered or s.gatherable or s.prey) or s.leap >= 0.0 or s.mark.a > 0.0 or s.safe:
+			continue      # another man's sheep, or one the story has taken out of his keeping, is not his to lose
 		var sx: float = s.global_position.x
 		if sx < min_x - 30.0 or sx > max_x + 30.0 or absf(s.global_position.y - global_position.y) > 80.0:
 			continue

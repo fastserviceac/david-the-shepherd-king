@@ -282,13 +282,13 @@ const CRAFTS := {
 		"He runs a little faster.",
 		"He runs faster.",
 		"Faster still, and he is ready to dodge again sooner."]},
-	"hand": {"name": "Strong Hand", "by": "blows landed with the staff", "marks": [30, 150, 450], "gift": "hand", "gifts": [
-		"The staff reaches farther.",
-		"The rising blow lands harder and throws a beast back.",
+	"hand": {"name": "Strong Hand", "by": "blows landed with the staff", "marks": [14, 110, 380], "gift": "hand", "gifts": [
+		"The staff reaches farther and strikes harder: three blows drive off a jackal, not five.",
+		"Harder again: two blows drive off a jackal. The rising blow throws a beast back.",
 		"The low sweep lands harder, and blows chain more easily."]},
 	"eye": {"name": "Sure Eye", "by": "stones that find their mark", "marks": [6, 30, 90], "gift": "sling", "gifts": [
 		"The sling comes up to speed sooner.",
-		"A full-wound stone flies faster.",
+		"A full-wound stone flies faster, and every stone strikes harder.",
 		"A full-wound stone strikes harder."]},
 	"heart": {"name": "Steady Heart", "by": "blows escaped and beasts driven off", "marks": [10, 45, 140], "gift": "heart", "gifts": [
 		"After a clean escape the opening lasts longer.",
@@ -304,6 +304,18 @@ const CRAFT_ORDER := ["feet", "hand", "eye", "heart", "voice"]
 
 func craft_xp(craft: String) -> float:
 	return float(save.get("growth", {}).get(craft, 0.0))
+
+
+## How hard one blow lands on a lesser beast (a jackal has 6). It grows with him: the staff with the Strong Hand,
+## the sling with hand and eye both, and a stone always tells more than the staff does.
+##   staff, hand 0-3:  1, 2, 3, 3 a blow (the third of a chain one more)  ->  5, 3, 2, 2 blows to drive a jackal off
+##   stone, loosed quick:  one more than the staff.   Full-wound: twice that, and more again with the Sure Eye
+func blow(kind: String, full: bool = false) -> int:
+	var staff: int = [1, 2, 3, 3][clampi(rank("hand"), 0, 3)]
+	if kind == "staff":
+		return staff
+	var quick := staff + 1 + (1 if rank("eye") >= 2 else 0)
+	return quick * 2 + (2 if rank("eye") >= 3 else 0) if full else quick
 
 
 func rank(craft: String) -> int:

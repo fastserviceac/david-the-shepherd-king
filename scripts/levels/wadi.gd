@@ -3,6 +3,13 @@ extends "res://scripts/levels/level_base.gd"
 ## come down to a sling stone: as a step, as a plug in a gap, or onto whatever waits underneath.
 
 var shelf: Rect2
+var b1                    # the boulders, in the order they stand
+var b2
+var b3
+var b4
+var b5
+var jars := {"n": 0}      # jars still hanging in the dead acacia
+var _far := 0.0           # the farthest he has come, for the goal
 var end_x := 7660.0       # the bear's cave, at the head of the wadi
 
 
@@ -81,7 +88,7 @@ func _populate() -> void:
 	add_wool(4720.0, 34.0)
 
 	# first step: a boulder for a stair
-	var b1 = add_boulder(Vector2(1185.0, 400.0), Rect2(1232.0, 555.0, 72.0, 55.0))
+	b1 = add_boulder(Vector2(1185.0, 400.0), Rect2(1232.0, 555.0, 72.0, 55.0))
 	add_hint(1040.0, 190.0, "K  bring the boulder down")
 	add_trigger(820.0, 960.0, func() -> void: say(["n_wadi_boulder"]))
 
@@ -93,18 +100,18 @@ func _populate() -> void:
 	# under the shelf a pair of jackals hold the riverbed; over them, on the shelf's lip, a boulder
 	add_jackal(2380.0, 2250.0, 2580.0)
 	add_jackal(2500.0, 2250.0, 2580.0)
-	var b2 = add_boulder(Vector2(2478.0, 312.0), Rect2(2466.0, 445.0, 72.0, 55.0))
+	b2 = add_boulder(Vector2(2478.0, 312.0), Rect2(2466.0, 445.0, 72.0, 55.0))
 
 	# the gap: a slab perched over it comes down as a bridge
-	var b3 = add_boulder(Vector2(2548.0, 340.0), Rect2(2596.0, 498.0, 188.0, 60.0))
+	b3 = add_boulder(Vector2(2548.0, 340.0), Rect2(2596.0, 498.0, 188.0, 60.0))
 	add_hint(2470.0, 250.0, "Look up")
 
 	add_jackal(3300.0, 3000.0, 3720.0)
 	# last step: the boulder sits high. Throw high
-	var b4 = add_boulder(Vector2(3882.0, 262.0), Rect2(3934.0, 445.0, 72.0, 55.0))
+	b4 = add_boulder(Vector2(3882.0, 262.0), Rect2(3934.0, 445.0, 72.0, 55.0))
 	b4.gate = "eye"          # the way on asks for the gift given just below it
 	# the gift of this place: the sure eye. Every boulder below brought down, the one over the jackals too
-	var jars := {"n": 3}
+	jars = {"n": 3}
 	if not Game.has("eye") and not Game.backdrop:
 		var tip := 3740.0      # a dead acacia, and three jars hung in it at three heights: a marksman's test
 		var gy := on_ground(3600.0).y
@@ -142,7 +149,7 @@ func _upper_wadi() -> void:
 	if Game.backdrop:
 		return
 	# the last break: a slab the floods left on a perch comes down across it
-	add_boulder(Vector2(5650.0, 232.0), Rect2(5716.0, 388.0, 200.0, 60.0))
+	b5 = add_boulder(Vector2(5650.0, 232.0), Rect2(5716.0, 388.0, 200.0, 60.0))
 	add_hint(5560.0, 230.0, "The bed is broken ahead.  Look up")
 	# where the trails part: he must read the ground to know which is the lamb's
 	add_tracks(5980.0, 6200.0, true)
@@ -161,3 +168,50 @@ func _upper_wadi() -> void:
 		Game.music(mood, 2.5)
 		show_tip("Ahead, the rock opens.  The broad tracks go straight in"))
 	add_tracks(7460.0, end_x - 60.0, true)
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	var f := _far
+	if not ambush.is_empty():
+		if ambush["cleared"]:
+			return "Go into the bear's cave, east"
+		if not ambush["walls"].is_empty():
+			return "Drive off the pack in the narrow wadi"
+	if f < 1232.0:
+		if f > 900.0 and is_instance_valid(b1) and not b1.fallen:
+			return "Bring the boulder down for a step"
+		return "Follow the tracks up the wadi, east"
+	if f < 2200.0:
+		return "Follow the broad tracks, not the small ones"
+	if f < 2790.0:
+		if is_instance_valid(b2) and not b2.fallen:
+			return "Drop the boulder on the jackals below"
+		if is_instance_valid(b3) and not b3.fallen:
+			return "Sling the slab down to bridge the gap"
+		return "Follow the broad tracks, east"
+	if f < 4000.0:
+		if not Game.has("eye"):
+			if jars["n"] > 0:
+				return "Break the three jars in the dead tree"
+			if not (b1.fallen and b2.fallen and b3.fallen):
+				return "Bring down every boulder you passed, back west"
+			return "Step into the light under the dead tree"
+		if is_instance_valid(b4) and not b4.fallen:
+			return "Sling the high boulder down for a step"
+		return "Follow the broad tracks, east"
+	if f < 5500.0:
+		return "Follow the broad tracks up the wadi, east"
+	if f < 5930.0:
+		if is_instance_valid(b5) and not b5.fallen:
+			return "Sling the slab down to bridge the break"
+		return "Follow the broad tracks, east"
+	return "Follow the broad tracks to the cave, east"

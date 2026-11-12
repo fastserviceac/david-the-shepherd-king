@@ -11,6 +11,7 @@ var bear
 var bear_started := false
 var walls: Array = []
 var lit_once := false
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 var out_x := 6720.0       # where the cave lets him out, far beyond the bear's floor
@@ -180,3 +181,24 @@ func _back_passages() -> void:
 	add_jackal(6300.0, 6180.0, 6600.0)
 	add_jackal(6480.0, 6180.0, 6600.0)
 	add_tracks(6560.0, out_x - 40.0, true)
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if bear_started:
+		if not is_instance_valid(bear) or not bear.fleeing:
+			return "Drive the bear off"
+		return "Leave the cave, east"
+	if _far > 4540.0:
+		return "Leave the cave, east"
+	if not lit_once:
+		return "Light a torch at the embers"
+	return "Follow the cave east, keep your torch lit"

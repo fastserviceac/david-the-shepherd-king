@@ -62,6 +62,9 @@ var gift_spots: Array = []    # where a gift waits: {id, x, ready, wait, node, n
 var caves: Array = []         # side caves: rooms off the path, built far beyond the level's end and entered through a cave mouth
 var in_cave = null
 var finds: Array = []         # places off the path, not yet come upon: {id, at, name, craft, glow}
+var goal := ""               # what he is to do now, always on the screen in a few plain words
+var goal_was := ""           # the one just finished, shown struck through for a moment
+var goal_t := 99.0           # seconds since the goal last changed
 var keepsakes: Array = []     # smooth stones still lying here: [node, id]
 var ambush := {}              # a pack closing in: walls, beasts and the trigger that starts it
 var tasks: Array = []         # places where he does something with his hands by holding the grab key
@@ -1479,6 +1482,7 @@ func respawn() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	goal_t += _delta
 	if not is_instance_valid(player) or Game.backdrop or done:
 		return
 	var px: float = player.global_position.x
@@ -1601,10 +1605,25 @@ func _process(_delta: float) -> void:
 ## and come out at its last watchfire. Earlier places hold things only later gifts can reach.
 func _way_back() -> void:
 	if section_idx <= 0 or Game.backdrop or not is_instance_valid(Game.main):
+		_way_on()
 		return
 	var prev: String = Game.t(Game.sections()[section_idx - 1]["title"])
 	var tk := add_task(46.0, Game.t("Go back to %s") % prev, 0.7, func() -> void:
 		Game.main.start_section(section_idx - 1, 99), 60.0)
+	tk["again"] = true
+	_way_on()
+
+
+## A place he has already finished he need not finish again to leave: the road on stands open at its far end.
+func _way_on() -> void:
+	var secs: Array = Game.sections()
+	if Game.backdrop or not is_instance_valid(Game.main) or section_idx + 1 >= secs.size():
+		return
+	if int(Game.save.get("unlocked", 0)) <= section_idx:
+		return
+	var nxt: String = Game.t(secs[section_idx + 1]["title"])
+	var tk := add_task(width - 46.0, Game.t("Go on to %s") % nxt, 0.7, func() -> void:
+		Game.main.start_section(section_idx + 1, 0), 60.0)
 	tk["again"] = true
 
 
@@ -1668,6 +1687,8 @@ func _update_push(delta: float) -> void:
 		return
 	var dir := Input.get_axis("move_left", "move_right")
 	for pb in pushables:
+		if not is_instance_valid(pb["body"]):
+			continue
 		var body: StaticBody2D = pb["body"]
 		if not pb["on"] or not is_instance_valid(body) or absf(dir) < 0.3 or not player.is_on_floor():
 			continue
@@ -1951,6 +1972,18 @@ func _update_prompt(delta: float) -> void:
 
 
 ## A short lesson from the fight, said once it has been earned (a blow turned, a spring missed).
+## What the player is to do now. Call it whenever a step is finished: the old one is ticked off on the screen and
+## the new one written under it, so he always knows both that he has done it and what comes next.
+func set_goal(text: String) -> void:
+	if text == goal:
+		return
+	goal_was = goal
+	goal = text
+	goal_t = 0.0
+	if goal_was != "" and not Game.fast and not Game.backdrop:
+		Game.sfx("gather", -12.0, 0.0)
+
+
 func show_tip(text: String, seconds: float = 4.5) -> void:
 	tip = text
 	tip_t = seconds

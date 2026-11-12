@@ -11,6 +11,7 @@ var lion_started := false
 var end_x := 7150.0       # the foot of the ridge, where the way down ends
 var carrying := false
 var told := false
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 func _setup() -> void:
@@ -211,3 +212,24 @@ func _way_down() -> void:
 	add_trigger(end_x - 60.0, end_x + 90.0, func() -> void:
 		if carrying and told:
 			complete(), false)
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if carrying:
+		return "Carry the lamb down off the ridge, east"
+	if not lion_started:
+		return "Climb the ridge, east"
+	if not is_instance_valid(lion) or boss != null:
+		return "Beat the lion back from the lamb"
+	if is_instance_valid(lamb) and not lamb.gathered:
+		return "Go to the lamb, east"
+	return "Carry the lamb down off the ridge, east"

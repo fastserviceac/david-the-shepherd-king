@@ -11,6 +11,7 @@ var level
 var player
 var hp := 2
 var max_hp := 2
+var lesser := false          # a jackal and its like: his blows tell more on these as his hand and eye grow
 var hit_r := 22.0
 var hit_h := 30.0
 var body_r := 14.0
@@ -174,7 +175,7 @@ func drive_off() -> void:
 	remove_from_group("hittable")
 	remove_from_group("enemies")
 	flee_dir = -1.0 if (is_instance_valid(player) and to_player() > 0.0) else 1.0
-	if max_hp >= 6:      # a great beast driven off: let the moment land
+	if not lesser:      # a great beast driven off: let the moment land
 		Game.burst(get_parent(), global_position + Vector2(0, -hit_h * 0.5), Color(1.0, 0.9, 0.6, 0.9), 40, 320.0)
 		if is_instance_valid(player):
 			player.shake = 12.0
@@ -183,7 +184,7 @@ func drive_off() -> void:
 		Game.slowmo(0.3, 0.9)
 	elif anim == "jackal":
 		Game.sfx("jackal_yelp", -4.0)
-	Game.grow("heart", 3.0 if max_hp >= 6 else 1.0)
+	Game.grow("heart", 3.0 if not lesser else 1.0)
 	defeated.emit()
 
 

@@ -207,6 +207,24 @@ func _draw() -> void:
 			draw_circle(tp + Vector2(tw + 16.0 + k * 13.0, -6.0), 3.6, Color(1.0, 0.86, 0.5, ta) if k < int(tt[1]) else Color(1, 1, 1, 0.25 * ta))
 		draw_string(Game.serif, tp + Vector2(0, 22), Game.t(tc["gifts"][int(tt[1]) - 1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(cream.r, cream.g, cream.b, 0.85 * ta))
 
+	# what he is to do now: always there, top left, in plain words. When a step is done it is ticked off for a
+	# moment and the next one is written in
+	if is_instance_valid(level) and str(level.goal) != "" and not Game.cinematic:
+		var gf := Game.serif
+		var gy := 150.0 if level.sheep_total > 0 else 92.0
+		var gt: float = level.goal_t
+		var now_txt: String = Game.keys(Game.t(level.goal))
+		var fresh := clampf(1.0 - gt / 2.2, 0.0, 1.0)
+		if str(level.goal_was) != "" and gt < 3.0:
+			var da := clampf(minf(gt * 4.0, (3.0 - gt) * 1.5), 0.0, 1.0)
+			var was_txt: String = Game.keys(Game.t(level.goal_was))
+			draw_string(gf, Vector2(30.0, gy), "✓  " + was_txt, HORIZONTAL_ALIGNMENT_LEFT, 560.0, 16, Color(0.6, 0.95, 0.6, 0.85 * da))
+			gy += 26.0
+		var gw := minf(gf.get_string_size(now_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x + 54.0, 620.0)
+		draw_rect(Rect2(22.0, gy - 22.0, gw, 32.0), Color(0.04, 0.03, 0.06, 0.5 + 0.25 * fresh))
+		draw_rect(Rect2(22.0, gy - 22.0, 4.0, 32.0), Color(1.0, 0.82, 0.45, 0.9))
+		draw_string(gf, Vector2(36.0, gy), now_txt, HORIZONTAL_ALIGNMENT_LEFT, 590.0, 19, Color(1.0, 0.95 - 0.1 * fresh, 0.85 - 0.3 * fresh, 0.96))
+
 	# a sheep in danger that he cannot see: a mark at the edge of the screen, on the side it is on
 	if is_instance_valid(level) and is_instance_valid(level.player):
 		var centre: float = level.player.cam.get_screen_center_position().x

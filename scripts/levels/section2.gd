@@ -6,6 +6,10 @@ const BASE := 572.0
 
 var ewe
 var end_x := 7780.0       # the foot of the ridge, where the tracks are
+var keepers: Array = []   # the jackals that hold the brook
+var spans: Array = []     # the bridges brought down, by where each begins
+var listen_task: Dictionary
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 func _setup() -> void:
@@ -61,7 +65,7 @@ func _populate() -> void:
 
 	# the gift of this place: the sling, by the brook. A jackal has the bank; it must be driven off first
 	if not Game.has("sling"):
-		var keepers: Array = [add_jackal(980.0, 800.0, 1460.0), add_jackal(1180.0, 800.0, 1460.0), add_jackal(1360.0, 800.0, 1460.0)]
+		keepers = [add_jackal(980.0, 800.0, 1460.0), add_jackal(1180.0, 800.0, 1460.0), add_jackal(1360.0, 800.0, 1460.0)]
 		add_gift("sling", 1250.0, func() -> bool:
 			for k in keepers:
 				if is_instance_valid(k) and not k.fleeing:
@@ -131,6 +135,7 @@ func _bridge(x0: float, x1: float, jar: Vector2) -> void:
 	var tree := add_bough_tree(jar.x + 34.0, BASE, 0.69)
 	var t = hang_jar(tree, jar)
 	t.struck.connect(drop)
+	t.struck.connect(func() -> void: spans.append(x0))
 
 
 func begin() -> void:
@@ -151,7 +156,7 @@ func _upper_ravine() -> void:
 	_bridge(5560.0, 5820.0, Vector2(5690.0, BASE - 150.0))
 	add_wool(5960.0)
 	# he cannot see the lamb; he can hear it, if he stands still
-	add_task(6040.0, "Stand still and listen", 1.4, func() -> void:
+	listen_task = add_task(6040.0, "Stand still and listen", 1.4, func() -> void:
 		Game.sfx("lamb", -13.0, 0.0)
 		show_tip("A cry, thin and far off.  Not from the rocks above: from on up the ravine", 6.5))
 	add_hint(6040.0, 150.0, "The wool goes two ways here")
@@ -170,3 +175,51 @@ func _upper_ravine() -> void:
 	add_tracks(7140.0, 7520.0)
 	add_tracks(7400.0, 7740.0, true)
 	add_wool(7300.0)
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	var f := _far
+	if f < 900.0:
+		return "Follow the ravine east to the brook"
+	if f < 1840.0:
+		if not Game.has("sling"):
+			for k in keepers:
+				if is_instance_valid(k) and not k.fleeing:
+					return "Drive the jackals off the brook"
+			return "Step into the light by the brook"
+		if not (1500.0 in spans):
+			return "Break the hanging jar to lower the bridge"
+		return "Cross the log bridge, east"
+	if f < 3000.0 and not ambush.is_empty():
+		if not ambush["cleared"]:
+			if not ambush["walls"].is_empty():
+				return "Keep the jackals off the stray ewe"
+			return "Follow the ravine east"
+		if is_instance_valid(ewe) and not ewe.gathered:
+			return "Gather the stray ewe"
+	if f < 3700.0:
+		return "Follow the ravine east"
+	if f < 4040.0:
+		if not (3700.0 in spans):
+			return "Aim high: break the jar to lower the bridge"
+		return "Cross the log bridge, east"
+	if f < 5400.0:
+		return "Follow the ravine east"
+	if f < 5820.0:
+		if not (5560.0 in spans):
+			return "Break the hanging jar to lower the bridge"
+		return "Cross the log bridge, east"
+	if f < 6200.0 and listen_task.get("on", false):
+		return "Stand still and listen for the lamb"
+	if f < 7050.0:
+		return "Keep to the ravine floor, east"
+	return "Follow the tracks to the ridge, east"

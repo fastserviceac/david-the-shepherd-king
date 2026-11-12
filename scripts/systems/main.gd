@@ -203,7 +203,7 @@ func complete_section() -> void:
 func _on_menu(id: String) -> void:
 	match id:
 		"continue":
-			start_section(int(Game.save["section"]), int(Game.save["checkpoint"]))
+			start_section(int(Game.save["section"]), 0)      # a place is rebuilt whole when the game is reopened, so he begins it whole: its sheep, stones and tasks are not kept half done
 		"new":
 			menu.open("difficulty")
 		"sections":

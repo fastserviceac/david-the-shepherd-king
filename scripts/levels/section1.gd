@@ -4,6 +4,9 @@ extends "res://scripts/levels/level_base.gd"
 
 
 var fold_x := 7300.0      # where the fold stands, at the far end
+var wild_ewe              # the one that only his call will bring
+var thorn_ewe             # the one caught in the brake
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 func _setup() -> void:
@@ -56,6 +59,7 @@ func _populate() -> void:
 		shy.skittish = true
 	var ewe = add_sheep(2420.0)
 	ewe.wild = true          # and one that no hand will reach: she is what the gift is for
+	wild_ewe = ewe
 	add_stone("s1_start", on_ground(46.0))                                    # behind where he begins
 	add_stone("s1_step", Vector2(1485.0, platforms[5].position.y))
 	add_stone("s1_leap", Vector2(2080.0, platforms[6].position.y))
@@ -114,6 +118,7 @@ func _beyond_the_meadow() -> void:
 		add_bush(bx)
 	var caught = add_sheep(5015.0)
 	caught.gatherable = false
+	thorn_ewe = caught
 	add_task(5015.0, "Free the ewe from the thorns", 1.2, func() -> void:
 		caught.gatherable = true
 		caught.hop = 1.0
@@ -131,3 +136,28 @@ func _beyond_the_meadow() -> void:
 		show_tip("Dusk.  They come for the flock: keep them off the sheep", 6.0), func() -> void:
 		Game.music(mood, 2.5)
 		show_tip("The slope is quiet.  The fold is just ahead"))
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if not ambush.is_empty() and not ambush["walls"].is_empty():
+		return "Drive the jackals off the flock"
+	if sheep_count >= sheep_total:
+		return "Bring the flock to the fold, east"
+	if sheep_count >= 4 and not Game.has("voice"):
+		return "Stand in the shaft of light, east"
+	if _far >= 4600.0 and is_instance_valid(thorn_ewe) and not thorn_ewe.gatherable and not thorn_ewe.gathered:
+		return "Free the ewe from the thorns"
+	if _far >= 2150.0 and Game.has("voice") and is_instance_valid(wild_ewe) and not wild_ewe.gathered:
+		if player.global_position.x > wild_ewe.global_position.x + 500.0:
+			return "Go back west and call the wild ewe (Q)"
+		return "Call the wild ewe (Q)"
+	return "Gather the nine sheep"

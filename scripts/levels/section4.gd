@@ -11,6 +11,7 @@ var samuel: Node2D
 var lamb
 var carrying := false
 var met := false
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 ## The lamb lies down in the road. Lifting it is his to do; then he walks, and cannot run or fight.
@@ -177,3 +178,29 @@ func _anointing() -> void:
 	if not Game.fast:
 		await get_tree().create_timer(2.4).timeout
 	complete()
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if not ambush.is_empty() and not ambush["walls"].is_empty():
+		return "Drive the jackals off the flock"
+	if met:
+		if _far < 5400.0:
+			return "Go on to Bethlehem, east"
+		return "Go to Samuel in the courtyard, east"
+	if sheep_count < sheep_total:
+		if player.global_position.x > 1900.0:
+			return "Go back west and gather the strays"
+		return "Gather the three strays"
+	if carrying:
+		return "Carry the lamb to the servant, east"
+	if is_instance_valid(lamb) and not is_nan(lamb.stay):
+		return "Lift the lamb"
+	return "Lead the flock to the servant, east"

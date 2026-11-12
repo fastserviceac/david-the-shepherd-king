@@ -11,6 +11,7 @@ const WELL_X := 2300.0
 const OPEN_X := 2415.0
 const TROUGHS := [2030.0, 1890.0]
 const GATE := 3840.0
+const BUCKET_X := 1720.0
 
 var stone: Dictionary
 var fulcrum: Dictionary
@@ -42,6 +43,7 @@ var passing: Variant = null
 var in_fold := 0
 var strangers_in := 0
 var count_tries := 0
+var _far := 0.0           # the farthest he has come, for the goal
 
 
 func _setup() -> void:
@@ -123,6 +125,16 @@ func _populate() -> void:
 	fulcrum["moved"] = _fulcrum_moved
 	lever_task = add_task(2205.0, "lever the stone with the staff", 1.1, _lever, 44.0)
 	lever_task["on"] = false
+	add_painter(Vector2.ZERO, 5, func(ci: CanvasItem) -> void:
+		if task_now != lever_task or float(lever_task["t"]) <= 0.0 or not is_instance_valid(player):
+			return
+		var u := clampf(float(lever_task["t"]) / float(lever_task["hold"]), 0.0, 1.0)
+		var block: StaticBody2D = fulcrum["body"]
+		var pivot := Vector2(block.global_position.x + 6.0, block.global_position.y - 2.0)       # the top of the block
+		var hands: Vector2 = player.global_position + Vector2(player.facing * 16.0, -46.0 + 30.0 * u)   # he bears down
+		var tip: Vector2 = pivot + (pivot - hands).normalized() * 46.0                                  # the far end, under the stone
+		ci.draw_line(hands + Vector2(0, 2), tip + Vector2(0, 2), Color(0.05, 0.03, 0.02, 0.5), 7.0, true)
+		ci.draw_line(hands, tip, Color(0.42, 0.28, 0.16), 5.0, true), true)
 	# he levers it home from the far side, so the stone rolls away from him and never onto him
 	back_task = add_task(OPEN_X + 82.0, "lever the stone back over the well", 1.1, _close_well, 36.0)
 	back_task["on"] = false
@@ -133,16 +145,17 @@ func _populate() -> void:
 		if opened or stone["on"]:
 			return
 		tried = true
-		_hint(2225.0, 250.0, "Too heavy.  Find something to lever it with")
+		_hint(2180.0, 250.0, "Too heavy.  Push the block up against it, for the staff to bear on")
 		say(["n_well_heavy"]))
 	add_hint(430.0, 150.0, "Lead them to the well")
-	# the bucket and its rope: every shepherd who waters here takes them from the foot of the terraces and puts them back
+	# the bucket and its rope: kept by the watchfire on the path, in plain sight, where every shepherd takes them and puts them back
 	has_bucket = Game.fast or Game.backdrop
 	if not has_bucket:
-		bucket_prop = add_sprite("res://art/props/bucket.png", on_ground(1400.0) + Vector2(0, 4), 1.0, 2, pal.get("char", Color(1, 1, 1)))
-		bucket_prop.scale = Vector2.ONE * (34.0 / bucket_prop.texture.get_width())
-		add_glow(on_ground(1400.0) + Vector2(0, -14), Color(1.0, 0.85, 0.6, 0.35), 110.0)
-		add_task(1400.0, "take the bucket and rope", 0.6, func() -> void:
+		bucket_prop = add_sprite("res://art/props/bucket.png", on_ground(BUCKET_X) + Vector2(0, 4), 1.0, 4, pal.get("char", Color(1, 1, 1)))
+		bucket_prop.scale = Vector2.ONE * (46.0 / bucket_prop.texture.get_width())
+		add_glow(on_ground(BUCKET_X) + Vector2(0, -14), Color(1.0, 0.85, 0.6, 0.6), 150.0)
+		add_hint(BUCKET_X, 150.0, "The bucket and rope.  He will need them at the well")
+		add_task(BUCKET_X, "take the bucket and rope", 0.5, func() -> void:
 			has_bucket = true
 			bucket_prop.visible = false
 			Game.sfx("gather", -8.0, 0.0)
@@ -261,6 +274,7 @@ func _fulcrum_moved(x: float) -> void:
 		fulcrum["on"] = false
 		lever_task["on"] = true
 		Game.sfx("hit", -8.0, 0.1)
+		_hint(2205.0, 250.0, "E  hold: set the staff under the stone and heave")
 
 
 func _lever() -> void:
@@ -275,7 +289,22 @@ func _lever() -> void:
 		tw.tween_property(body, "position:x", OPEN_X, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		tw.tween_property(stone["sp"], "rotation", (OPEN_X - WELL_X) / 46.0, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		await tw.finished
+	# the block has done its work: it tips aside into the dust, and the well-head is clear to stand at
+	for part in [fulcrum["body"], fulcrum["sp"]]:
+		if is_instance_valid(part):
+			part.queue_free()
+	fulcrum["on"] = false
 	_open_well()
+
+
+func _on_respawn() -> void:
+	carrying = false
+	if is_instance_valid(player):
+		player.calm = false
+	if opened and not watered:
+		draw_task["on"] = true
+		for tk in pour_tasks:
+			tk["on"] = false
 
 
 func _open_well() -> void:
@@ -294,15 +323,15 @@ func _open_well() -> void:
 		await send_wave(WELL_X - 560.0, WELL_X + 520.0, 3, true, true, pack)
 		Game.music(mood, 2.0)
 	await give_here("hand")        # held: the gift of this place
-	_hint(WELL_X - 150.0, 265.0, "Q  call your own")
+	_hint(WELL_X - 14.0, 265.0, "E  hold: draw water")
 	await say(["n_well_stone", "n_well_voice", "n_well_draw"])
 
 
 func _drew() -> void:
-	if not has_bucket:          # nothing to draw with: it is back by the terraces
-		draw_task["on"] = true
-		show_tip("Nothing to draw with.  The bucket and rope are kept back by the terraces", 6.0)
-		return
+	if not has_bucket:          # he passed them by: the bucket and rope kept at the well-head will do, so he is never turned away
+		has_bucket = true
+		if is_instance_valid(bucket_prop):
+			bucket_prop.visible = false
 	carrying = true
 	player.calm = true
 	draw_task["on"] = false
@@ -346,6 +375,12 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not is_instance_valid(player) or Game.backdrop:
 		return
+	if not has_bucket and absf(player.global_position.x - BUCKET_X) < 44.0:      # he takes it up as he passes: no key to find
+		has_bucket = true
+		if is_instance_valid(bucket_prop):
+			bucket_prop.visible = false
+		Game.sfx("gather", -8.0, 0.0)
+		show_tip("Bucket and rope.  Now the stone, then the water")
 	for i in waters.size():          # the water stands at the level of what is left, and sinks as they drink
 		var lvl: int = clampi(drinks[i], 0, 3)
 		var wt: Sprite2D = waters[i]
@@ -461,6 +496,7 @@ func _jackal_comes() -> void:
 	var lamb: Dictionary = own[4]
 	if lamb["state"] != "gone":
 		lamb["state"] = "gone"
+		lamb["s"].safe = true
 		lamb["s"].max_speed = 70.0
 		lamb["s"].stay = 4290.0
 		followers.erase(lamb["s"])
@@ -469,6 +505,8 @@ func _jackal_comes() -> void:
 
 func _all_watered() -> void:
 	watered = true
+	carrying = false
+	player.calm = false
 	draw_task["on"] = false
 	for tk in pour_tasks:
 		tk["on"] = false
@@ -595,3 +633,53 @@ func _count_done() -> void:
 		h["on"] = false
 	await say(["n_s1_end"])
 	complete()
+
+
+## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if Game.backdrop or done or not is_instance_valid(player):
+		return
+	_far = maxf(_far, player.global_position.x)
+	set_goal(_goal_now())
+
+
+func _goal_now() -> String:
+	if counting:
+		return "Turn back the marked sheep (J)"
+	if closed:
+		return "Count the flock in at the gate, east"
+	if watered:
+		return "Put the stone back over the well"
+	if not opened:
+		if not has_bucket:
+			if player.global_position.x > BUCKET_X + 300.0:
+				return "Fetch the bucket and rope, back west"
+			return "Find the bucket and rope by the watchfire"
+		if stone["on"]:
+			return "Roll the stone off the well"
+		if fulcrum["on"]:
+			return "Push the block against the well stone"
+		return "Set the staff under the stone and heave"
+	if not Game.has("hand"):
+		return "Drive off the beasts at the well"
+	if is_instance_valid(jackal) and jackal_sent and not jackal.fleeing:
+		return "Drive off the jackal"
+	if carrying:
+		return "Pour the water into a trough, west"
+	var mixed_n := 0
+	var unwatered := 0
+	for o in own:
+		if o["state"] == "mixed":
+			mixed_n += 1
+		if o["state"] in ["mixed", "led", "drinking"]:
+			unwatered += 1
+	if mixed_n > 0:
+		return "Call your own out of the crowd (Q)"
+	var wet := int(drinks[0]) + int(drinks[1])
+	for o in others:
+		if o["state"] in ["going", "drinking"]:
+			return "Drive the strange sheep off the troughs (J)"
+	if wet < unwatered:
+		return "Draw water from the well"
+	return "Guard the troughs while they drink"
