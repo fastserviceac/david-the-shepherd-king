@@ -3,13 +3,16 @@ extends "res://scripts/levels/level_base.gd"
 ## while gathering the flock into the fold.
 
 
+var fold_x := 7300.0      # where the fold stands, at the far end
+
+
 func _setup() -> void:
 	flutters = 4
 	leaves = Color(1.0, 0.86, 0.5, 0.55)
 	ambience = "pastures"
 	backdrop_art = "res://art/s1_backdrop.png"
 	midground_art = "res://art/s1_mid.png"
-	width = 5200.0
+	width = 7700.0
 	pal.merge({
 		"shafts": Color(1.0, 0.85, 0.5, 0.07), "mist": Color(1.0, 0.9, 0.7, 0.06),
 		"sky_top": Color(0.2, 0.36, 0.6), "sky_mid": Color(0.96, 0.66, 0.4), "sky_bot": Color(1.0, 0.87, 0.58),
@@ -18,7 +21,7 @@ func _setup() -> void:
 		"mote": Color(1.0, 0.9, 0.6, 0.5),
 	}, true)
 	segments = [make_ground(0.0, width, 566.0, 13.0, 0.4)]
-	checkpoints = [220.0, 2350.0, 4050.0]
+	checkpoints = [220.0, 2350.0, 4050.0, 5330.0, 6120.0]
 	ledge(1040.0, 68.0, 130.0)
 	ledge(1230.0, 136.0, 160.0)
 	ledge(3150.0, 68.0, 120.0)
@@ -26,6 +29,10 @@ func _setup() -> void:
 	ledge(3510.0, 204.0, 170.0)
 	ledge(1440.0, 204.0, 90.0)       # a step beyond the second ledge, for those who look up
 	ledge(2020.0, 114.0, 120.0)      # too high for a boy: it needs the running leap he grows into
+	# the old terraces beyond the meadow: three steps up
+	ledge(5480.0, 68.0, 130.0)
+	ledge(5660.0, 136.0, 130.0)
+	ledge(5840.0, 204.0, 160.0)
 
 
 func _populate() -> void:
@@ -65,16 +72,17 @@ func _populate() -> void:
 		add_hint(700.0, 120.0, "Walk to a sheep to gather it")
 		add_hint(1000.0, 250.0, "Space  jump")
 		add_hint(1690.0, 190.0, "J  staff")
-		add_hint(4800.0, 210.0, "Bring the flock to the fold")
+		add_hint(fold_x, 210.0, "Bring the flock to the fold")
 		add_hint(2080.0, 60.0, "Too high, for now")
 		add_hint(2760.0, 150.0, "Tab  his growth")
 
 	# the gift of this place: his voice. Two brought in by hand first; then the ewe that will not be caught
 	add_gift("voice", 2180.0, func() -> bool: return sheep_count >= 4, "Bring in all four behind you.  The nervous ones will not stand for running")
 	add_hint(1560.0, 150.0, "Shift  walk softly")
-	_build_fold(4800.0)
+	_build_fold(fold_x)
 	add_trigger(2500.0, 2700.0, func() -> void: say(["ps23_1"]))
-	add_trigger(4720.0, 4900.0, _at_fold, false)
+	add_trigger(fold_x - 80.0, fold_x + 100.0, _at_fold, false)
+	_beyond_the_meadow()
 
 
 func _build_fold(x: float) -> void:
@@ -93,3 +101,33 @@ func _at_fold() -> void:
 		return
 	await say(["n_s1_to_well"])
 	complete()
+
+
+## The longer way home. Past the meadow the ground is rougher: a brake of thorn where a ewe has caught herself,
+## the old terraces where one has climbed after the last green, and then the open slope before the fold, where
+## the jackals come down at dusk because that is when a flock is strung out and tired.
+func _beyond_the_meadow() -> void:
+	if Game.backdrop:
+		return
+	# the thorn brake: she went in after the shade and cannot get out. Cut a way to her, then free her
+	for bx in [4780.0, 4900.0, 5130.0, 5240.0]:
+		add_bush(bx)
+	var caught = add_sheep(5015.0)
+	caught.gatherable = false
+	add_task(5015.0, "Free the ewe from the thorns", 1.2, func() -> void:
+		caught.gatherable = true
+		caught.hop = 1.0
+		Game.sfx("sheep", -5.0, 0.1)
+		show_tip("She is out.  Count her in with the rest"))
+	add_hint(4700.0, 170.0, "A ewe is caught in the thorns ahead")
+	# the terraces: one has climbed for the last of the green, and a smooth stone lies on the top step
+	add_sheep(0.0, Vector2(5725.0, platforms[8].position.y))
+	add_stone("s1_terrace", Vector2(5950.0, platforms[9].position.y))
+	add_tree(5400.0, 1.1)
+	add_tree(6050.0, 0.9, true)
+	# dusk on the open slope: they come for the flock, not for him
+	add_ambush(6250.0, 7000.0, [1, 2], func() -> void:
+		Game.music("battle", 0.8)
+		show_tip("Dusk.  They come for the flock: keep them off the sheep", 6.0), func() -> void:
+		Game.music(mood, 2.5)
+		show_tip("The slope is quiet.  The fold is just ahead"))

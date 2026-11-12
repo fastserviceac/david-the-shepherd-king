@@ -168,19 +168,20 @@ func _s1(lv) -> void:
 	Game.grow("hand", 100000.0)
 	_check(Game.rank("hand") == 3 and before == 0, "a craft grows with use")
 	Game.save["growth"]["hand"] = kept
-	await _goto(4800.0)
+	await _goto(main.level.fold_x)
 	_check(not lv.done, "fold stays shut while sheep are missing")
 	await _goto(4500.0)
 	for s in lv.get_children():
 		if s.get("gatherable") != null and not s.gathered:
+			s.gatherable = true
 			lv.player.position = s.position
 			lv.player.velocity = Vector2.ZERO
 			await _frames(10)
-	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 7, "all seven sheep gathered")
+	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 9, "all nine sheep gathered")
 	for b in tree.get_nodes_in_group("hittable"):
 		b.hit(1, 1, "staff")
 		b.hit(1, 1, "staff")
-	await _goto(4800.0)
+	await _goto(main.level.fold_x)
 
 
 func _s2(lv) -> void:
@@ -241,7 +242,7 @@ func _s2(lv) -> void:
 		for n in tree.get_nodes_in_group("enemies"):
 			n.hit(9, 1, "staff")
 	_check(lv.ewe.gatherable and lv.ambush["cleared"], "the ewe is freed when the pack is driven off")
-	await _goto(5400.0)
+	await _goto(main.level.end_x)
 
 
 func _index(script_name: String) -> int:
@@ -1034,7 +1035,7 @@ func flow(m, dir: String) -> void:
 	for b in tree.get_nodes_in_group("hittable"):
 		b.hit(1, 1, "staff")
 		b.hit(1, 1, "staff")
-	await _goto(4800.0)
+	await _goto(main.level.fold_x)
 	await _wait(1.0)
 	await _skip_story(20.0)
 	await _wait(7.0)

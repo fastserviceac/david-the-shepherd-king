@@ -5,6 +5,7 @@ extends "res://scripts/levels/level_base.gd"
 const BASE := 572.0
 
 var ewe
+var end_x := 7780.0       # the foot of the ridge, where the tracks are
 
 
 func _setup() -> void:
@@ -16,7 +17,7 @@ func _setup() -> void:
 	midground_art = "res://art/s2_mid.png"
 	mid_tint = Color(0.78, 0.72, 0.86)
 	mood = "dusk"
-	width = 5600.0
+	width = 8000.0
 	pal.merge({
 		"mist": Color(0.8, 0.6, 0.95, 0.09),
 		"grass": Color(0.72, 0.52, 0.72), "ground": Color(0.5, 0.42, 0.6), "char": Color(0.86, 0.72, 0.84),
@@ -30,11 +31,17 @@ func _setup() -> void:
 		make_ground(770.0, 1500.0, BASE, 12.0, 1.1),
 		make_ground(1840.0, 3000.0, BASE, 14.0, 2.0),
 		make_ground(3130.0, 3700.0, BASE, 10.0, 0.7),
-		make_ground(4040.0, width, BASE, 14.0, 1.5),
+		make_ground(4040.0, 5560.0, BASE, 14.0, 1.5),
+		make_ground(5820.0, 6900.0, BASE, 12.0, 0.4),      # the upper ravine: a fork, and a false trail
+		make_ground(7050.0, width, BASE, 10.0, 2.6),
 	]
-	checkpoints = [150.0, 1100.0, 1920.0, 3210.0, 4120.0]
+	checkpoints = [150.0, 1100.0, 1920.0, 3210.0, 4120.0, 5900.0, 7130.0]
 	ledge(2300.0, 68.0, 110.0)
 	ledge(2470.0, 136.0, 110.0)
+	# the false trail: three steps up the side of the ravine
+	ledge(6160.0, 68.0, 120.0)
+	ledge(6330.0, 136.0, 120.0)
+	ledge(6500.0, 204.0, 150.0)
 
 
 func _populate() -> void:
@@ -87,14 +94,16 @@ func _populate() -> void:
 
 	add_trigger(2000.0, 2120.0, func() -> void: say(["ps23_4"]))
 
+	_upper_ravine()
+
 	# wool and tracks at the foot of the ridge
-	var end := on_ground(5380.0)
+	var end := on_ground(end_x)
 	add_glow(end + Vector2(0, -14), Color(1.0, 0.85, 0.7, 0.5), 180.0)
 	add_painter(end, 4, func(ci: CanvasItem) -> void:
 		for o in [Vector2(-30, -5), Vector2(-4, -7), Vector2(22, -4), Vector2(52, -6)]:
 			ci.draw_circle(o, 5.0, pal["wool"])
 			ci.draw_circle(o + Vector2(5, -3), 4.0, pal["wool"]))
-	add_trigger(5330.0, 5480.0, _at_tracks)
+	add_trigger(end_x - 50.0, end_x + 100.0, _at_tracks)
 
 
 ## Three jars hung in one dead tree, each at a different height: a test of the sling.
@@ -131,3 +140,32 @@ func begin() -> void:
 func _at_tracks() -> void:
 	await say(["n_s2_tracks"])
 	complete()
+
+
+## The upper ravine. The trial tree is not the end of it: beyond is a third gap, a fork where the wool leads the
+## wrong way, a place to stand still and listen, and jackals that would rather have the ewe than him.
+func _upper_ravine() -> void:
+	if Game.backdrop:
+		return
+	_bridge(5560.0, 5820.0, Vector2(5690.0, BASE - 150.0))
+	add_wool(5960.0)
+	# he cannot see the lamb; he can hear it, if he stands still
+	add_task(6040.0, "Stand still and listen", 1.4, func() -> void:
+		Game.sfx("lamb", -13.0, 0.0)
+		show_tip("A cry, thin and far off.  Not from the rocks above: from on up the ravine", 6.5))
+	add_hint(6040.0, 150.0, "The wool goes two ways here")
+	# the false trail: wool on every step, and nothing at the top but a stone and the wind
+	add_wool(6215.0, 68.0 + 26.0)
+	add_wool(6385.0, 136.0 + 26.0)
+	add_stone("s2_false", Vector2(6600.0, platforms[4].position.y))
+	add_trigger(6540.0, 6660.0, func() -> void:
+		if player.global_position.y < platforms[4].position.y + 12.0:
+			show_tip("Only wool.  The thorn combs every sheep that passes: this is an old trail", 6.0))
+	# on the ravine floor two jackals keep pace with whatever comes through. They want the ewe
+	add_jackal(6420.0, 6120.0, 6860.0)
+	add_jackal(6700.0, 6120.0, 6860.0)
+	add_tree(6950.0 - 140.0, 1.2, true)
+	# beyond the last gap the ground is soft, and it has kept what crossed it
+	add_tracks(7140.0, 7520.0)
+	add_tracks(7400.0, 7740.0, true)
+	add_wool(7300.0)

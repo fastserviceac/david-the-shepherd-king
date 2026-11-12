@@ -182,7 +182,8 @@
     "s1_step",
     "s1_leap",
     "s1_cave",
-    "s1_store"
+    "s1_store",
+    "s1_terrace"
    ],
    "finds": [
     [
@@ -224,7 +225,8 @@
     "s2_brake",
     "s2_trial",
     "s2_cistern",
-    "s2_leap"
+    "s2_leap",
+    "s2_false"
    ],
    "finds": [
     [
