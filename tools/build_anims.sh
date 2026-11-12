@@ -79,3 +79,5 @@ run $V/h_lion_vault art/lion/anim vault key=blue mode=range a=64 b=116 step=2 hf
 # the jackal worrying at a sheep, and running flat out, from clips started on the game's own jackal (tools/src/jackal_start.png)
 run $V/h_jackal_worry art/jackal/anim worry key=blue mode=range a=24 b=108 step=3 hframe=0 wide=1.8 tall=1.4 size=110 erode=3
 run $V/h_jackal_flee art/jackal/anim run key=blue mode=range a=52 b=116 step=2 hframe=60 wide=1.8 tall=1.4 size=110 erode=3
+# the sheep's run, from a green-screen clip started on the game's own sheep (tools/src/sheep_start_green.png)
+run $V/g_sheep_run_green art/sheep/anim run key=green halo=2 mode=loop double=0 wide=1.5 tall=1.4 size=110 erode=3

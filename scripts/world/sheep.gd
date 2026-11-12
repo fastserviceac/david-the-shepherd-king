@@ -160,6 +160,9 @@ func _draw() -> void:
 		return
 	if moving:
 		var arr: Array = FA.frames("sheep", "walk")
+		var rn: Array = FA.frames("sheep", "run")
+		if (bolt > 0.0 or pace > 185.0) and not rn.is_empty():      # bolting, or hurrying to keep up: a real run
+			arr = rn
 		gait += get_process_delta_time() * clampf(8.0 + pace * 0.16, 10.0, 46.0)      # legs keep time with the ground covered
 		tex = arr[int(gait) % arr.size()]
 	else:
