@@ -75,3 +75,6 @@ run $V/r_lion_rake art/lion/anim rake mode=range a=20 b=52 step=2 hframe=0 halo=
 run $V/h_bear_slam art/bear/anim slamup key=blue mode=range a=2 b=26 step=2 hframe=0 wide=1.8 tall=2.3 size=150
 run $V/h_bear_slam art/bear/anim slam key=blue mode=range a=64 b=94 step=2 hframe=0 wide=1.8 tall=2.3 size=150
 run $V/h_lion_vault art/lion/anim vault key=blue mode=range a=64 b=116 step=2 hframe=0 halo=0 erode=3 wide=2.2 tall=1.8 size=150
+# the jackal worrying at a sheep, and running flat out, from clips started on the game's own jackal (tools/src/jackal_start.png)
+run $V/h_jackal_worry art/jackal/anim worry key=blue mode=range a=24 b=108 step=3 hframe=0 wide=1.8 tall=1.4 size=110 erode=3
+run $V/h_jackal_flee art/jackal/anim run key=blue mode=range a=52 b=116 step=2 hframe=60 wide=1.8 tall=1.4 size=110 erode=3

@@ -3,6 +3,7 @@ extends "res://scripts/enemies/enemy.gd"
 
 var lunge_cd := 0.0
 var retreat := 0.0
+var worrying := 0.0      # seconds since it was last at a sheep's side
 
 
 func _init_enemy() -> void:
@@ -33,6 +34,7 @@ func _on_touch() -> void:
 
 func _ai(delta: float) -> void:
 	lunge_cd -= delta
+	worrying -= delta
 	var dx := to_player()
 	var dy: float = absf(player.global_position.y - global_position.y)
 	if retreat > 0.0:
@@ -82,12 +84,19 @@ func _worry(_delta: float, dx: float, dy: float) -> bool:
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, 1200.0 * get_physics_process_delta_time())
 		prey.worried = 0.25
+		worrying = 0.2
 		level.sheep_in_danger()
 	return true
 
 
 func _draw() -> void:
+	var wr: Array = FA.frames("jackal", "worry")
+	var rn: Array = FA.frames("jackal", "run")
 	if not is_on_floor() and not fleeing:
 		show_frame(action_frame("lunge", air_t / 0.5, 6, 30), 0.5, 1.8)    # crouch, spring with jaws open, land
+	elif worrying > 0.0 and not wr.is_empty():      # head down at the sheep, snapping and tugging
+		show_frame(wr[int(t * 16.0) % wr.size()], 0.5, 1.4)
+	elif (fleeing or absf(velocity.x) > 165.0) and not rn.is_empty():      # flat out: fleeing, or closing on its prey
+		show_frame(rn[int(dist / 210.0 * rn.size()) % rn.size()], 0.5, 1.4)
 	else:
 		show_frame(walk_frame(), 0.5, 1.4)
