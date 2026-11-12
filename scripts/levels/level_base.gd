@@ -980,10 +980,15 @@ func add_bones_at(at: Vector2, tint: Color = Color(0.7, 0.7, 0.85)) -> void:
 		add_sprite("res://art/props/bones.png", at, 0.07, 2, tint)
 
 
-## Rain standing in a hollow of the rock, with its own stone lip (painted by tools/pool.py), set into the
-## ground. `tint` is the light it is seen in.
+## Rain standing in a hollow of the rock, with its own stone lip (painted by tools/pool.py). It lies IN the
+## ground: its far lip is at the line he walks on and the water is below that line, in the strip of ground seen
+## from the side, so it is never drawn against the scenery behind. Loose stones lie along its near edge.
 func add_pool(x: float, tint: Color) -> void:
-	add_sprite("res://art/props/pool.png", on_ground(x) + Vector2(0, 14), 1.0, 3, tint)
+	var at := on_ground(x)
+	var sp := add_sprite("res://art/props/pool.png", at + Vector2(0, 30), 1.0, 3, tint)
+	sp.scale.y *= 0.64
+	var lit: Color = pal.get("char", Color(1, 1, 1))      # the stones are lit like the other loose stones of the place
+	add_rubble(at + Vector2(0, 17), [[-116.0, 0.62, false], [78.0, 0.3, true], [112.0, 0.5, true]], Color(lit.r * 0.55, lit.g * 0.56, lit.b * 0.66))      # at its ends, on the ground, not down the face
 
 
 ## Loose painted stones lying in front of something, to break its edge: each [dx, size, flipped].
