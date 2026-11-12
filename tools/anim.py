@@ -7,7 +7,7 @@ from PIL import Image, ImageFilter
 import numpy as np
 src, out, name = sys.argv[1:4]
 opt = dict(key='green', mode='loop', a='0', b='0', step='1', hframe='-1', size='150', feet='global', wide='1.4', tall='1.65',
-           double='0', halo='1', erode='5', inner='8', res='2', white='0', href='0', soft='0', steady='7', rim='0')
+           double='0', halo='1', erode='5', inner='8', res='2', white='0', href='0', soft='0', steady='7', rim='0', grow='14')
 opt.update(dict(x.split('=') for x in sys.argv[4:]))
 files = sorted(glob.glob(src + '/f*.png'))
 
@@ -27,7 +27,7 @@ def mask(im):
         q = b / (np.maximum(r, g) + 0.04)
         bg = np.clip((q - 1.25) / 0.45, 0, 1) * np.clip((b - 0.1) / 0.08, 0, 1)
         grown = bg > 0.5; bluish = b > r * 1.04       # the pale glow the video puts round the animal
-        for _ in range(14):
+        for _ in range(int(opt['grow'])):      # grow=2 for a small animal with thin dark legs, which this would eat
             grown = grown | ((filt(grown.astype(np.float32), ImageFilter.MaxFilter(3)) > 0.5) & bluish)
         bg = np.maximum(bg, grown.astype(np.float32))
     elif opt['halo'] == '1':
