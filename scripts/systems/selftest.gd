@@ -53,6 +53,8 @@ func smoke(m) -> void:
 	tree = m.get_tree()
 	m.hud.visible = true
 	for i in Game.sections().size():
+		if OS.has_environment("SMOKE_ONLY") and not str(Game.sections()[i]["script"]).get_file().get_basename() in OS.get_environment("SMOKE_ONLY").split(","):
+			continue      # SMOKE_ONLY=section3,den runs just those sections
 		print("Section %d: %s" % [i + 1, Game.sections()[i]["title"]])
 		Game.backdrop = false
 		Game.cinematic = false
@@ -425,6 +427,43 @@ func _den(lv) -> void:
 	await _frames(5)
 	_check(lv.boss == null, "bear driven off")
 	await _goto(4700.0)
+	await _goto(5130.0)
+	_check(lv._goal_now() == "Search the bear's larder", "he has still to look in the bear's larder")
+	await _goto(7290.0)
+	await _frames(10)
+	_check(not lv.ambush["walls"].is_empty(), "the scavengers come for him in the dark of the back passage")
+	for k in 12:
+		await _frames(8)
+		for n in tree.get_nodes_in_group("enemies"):
+			n.hit(9, 1, "staff")
+	_check(lv.ambush["cleared"], "and are driven off")
+	await _goto(lv.SHELF_X - 40.0)
+	Input.action_press("move_right")
+	for k in 6:
+		Input.action_press("jump")
+		await _frames(50)
+		Input.action_release("jump")
+		await _frames(4)
+	_check(lv.player.position.x < lv.SHELF_X, "the shelf the way out goes over is too high to leap")
+	await _goto(7590.0)
+	var shoved := 0
+	while lv.step_rock["body"].position.x < lv.SHELF_X - 32.0 and shoved < 1500:
+		await _frames(1)
+		shoved += 1
+	Input.action_release("move_right")
+	await _frames(5)
+	Input.action_press("move_left")       # back off for a run at it
+	await _frames(25)
+	Input.action_release("move_left")
+	Input.action_press("move_right")
+	for k in 8:
+		Input.action_press("jump")
+		await _frames(40)
+		Input.action_release("jump")
+		await _frames(4)
+	Input.action_release("move_right")
+	print("  the rock took %.1f s to roll under the shelf; he stands at y=%d" % [shoved / 60.0, int(lv.player.position.y)])
+	_check(lv.player.position.x > lv.SHELF_X and lv.player.position.y < lv.BASE - 100.0, "with the rock rolled under it for a step, he climbs out")
 	await _goto(lv.out_x + 30.0)
 
 
@@ -474,7 +513,8 @@ func _s3(lv) -> void:
 	if had_feet:
 		Game.give("feet", true)
 	for n in tree.get_nodes_in_group("enemies"):
-		n.hit(9, 1, "staff")
+		if n.global_position.x < 4500.0:      # the ones on the way up; those on the way down are met later
+			n.hit(9, 1, "staff")
 	await _goto(3000.0)
 	await _frames(10)
 	_check(lv.lion != null, "lion appears")
@@ -512,7 +552,7 @@ func _s3(lv) -> void:
 			if f > 500 and (stg < 3 or seen_lion.has_all(["pounce", "lurk", "rush", "recover"])):
 				break
 			await _frames(1)
-	print("  lion on its own went through: ", seen_lion.keys())
+	print("  lion on its own went through: ", seen_lion.keys(), "  (it ended at x=%d, David at x=%d)" % [int(lv.lion.global_position.x), int(lv.player.global_position.x)])
 	for need in ["pounce", "lurk", "rush", "recover"]:
 		_check(seen_lion.has(need), "the lion uses its " + need)
 	lv.player.invuln = 0.0
@@ -524,6 +564,41 @@ func _s3(lv) -> void:
 	await _goto(3950.0)
 	await _frames(20)
 	_check(lv.carrying and not lv.done, "he lifts the lamb, and the way down is still ahead of him")
+	Input.action_press("move_right")
+	Input.action_press("jump")
+	await _frames(20)
+	Input.action_release("jump")
+	_check(lv.player.is_on_floor() and lv.player.velocity.y >= 0.0, "with the lamb on his shoulders he does not leap")
+	await _frames(700)
+	_check(lv.player.position.x < lv.WATER_X + 250.0 and lv._goal_now().begins_with("Wash"), "he does not go on down with the lamb bleeding")
+	await _goto(lv.WATER_X)
+	Input.action_release("move_right")
+	lv.do_task(lv.tend_task)
+	_check(lv.tended, "he washes and binds its wound at the pool")
+	await _goto(lv.ROCK_X - 80.0)
+	Input.action_press("move_right")
+	var shoved := 0
+	while lv.rock["on"] and shoved < 1500:
+		await _frames(1)
+		shoved += 1
+	await _frames(240)
+	Input.action_release("move_right")
+	print("  the rock took %.1f s to shoulder off the path" % (shoved / 60.0))
+	_check(not lv.rock["on"] and lv.player.position.x > 5400.0, "a fallen rock bars the path, and he shoulders it over the step and goes on")
+	await _goto(lv.CLEFT_X)
+	_check(lv._goal_now() == "Lay the lamb in the cleft of the rock", "jackals wait below, and he cannot fight with the lamb")
+	lv.do_task(lv.lay_task)
+	await _frames(5)
+	_check(not lv.carrying and lv.lamb.visible and lv.player.act == "", "he lays it in the cleft and his hands are free")
+	for k in 12:
+		await _frames(8)
+		for n in tree.get_nodes_in_group("enemies"):
+			n.hit(9, 1, "staff")
+	_check(lv._pack_left() == 0 and lv._goal_now() == "Lift the lamb", "the jackals are driven off the path")
+	await _goto(lv.CLEFT_X)
+	lv.do_task(lv.lift_task)
+	await _frames(5)
+	_check(lv.carrying and lv.spoken, "he takes the lamb up again for the last of the way")
 	await _goto(lv.end_x)
 	await _frames(20)
 
