@@ -79,6 +79,7 @@ func _populate() -> void:
 	# the thorn brake: a strayed ewe, and a pack that has found her first
 	ewe = add_sheep(2640.0)
 	ewe.gatherable = false
+	ewe.prey = true          # the pack is here for her: keep them off her while they come
 	add_stone("s2_brake", Vector2(2525.0, platforms[1].position.y))
 	add_leap("s2_leap", 2080.0)      # for when he comes back with swift feet
 	add_ambush(2080.0, 2960.0, [2, 3, 3], func() -> void:

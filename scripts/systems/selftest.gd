@@ -168,6 +168,23 @@ func _s1(lv) -> void:
 	Game.grow("hand", 100000.0)
 	_check(Game.rank("hand") == 3 and before == 0, "a craft grows with use")
 	Game.save["growth"]["hand"] = kept
+	# a jackal goes for a sheep he can see, and leaves alone one he cannot
+	var bait = lv.add_sheep(380.0)
+	lv.sheep_total -= 1
+	bait.gatherable = false
+	bait.prey = true
+	var jk = lv.add_jackal(440.0, 250.0, 560.0)
+	await _goto(3000.0)
+	for k in 90:
+		await tree.physics_frame
+	_check(bait.threat < 0.01, "a jackal leaves a sheep alone while the shepherd is far out of sight")
+	await _goto(720.0)      # in sight of the sheep, but not on top of the jackal
+	for k in 150:
+		await tree.physics_frame
+	_check(bait.threat > 0.15, "a jackal goes for a sheep in his sight and the ring begins to close (%.2f)" % bait.threat)
+	jk.queue_free()
+	bait.queue_free()
+	await _frames(4)
 	await _goto(main.level.fold_x)
 	_check(not lv.done, "fold stays shut while sheep are missing")
 	await _goto(4500.0)

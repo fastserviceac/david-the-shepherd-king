@@ -54,33 +54,34 @@ func _ai(delta: float) -> void:
 		patrol(delta, speed)
 
 
-const TAKE := 4.0        # seconds at a sheep's side before it is carried off
-
-## A jackal would sooner have a sheep than a fight. If one is within its ground and the shepherd is not right on
-## top of it, it goes for the sheep and worries it; left there long enough, it carries the sheep off.
-func _worry(delta: float, dx: float, dy: float) -> bool:
-	if absf(dx) < 135.0 and dy < 130.0:      # he is on it: it has him to deal with first
-		return false
+## A jackal would sooner have a sheep than a fight. If a sheep is on its ground and the shepherd is in sight of
+## it, the jackal goes for the sheep and worries it, and only turns on him when he is right on top of it. Left at
+## a sheep's side long enough, it carries the sheep off. It never does this out of his sight: he must have the
+## chance to stop it.
+func _worry(_delta: float, dx: float, dy: float) -> bool:
 	var prey = null
-	var best := 330.0
+	var best := 420.0
 	for s in get_tree().get_nodes_in_group("sheep"):
-		if not is_instance_valid(s) or not (s.gathered or s.gatherable) or s.leap >= 0.0:
+		if not is_instance_valid(s) or not (s.gathered or s.gatherable or s.prey) or s.leap >= 0.0:
 			continue
 		var sx: float = s.global_position.x
 		if sx < min_x - 30.0 or sx > max_x + 30.0 or absf(s.global_position.y - global_position.y) > 80.0:
+			continue
+		if absf(sx - player.global_position.x) > 620.0:      # out of his sight: it leaves that one alone
 			continue
 		if absf(sx - global_position.x) < best:
 			best = absf(sx - global_position.x)
 			prey = s
 	if prey == null:
 		return false
+	if absf(dx) < 62.0 and dy < 130.0 and best > 140.0:      # he is on it and no sheep is close: it has him to deal with
+		return false
 	dir = 1 if prey.global_position.x >= global_position.x else -1
 	if best > 30.0:
-		velocity.x = move_toward(velocity.x, dir * 200.0, 900.0 * delta)
+		velocity.x = move_toward(velocity.x, dir * 200.0, 900.0 * get_physics_process_delta_time())
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, 1200.0 * delta)
+		velocity.x = move_toward(velocity.x, 0.0, 1200.0 * get_physics_process_delta_time())
 		prey.worried = 0.25
-		prey.threat += delta / TAKE
 		level.sheep_in_danger()
 	return true
 

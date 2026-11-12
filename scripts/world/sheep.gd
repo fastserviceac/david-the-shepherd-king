@@ -35,6 +35,8 @@ var leap_dur := 0.4
 var threat := 0.0        # 0..1: how near a beast at its side is to carrying it off
 var worried := 0.0       # seconds since a beast was last at it (counts down)
 var bleat := 0.0
+var prey := false         # a beast will go for it even though it is not yet his to gather (a strayed ewe)
+const TAKE := 4.0         # seconds with a beast at its side before it is carried off
 
 
 func _ready() -> void:
@@ -50,6 +52,7 @@ func _process(delta: float) -> void:
 	if worried > 0.0:          # a beast is at it: it cries out, and will be carried off if he does not come
 		worried -= delta
 		bleat -= delta
+		threat += delta / TAKE       # however many are at it, it is one sheep and one count
 		if bleat <= 0.0:
 			bleat = 0.7
 			hop = 1.0
