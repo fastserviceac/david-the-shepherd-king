@@ -625,6 +625,9 @@ func placeshots(m, dir: String) -> void:
 			await _frames(28)
 			await _snap(dir, "map_walk_" + lg)
 			m.map.walk = -1.0
+			m.map._toggle()
+			await _frames(140)
+			await _snap(dir, "map_land_" + lg)
 			m.map.close()
 		print("PLACESHOTS done")
 		tree.quit()

@@ -26,7 +26,7 @@ const RED := Color(0.55, 0.16, 0.1)
 # low sun, and looked down on from the south. Everything written on the map (road, marks, names, David) is drawn
 # flat on top, at the point where its place on the ground falls on the screen.
 const SPAN := 16.0            # the hills box is this wide in the 3D scene
-const EXAG := 2.4             # relief drawn this much taller than true, so wadis read
+const EXAG := {"hills": 2.4, "land": 7.0}      # relief drawn this much taller than true, so wadis read
 const VP := Vector2i(1920, 1080)
 var vp: SubViewport
 var cam: Camera3D
@@ -36,6 +36,7 @@ var gh := 0
 var depth := 9.0              # the box's north-south size in the scene
 var look := Vector3.ZERO      # the point on the ground the camera rests on
 var pull := 1.0               # 1 = close on a place, larger = drawn back
+var grounds := {}             # each view's ground: its heights, grid and mesh
 
 
 func _ready() -> void:
@@ -58,6 +59,7 @@ func open(playing: bool, at_section: int) -> void:
 	reveal = 1.0 if Game.fast else 0.0
 	walk = -1.0
 	_build_3d()
+	_show("hills")
 	look = _world_of(index)
 	pull = 1.0 if Game.fast else 2.3
 	_aim()
@@ -82,12 +84,13 @@ func _process(delta: float) -> void:
 				walk = -1.0
 				travel.emit(walk_to)
 		if cam:      # the camera glides to whatever is chosen, and follows him when he walks
-			var want := _world_of(index)
+			var want := _world_of(index) if view == "hills" else _ground(Vector2(0.0, 0.6))
 			if walk >= 0.0:
 				want = _along3(walk_pts3, walk)
 			var k := 1.0 - exp(-delta * 4.0)
 			look = look.lerp(want, k)
-			pull = lerpf(pull, 1.0, 1.0 - exp(-delta * 2.2))
+			pull = lerpf(pull, 1.0 if view == "hills" else 1.95, 1.0 - exp(-delta * 2.2))
+			cam.h_offset = lerpf(cam.h_offset, -1.15 if view == "hills" else 0.0, k)
 			_aim()
 		queue_redraw()
 
@@ -102,7 +105,7 @@ func _open_to(idx: int) -> bool:
 
 ## Where a latitude and longitude fall on the screen in the current view.
 func _at(lat: float, lon: float) -> Vector2:
-	if view == "hills" and cam:
+	if cam:
 		return _screen(_world(lat, lon))
 	var v: Dictionary = data["views"][view]
 	return Vector2((lon - v["lon0"]) / (v["lon1"] - v["lon0"]) * 1280.0, (v["lat1"] - lat) / (v["lat1"] - v["lat0"]) * 720.0)
@@ -120,7 +123,7 @@ func _world_of(i: int) -> Vector3:
 
 ## A latitude and longitude as a point on the 3D ground.
 func _world(lat: float, lon: float) -> Vector3:
-	var v: Dictionary = data["views"]["hills"]
+	var v: Dictionary = data["views"][view]
 	var u: float = (lon - v["lon0"]) / (v["lon1"] - v["lon0"])
 	var w: float = (v["lat1"] - lat) / (v["lat1"] - v["lat0"])
 	return _ground(Vector2((u - 0.5) * SPAN, (w - 0.5) * depth))
@@ -183,67 +186,15 @@ func _along3(pts: PackedVector3Array, u: float) -> Vector3:
 func _build_3d() -> void:
 	if vp != null:
 		return
-	var rel: Dictionary = data.get("relief", {})
-	gw = int(rel.get("w", 0))
-	gh = int(rel.get("h", 0))
-	var img: Image = (load("res://art/map_hills_height.png") as Texture2D).get_image()
-	if img.is_compressed():
-		img.decompress()
-	depth = SPAN * gh / gw
-	var unit: float = SPAN / (float(rel["km"]) * 1000.0) * EXAG       # scene units for a metre of height
-	var lo := float(rel["lo"])
-	var hi := float(rel["hi"])
-	heights.resize(gw * gh)
-	for y in gh:
-		for x in gw:
-			var c := img.get_pixel(x, y)
-			heights[y * gw + x] = ((c.r8 * 256 + c.g8) / 65535.0 * (hi - lo)) * unit
-	var verts := PackedVector3Array()
-	var norms := PackedVector3Array()
-	var uvs := PackedVector2Array()
-	var idx := PackedInt32Array()
-	verts.resize(gw * gh)
-	norms.resize(gw * gh)
-	uvs.resize(gw * gh)
-	var dx := SPAN / (gw - 1)
-	var dz := depth / (gh - 1)
-	for y in gh:
-		for x in gw:
-			var k := y * gw + x
-			verts[k] = Vector3(x * dx - SPAN * 0.5, heights[k], y * dz - depth * 0.5)
-			uvs[k] = Vector2(float(x) / (gw - 1), float(y) / (gh - 1))
-			var hl := heights[y * gw + maxi(x - 1, 0)]
-			var hr := heights[y * gw + mini(x + 1, gw - 1)]
-			var hu := heights[maxi(y - 1, 0) * gw + x]
-			var hd := heights[mini(y + 1, gh - 1) * gw + x]
-			norms[k] = Vector3((hl - hr) / (2.0 * dx), 1.0, (hu - hd) / (2.0 * dz)).normalized()
-	for y in gh - 1:
-		for x in gw - 1:
-			var k := y * gw + x
-			idx.append_array(PackedInt32Array([k, k + 1, k + gw, k + 1, k + gw + 1, k + gw]))
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = verts
-	arr[Mesh.ARRAY_NORMAL] = norms
-	arr[Mesh.ARRAY_TEX_UV] = uvs
-	arr[Mesh.ARRAY_INDEX] = idx
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = load("res://art/map_hills_ground.png")
-	mat.roughness = 1.0
-	mat.metallic_specular = 0.0
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	var land := MeshInstance3D.new()
-	land.mesh = mesh
-	land.material_override = mat
 	vp = SubViewport.new()
 	vp.size = VP
 	vp.own_world_3d = true
 	vp.msaa_3d = Viewport.MSAA_4X
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(vp)
-	vp.add_child(land)
+	for name in ["hills", "land"]:
+		grounds[name] = _build_ground(name)
+		vp.add_child(grounds[name]["node"])
 	# the table the land stands on, so its edges do not end in nothing
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = Vector2(200, 200)
@@ -345,7 +296,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		index = posmod(index - 1, n)
 		Game.sfx("ui_move", -8.0)
 	elif event.is_action_pressed("growth"):
-		view = "land" if view == "hills" else "hills"
+		_toggle()
 		Game.sfx("ui_move", -8.0)
 	elif event.is_action_pressed("accept"):
 		if view == "hills" and _open_to(index):
@@ -374,7 +325,7 @@ func _draw() -> void:
 	if data.is_empty() or not tex.has(view):
 		return
 	var ink := Color(0.2, 0.13, 0.08)
-	lit = view == "hills" and vp != null
+	lit = vp != null
 	if lit:
 		draw_texture_rect(vp.get_texture(), Rect2(0, 0, 1280, 720), false)
 		draw_rect(Rect2(0, 0, 1280, 90), Color(0.07, 0.055, 0.05, 0.0))
@@ -459,6 +410,12 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([at + Vector2(0, -12), at + Vector2(-7, -26), at + Vector2(7, -26)]), RED)
 		_card(secs)
 	# title, scale bar, keys
+	if view == "land" and lit:      # where the hills of this chapter lie in the whole land
+		var hb: Dictionary = data["views"]["hills"]
+		var box := PackedVector2Array()
+		for c in [[hb["lat1"], hb["lon0"]], [hb["lat1"], hb["lon1"]], [hb["lat0"], hb["lon1"]], [hb["lat0"], hb["lon0"]], [hb["lat1"], hb["lon0"]]]:
+			box.append(_at(c[0], c[1]))
+		draw_polyline(box, Color(1.0, 0.82, 0.5, 0.9), 2.0, true)
 	_text(Vector2(640, 44), Game.t(v["title"]), 30, ink)
 	var km := 20.0
 	if view != "hills":      # a scale bar means nothing on ground seen at a slant
@@ -553,3 +510,81 @@ func _card(secs: Array) -> void:
 			y += 24.0
 	var go := Game.t("He is here") if _here() == index else Game.keys(Game.t("Enter:  go there"))
 	draw_string(f, Vector2(tx, 618), go, HORIZONTAL_ALIGNMENT_LEFT, tw, 18, Color(1, 1, 1, 0.7))
+
+
+## Brings one view's ground forward: its mesh is shown and its heights are the ones places are set on.
+func _show(name: String) -> void:
+	view = name
+	for k in grounds:
+		grounds[k]["node"].visible = k == name
+	var g: Dictionary = grounds[name]
+	heights = g["heights"]
+	gw = g["gw"]
+	gh = g["gh"]
+	depth = g["depth"]
+
+
+func _build_ground(name: String) -> Dictionary:
+	var rel: Dictionary = data["relief"][name]
+	var w := int(rel["w"])
+	var h := int(rel["h"])
+	var img: Image = (load("res://art/map_%s_height.png" % name) as Texture2D).get_image()
+	if img.is_compressed():
+		img.decompress()
+	var dep := SPAN * h / w
+	var unit: float = SPAN / (float(rel["km"]) * 1000.0) * float(EXAG[name])       # scene units for a metre of height
+	var lo := float(rel["lo"])
+	var hi := float(rel["hi"])
+	var hs := PackedFloat32Array()
+	hs.resize(w * h)
+	for y in h:
+		for x in w:
+			var c := img.get_pixel(x, y)
+			hs[y * w + x] = ((c.r8 * 256 + c.g8) / 65535.0 * (hi - lo)) * unit
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	verts.resize(w * h)
+	norms.resize(w * h)
+	uvs.resize(w * h)
+	var dx := SPAN / (w - 1)
+	var dz := dep / (h - 1)
+	for y in h:
+		for x in w:
+			var k := y * w + x
+			verts[k] = Vector3(x * dx - SPAN * 0.5, hs[k], y * dz - dep * 0.5)
+			uvs[k] = Vector2(float(x) / (w - 1), float(y) / (h - 1))
+			var hl := hs[y * w + maxi(x - 1, 0)]
+			var hr := hs[y * w + mini(x + 1, w - 1)]
+			var hu := hs[maxi(y - 1, 0) * w + x]
+			var hd := hs[mini(y + 1, h - 1) * w + x]
+			norms[k] = Vector3((hl - hr) / (2.0 * dx), 1.0, (hu - hd) / (2.0 * dz)).normalized()
+	for y in h - 1:
+		for x in w - 1:
+			var k := y * w + x
+			idx.append_array(PackedInt32Array([k, k + 1, k + w, k + 1, k + w + 1, k + w]))
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = load("res://art/map_%s_ground.png" % name)
+	mat.roughness = 1.0
+	mat.metallic_specular = 0.0
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	node.material_override = mat
+	return {"heights": hs, "gw": w, "gh": h, "depth": dep, "node": node}
+
+
+## Between the hills of this chapter and the whole land.
+func _toggle() -> void:
+	_show("land" if view == "hills" else "hills")
+	pull = 2.6 if view == "land" else 1.6      # the camera draws back to the whole land, or comes down to the hills
+	look = _ground(Vector2(0.0, 0.6)) if view == "land" else _world_of(index)
