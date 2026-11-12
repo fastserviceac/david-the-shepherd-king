@@ -24,7 +24,7 @@
           "title": "The Lost Lamb",
           "script": "res://scripts/levels/section2.gd",
           "film": "count",
-          "aim": "Find the lamb that is missing.",
+          "aim": "Follow the lamb's trail up the ravine, and keep the jackals off the stray ewe you find on the way.",
           "why": "A hired man would call it one lamb in a flock. The flock is his father's, and he will have to answer for it."
         },
         {
@@ -38,28 +38,28 @@
           "title": "The Bear's Den",
           "script": "res://scripts/levels/den.gd",
           "film": "den",
-          "aim": "Go through the cave the tracks lead into.",
+          "aim": "Go through the cave the tracks lead into, and drive out the bear that holds it.",
           "why": "There is no way round it. Whatever lives in here, the lamb was carried this way."
         },
         {
           "title": "The Lion's Ridge",
           "script": "res://scripts/levels/section3.gd",
           "film": "ridge",
-          "aim": "Take the lamb back from the lion.",
+          "aim": "Take the lamb back from the lion, and carry it down off the ridge.",
           "why": "This is the night he will tell a king about, when no one believes a boy can fight: \"I went out after him.\""
         },
         {
           "title": "The Night Watch",
           "script": "res://scripts/levels/watch.gd",
           "film": "watch",
-          "aim": "Keep the flock through the night.",
+          "aim": "Keep the flock through the night: feed the fire, drive off what comes, and call back any that break out.",
           "why": "A flock that has smelt a lion breaks from the fold at a sound. The night is when a shepherd earns his keep."
         },
         {
           "title": "The Anointing",
           "script": "res://scripts/levels/section4.gd",
           "film": "dawn",
-          "aim": "Bring the whole flock home.",
+          "aim": "Gather the flock, bring it home, and go where you are sent.",
           "why": "He does not know yet that a prophet is waiting in his father's house, or what this day will make of him."
         }
       ]

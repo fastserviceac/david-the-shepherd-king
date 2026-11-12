@@ -117,6 +117,11 @@ func _populate() -> void:
 
 	stone = add_pushable(WELL_X, 88.0, 92.0, "res://art/props/wellstone.png", WELL_X, OPEN_X, true)
 	stone["on"] = Game.rank("hand") >= 2          # a grown hand can roll it with nothing but his shoulder
+	# the stone is round: its shoulders are lower than its crown. What he has to clear to get over it is the
+	# shoulder, well inside his jump, not the full height of the painting
+	var over: CollisionShape2D = stone["body"].get_child(0)
+	(over.shape as RectangleShape2D).size.y = 80.0
+	over.position.y = 6.0
 	stone["moved"] = func(x: float) -> void:
 		if not opened and x >= OPEN_X - 4.0:
 			_open_well()
