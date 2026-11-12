@@ -36,6 +36,8 @@ var gh := 0
 var depth := 9.0              # the box's north-south size in the scene
 var look := Vector3.ZERO      # the point on the ground the camera rests on
 var pull := 1.0               # 1 = close on a place, larger = drawn back
+var decorated := false
+var card_box: StyleBoxFlat
 var grounds := {}             # each view's ground: its heights, grid and mesh
 
 
@@ -60,6 +62,9 @@ func open(playing: bool, at_section: int) -> void:
 	walk = -1.0
 	_build_3d()
 	_show("hills")
+	if not decorated:
+		decorated = true
+		_decorate()
 	look = _world_of(index)
 	pull = 1.0 if Game.fast else 2.3
 	_aim()
@@ -149,7 +154,8 @@ func _screen(p: Vector3) -> Vector2:
 func _aim() -> void:
 	if cam == null:
 		return
-	cam.position = look + Vector3(0.0, 5.4, 6.0) * pull
+	var sway := Vector3(sin(t * 0.23) * 0.28, 0.0, 0.0)      # it never sits quite still: a slow drift, as of someone looking
+	cam.position = look + sway + Vector3(0.0, 5.4, 6.0) * pull
 	cam.look_at(look + Vector3(0, 0.1, 0), Vector3.UP)
 
 
@@ -331,7 +337,12 @@ func _draw() -> void:
 	lit = vp != null
 	if lit:
 		draw_texture_rect(vp.get_texture(), Rect2(0, 0, 1280, 720), false)
-		draw_rect(Rect2(0, 0, 1280, 90), Color(0.07, 0.055, 0.05, 0.0))
+		# distance: the far ground goes into a warm haze under a dusk sky, and the corners fall away
+		var sky_top := Color(0.16, 0.13, 0.2, 1.0)
+		var haze := Color(0.86, 0.66, 0.5, 0.0)
+		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(1280, 0), Vector2(1280, 120), Vector2(0, 120)]), PackedColorArray([sky_top, sky_top, Color(0.86, 0.66, 0.5, 0.62), Color(0.86, 0.66, 0.5, 0.62)]))
+		draw_polygon(PackedVector2Array([Vector2(0, 120), Vector2(1280, 120), Vector2(1280, 330), Vector2(0, 330)]), PackedColorArray([Color(0.86, 0.66, 0.5, 0.62), Color(0.86, 0.66, 0.5, 0.62), haze, haze]))
+		draw_polygon(PackedVector2Array([Vector2(0, 560), Vector2(1280, 560), Vector2(1280, 720), Vector2(0, 720)]), PackedColorArray([Color(0.03, 0.02, 0.03, 0.0), Color(0.03, 0.02, 0.03, 0.0), Color(0.03, 0.02, 0.03, 0.7), Color(0.03, 0.02, 0.03, 0.7)]))
 		ink = Color(0.98, 0.94, 0.84)
 	else:
 		draw_texture_rect(tex[view], Rect2(0, 0, 1280, 720), false)
@@ -389,6 +400,10 @@ func _draw() -> void:
 			draw_circle(p, 9.0, Color(0.08, 0.05, 0.03, 0.85))
 			draw_circle(p, 7.0, col)
 			draw_circle(p, 3.0, Color(0.95, 0.9, 0.78))
+			if known and i != index:      # its name, small, so the map can be read without stepping through it
+				_text(p + Vector2(0, -16), Game.t(secs[i]["title"]), 14, Color(ink.r, ink.g, ink.b, 0.82))
+			elif i == index and known:
+				_text(p + Vector2(0, -24), Game.t(secs[i]["title"]), 19, Color(1.0, 0.9, 0.62))
 			if known and _reach_now(pl):       # a gift given since opens something here: a beckoning ring
 				draw_arc(p, 13.0 + fmod(t * 9.0, 12.0), 0.0, TAU, 30, Color(1.0, 0.86, 0.5, 1.0 - fmod(t * 9.0, 12.0) / 12.0), 2.0, true)
 			if known and _all_found(pl):       # nothing left to find here
@@ -456,8 +471,15 @@ func _card(secs: Array) -> void:
 	var x := 28.0
 	var w := 332.0
 	var gold := Color(1.0, 0.86, 0.6)
-	draw_rect(Rect2(x, 76, w, 560), Color(0.09, 0.06, 0.04, 0.84))
-	draw_rect(Rect2(x, 76, w, 560), Color(0.78, 0.56, 0.2, 0.5), false, 1.5)
+	if card_box == null:
+		card_box = StyleBoxFlat.new()
+		card_box.bg_color = Color(0.07, 0.05, 0.05, 0.86)
+		card_box.border_color = Color(0.85, 0.64, 0.3, 0.55)
+		card_box.set_border_width_all(1)
+		card_box.set_corner_radius_all(16)
+		card_box.shadow_color = Color(0, 0, 0, 0.45)
+		card_box.shadow_size = 18
+	draw_style_box(card_box, Rect2(x, 76, w, 560))
 	var tx := x + 22.0
 	var tw := w - 44.0
 	if not _open_to(index):
@@ -613,3 +635,66 @@ func _reach_now(pl: Dictionary) -> bool:
 		if not sid in Game.stones() and Game.has(later[sid]):
 			return true
 	return false
+
+
+## Life on the ground: small dark trees wherever the land is green, and the towns as clusters of pale flat-roofed
+## houses standing where they really stand.
+func _decorate() -> void:
+	var node: Node3D = grounds["hills"]["node"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var img: Image = (load("res://art/map_hills_ground.png") as Texture2D).get_image()
+	if img.is_compressed():
+		img.decompress()
+	var spots: Array = []
+	for k in 14000:
+		var u := rng.randf()
+		var v := rng.randf()
+		var c := img.get_pixel(int(u * (img.get_width() - 1)), int(v * (img.get_height() - 1)))
+		if c.g > c.r * 0.9 and c.g > c.b * 1.3:      # green ground: olive and oak
+			spots.append(_ground(Vector2((u - 0.5) * SPAN, (v - 0.5) * depth)))
+	var tree := CylinderMesh.new()
+	tree.top_radius = 0.0
+	tree.bottom_radius = 0.5
+	tree.height = 1.3
+	tree.radial_segments = 6
+	tree.rings = 1
+	var tmat := StandardMaterial3D.new()
+	tmat.albedo_color = Color(0.2, 0.26, 0.14)
+	tmat.roughness = 1.0
+	tree.material = tmat
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = tree
+	mm.instance_count = spots.size()
+	for k in spots.size():
+		var sc := rng.randf_range(0.035, 0.075)
+		mm.set_instance_transform(k, Transform3D(Basis().scaled(Vector3(sc, sc * rng.randf_range(0.8, 1.3), sc)), spots[k] + Vector3(0, sc * 0.6, 0)))
+	var trees := MultiMeshInstance3D.new()
+	trees.multimesh = mm
+	node.add_child(trees)
+	# the towns
+	var house := BoxMesh.new()
+	var hmat := StandardMaterial3D.new()
+	hmat.albedo_color = Color(0.9, 0.82, 0.68)
+	hmat.roughness = 1.0
+	house.material = hmat
+	var homes: Array = []
+	for tw in data["towns"]:
+		if not "hills" in tw["views"]:
+			continue
+		var at := _world(tw["lat"], tw["lon"])
+		for k in 16:
+			var off := Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 0.3)
+			var g := _ground(Vector2(at.x + off.x, at.z + off.y))
+			var sz := Vector3(rng.randf_range(0.07, 0.12), rng.randf_range(0.05, 0.09), rng.randf_range(0.07, 0.12))
+			homes.append(Transform3D(Basis(Vector3.UP, rng.randf() * 0.6).scaled(sz), g + Vector3(0, sz.y * 0.5, 0)))
+	var hm := MultiMesh.new()
+	hm.transform_format = MultiMesh.TRANSFORM_3D
+	hm.mesh = house
+	hm.instance_count = homes.size()
+	for k in homes.size():
+		hm.set_instance_transform(k, homes[k])
+	var town := MultiMeshInstance3D.new()
+	town.multimesh = hm
+	node.add_child(town)
