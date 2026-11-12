@@ -26,7 +26,8 @@ run $V/graze art/sheep/anim graze key=blue mode=range a=0 b=188 step=4 hframe=0 
 python3 tools/rim_clean.py art/sheep/anim      # the sheep clips carry an orange glow round the animal: eat it off the outline
 run $V/jackal art/jackal/anim walk mode=loop double=1 wide=1.8 tall=1.4 size=110 erode=3
 run $V/lunge art/jackal/anim lunge mode=range a=64 b=134 step=2 hframe=0 wide=1.8 tall=1.8 size=110 feet=each erode=3
-run $V/bear art/bear/anim walk mode=loop double=1 wide=1.5 tall=1.4 size=150
+# the bear's walk, from a clip started on the game's own bear: two full gait cycles (bear.gd stride is set to match)
+run $V/h_bear_walk2 art/bear/anim walk key=blue mode=loop double=1 wide=1.5 tall=1.4 size=150
 run $V/lion art/lion/anim walk mode=loop double=1 wide=1.8 tall=1.4 size=150 halo=0 erode=3
 run $V/pounce art/lion/anim crouch mode=range a=16 b=64 step=4 hframe=0 halo=0 wide=1.8 tall=1.4 size=150 erode=3
 run $V/pounce art/lion/anim pounce mode=range a=96 b=156 step=2 hframe=0 halo=0 wide=1.8 tall=1.8 size=150 feet=each erode=3

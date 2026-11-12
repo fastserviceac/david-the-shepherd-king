@@ -21,7 +21,7 @@ var open_hits := 0        # blows taken in this opening; it will not stand for m
 
 func _init_enemy() -> void:
 	anim = "bear"
-	stride = 210.0
+	stride = 420.0      # the walk set holds two full gait cycles, so one pass of it covers twice the ground of one
 	hp = 16
 	speed = 75.0
 	hit_r = 36.0
