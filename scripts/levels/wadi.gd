@@ -102,23 +102,11 @@ func _populate() -> void:
 	# the gift of this place: the sure eye. Every boulder below brought down, the one over the jackals too
 	var jars := {"n": 3}
 	if not Game.has("eye") and not Game.backdrop:
-		var tree := Sprite2D.new()          # a dead acacia, and three jars hung in it at three heights: a marksman's test
-		tree.texture = load("res://art/props/deadtree.png")
-		tree.centered = false
-		var tsc := 0.78 / ART
-		tree.scale = Vector2(tsc, tsc)
-		var tip := 3740.0
+		var tip := 3740.0      # a dead acacia, and three jars hung in it at three heights: a marksman's test
 		var gy := on_ground(3600.0).y
-		tree.position = Vector2(tip - tree.texture.get_width() * tsc, gy + 10.0 - tree.texture.get_height() * tsc)
-		tree.z_index = 1
-		tree.modulate = pal.get("char", Color(1, 1, 1))
-		add_child(tree)
-		var branch := tree.position.y + tree.texture.get_height() * tsc * 0.16
-		for spot in [Vector2(tip - 8.0, gy - 250.0), Vector2(tip - 84.0, gy - 170.0), Vector2(tip - 160.0, gy - 110.0)]:
-			var tg = Target.new()
-			tg.position = spot
-			tg.rope = spot.y - branch
-			add_child(tg)
+		var tree := add_bough_tree(tip, gy)
+		for spot in [Vector2(tip - 34.0, gy - 250.0), Vector2(tip - 100.0, gy - 170.0), Vector2(tip - 166.0, gy - 110.0)]:
+			var tg = hang_jar(tree, spot)
 			tg.struck.connect(func() -> void: jars["n"] -= 1)
 	else:
 		jars["n"] = 0

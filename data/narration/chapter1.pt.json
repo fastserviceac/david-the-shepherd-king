@@ -39,7 +39,7 @@
    "text": "A noite havia caído sobre a crista. Em algum lugar lá em cima, o cordeiro balia."
   },
   "1sam17_34": {
-   "text": "O seu servo estava apascentando as ovelhas de seu pai; e quando vinha um leão ou um urso e levava uma ovelha do rebanho, eu ia atrás dele, o atacava e resgatava a ovelha da sua boca.",
+   "text": "O seu servo estava apascentando as ovelhas de seu pai; e quando vinha um leão ou um urso e levava um cordeiro do rebanho, eu ia atrás dele, o atacava e o resgatava da sua boca.",
    "ref": "1 Samuel 17:34–35"
   },
   "n_s3_remember": {
@@ -207,7 +207,7 @@
   },
   "n_place_threshing": {
    "text": "Uma eira, em terreno alto, onde o vento da tarde leva a palha. Numa eira assim, em Belém, Boaz padejou a sua cevada; e Rute lhe deu Obede, pai de Jessé, pai de Davi.",
-   "ref": "Rute 3:2; 4:17"
+   "ref": "Rute 3:2; 4:13, 17"
   },
   "n_place_cistern": {
    "text": "Uma cisterna cavada na rocha por mãos há muito mortas. Nenhum rio corre nestas colinas: a chuva do inverno é recolhida e guardada, e uma terra é tida por rica pelas suas cisternas.",
@@ -222,20 +222,40 @@
    "ref": "Juízes 6:2"
   },
   "n_place_outlook": {
-   "text": "Daqui a terra desce para o oriente, mais de mil metros por um deserto nu até o Mar Salgado, a margem mais baixa da terra. Além dele erguem-se os montes de Moabe, onde Rute nasceu.",
-   "ref": "Rute 1:1-4"
+   "text": "Daqui a terra desce para o oriente, cerca de mil metros por um deserto nu até o Mar Salgado, a margem mais baixa da terra. Além dele erguem-se os montes de Moabe, onde Rute nasceu.",
+   "ref": "Rute 1:4; 2:11"
   },
   "n_place_stars": {
    "text": "Uma pedra chata sob o céu aberto. Os pastores conheciam as estações pelas estrelas: as Plêiades nascendo antes da aurora, Órion na noite de inverno. Um boiadeiro de Tecoa diria um dia que é o Criador delas a quem se deve buscar.",
    "ref": "Amós 1:1; 5:8"
   },
   "n_place_rachel": {
-   "text": "Uma coluna de pedras à beira do caminho. Aqui Jacó sepultou Raquel, que morreu ao dar à luz Benjamim no caminho de Efrata, que é Belém; e ergueu uma coluna sobre a sua sepultura.",
+   "text": "Uma coluna de pedras à beira do caminho. Aqui, como se conta, Jacó sepultou Raquel, que morreu ao dar à luz Benjamim no caminho de Efrata, que é Belém; e ergueu uma coluna sobre a sua sepultura.",
    "ref": "Gênesis 35:19-20"
   },
   "n_place_foldcave": {
    "text": "Os pastores recolhiam os rebanhos em cavernas como esta quando o tempo virava. Anos depois, Saul entraria numa caverna assim, junto aos currais das ovelhas, sem saber quem estava sentado no escuro, lá no fundo.",
    "ref": "1 Samuel 24:3"
+  },
+  "n_dawn_samuel": {
+   "text": "Naquele mesmo dia, um velho subia pela estrada de Belém, trazendo uma novilha para o sacrifício. Era o profeta Samuel. Os anciãos da cidade saíram ao seu encontro, tremendo.",
+   "ref": "1 Samuel 16:4"
+  },
+  "n_end_samuel": {
+   "text": "Então Samuel se levantou e foi para Ramá.",
+   "ref": "1 Samuel 16:13"
+  },
+  "n_end_david": {
+   "text": "E Davi voltou para as ovelhas de seu pai. O óleo ainda estava em seus cabelos. Nada havia mudado, e nada seria como antes.",
+   "ref": ""
+  },
+  "n_end_saul": {
+   "text": "Mas já havia um rei em Israel. E o Espírito do SENHOR se retirou de Saul, e um espírito mau, da parte do SENHOR, o atormentava.",
+   "ref": "1 Samuel 16:14"
+  },
+  "n_end_lyre": {
+   "text": "Os servos do rei saíram à procura de um homem que soubesse tocar a lira. Um deles tinha visto um filho de Jessé, o belemita.",
+   "ref": "1 Samuel 16:16–18"
   }
  }
 }

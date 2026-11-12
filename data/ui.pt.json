@@ -31,7 +31,7 @@
  "The Lion's Ridge": "A Crista do Leão",
  "The Night Watch": "A Vigília da Noite",
  "The Anointing": "A Unção",
- "The Harp": "A Harpa",
+ "The Lyre": "A Lira",
  "One": "Um",
  "Two": "Dois",
  "Chapter %s  ·  %s": "Capítulo %s  ·  %s",
@@ -233,7 +233,7 @@
  "Go through the cave the tracks lead into.": "Atravesse a caverna aonde os rastros levam.",
  "There is no way round it. Whatever lives in here, the lamb was carried this way.": "Não há como contornar. Seja o que for que mora aqui, o cordeiro foi levado por este caminho.",
  "Take the lamb back from the lion.": "Tome o cordeiro de volta do leão.",
- "This is the night he will tell a king about, when no one believes a boy can fight: \"I went out after it.\"": "Esta é a noite que ele contará a um rei, quando ninguém acreditar que um menino pode lutar: \"Eu saí atrás dele.\"",
+ "This is the night he will tell a king about, when no one believes a boy can fight: \"I went out after him.\"": "Esta é a noite que ele contará a um rei, quando ninguém acreditar que um menino pode lutar: \"Eu saí atrás dele.\"",
  "Keep the flock through the night.": "Guarde o rebanho durante a noite.",
  "A flock that has smelt a lion breaks from the fold at a sound. The night is when a shepherd earns his keep.": "Um rebanho que sentiu o cheiro de um leão foge do aprisco a qualquer ruído. É à noite que o pastor faz jus ao seu sustento.",
  "Bring the whole flock home.": "Leve o rebanho inteiro para casa.",
@@ -269,5 +269,10 @@
  "Smooth stones": "Pedras lisas",
  "Off the path": "Fora do caminho",
  "?   a place not yet found": "?   um lugar ainda não encontrado",
- "He is here": "Ele está aqui"
+ "He is here": "Ele está aqui",
+ "The pouch holds %d.  Hold the sling to its full wind: a smooth stone strikes harder and staggers any beast.": "A bolsa leva %d.  Segure a funda até o giro completo: uma pedra lisa bate mais forte e atordoa qualquer fera.",
+ "%d more and the pouch holds another": "Mais %d e a bolsa leva outra",
+ "Within his reach now, with %s": "Agora ao seu alcance, com %s",
+ "Something here waits for %s": "Algo aqui espera por %s",
+ "A shepherd's store, hung out of reach.  It wants a sling": "A reserva de um pastor, pendurada fora de alcance.  Pede uma funda"
 }

@@ -52,6 +52,7 @@ func _populate() -> void:
 	add_stone("s1_start", on_ground(46.0))                                    # behind where he begins
 	add_stone("s1_step", Vector2(1485.0, platforms[5].position.y))
 	add_stone("s1_leap", Vector2(2080.0, platforms[6].position.y))
+	add_store("s1_store", 1760.0)     # hung in the olive by the steps: for when he has a sling
 	add_sheep(0.0, Vector2(3600.0, platforms[4].position.y))
 	add_sheep(4280.0)
 

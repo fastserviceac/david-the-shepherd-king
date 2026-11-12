@@ -73,6 +73,7 @@ func _populate() -> void:
 	ewe = add_sheep(2640.0)
 	ewe.gatherable = false
 	add_stone("s2_brake", Vector2(2525.0, platforms[1].position.y))
+	add_leap("s2_leap", 2080.0)      # for when he comes back with swift feet
 	add_ambush(2080.0, 2960.0, [2, 3, 3], func() -> void:
 		Game.music("battle", 0.8)
 		await say(["n_s2_ewe"]), func() -> void:
@@ -101,23 +102,11 @@ func _populate() -> void:
 func _trial() -> void:
 	if "s2_trial" in Game.stones() or Game.backdrop:
 		return
-	var tree := Sprite2D.new()
-	tree.texture = load("res://art/props/deadtree.png")
-	tree.centered = false
-	var sc := 0.78 / ART
-	tree.scale = Vector2(sc, sc)
 	var tip := 5120.0
-	tree.position = Vector2(tip - tree.texture.get_width() * sc, BASE + 10.0 - tree.texture.get_height() * sc)
-	tree.z_index = 1
-	tree.modulate = pal.get("char", Color(1, 1, 1))
-	add_child(tree)
-	var branch := tree.position.y + tree.texture.get_height() * sc * 0.16
+	var tree := add_bough_tree(tip, BASE)
 	var left := {"n": 3}
-	for spot in [Vector2(tip - 8.0, BASE - 250.0), Vector2(tip - 84.0, BASE - 170.0), Vector2(tip - 160.0, BASE - 110.0)]:
-		var t = Target.new()
-		t.position = spot
-		t.rope = spot.y - branch
-		add_child(t)
+	for spot in [Vector2(tip - 34.0, BASE - 250.0), Vector2(tip - 100.0, BASE - 170.0), Vector2(tip - 166.0, BASE - 110.0)]:
+		var t = hang_jar(tree, spot)
 		t.struck.connect(func() -> void:
 			left["n"] -= 1
 			if left["n"] == 0:
@@ -128,22 +117,10 @@ func _trial() -> void:
 
 func _bridge(x0: float, x1: float, jar: Vector2) -> void:
 	var drop := add_bridge(x0, x1, BASE)
-	var t = Target.new()
-	t.position = jar
-	t.rope = jar.y - (BASE - 330.0)
-	add_child(t)
+	# the dead tree the jar hangs from: its long bough reaches out over the gap, and the rope is tied to it
+	var tree := add_bough_tree(jar.x + 34.0, BASE, 0.69)
+	var t = hang_jar(tree, jar)
 	t.struck.connect(drop)
-	# the dead tree the jar hangs from: its long branch ends right above the jar
-	var tree := Sprite2D.new()
-	tree.texture = load("res://art/props/deadtree.png")
-	tree.centered = false
-	var sc := 0.69 / ART
-	tree.scale = Vector2(sc, sc)
-	tree.position = Vector2(jar.x - tree.texture.get_width() * sc, BASE + 10.0 - tree.texture.get_height() * sc)
-	tree.z_index = 1
-	tree.modulate = pal.get("char", Color(1, 1, 1))
-	add_child(tree)
-	t.rope = jar.y - (tree.position.y + tree.texture.get_height() * sc * 0.16)
 
 
 func begin() -> void:

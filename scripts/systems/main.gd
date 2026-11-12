@@ -184,6 +184,15 @@ func complete_section() -> void:
 		Game.save["section"] = 0
 		Game.save["checkpoint"] = 0
 		Game.save_game()
+		# the film that closes the chapter and opens the next: the prophet gone, the boy back with the sheep,
+		# and a king who does not yet know
+		if intro.has_story("end") and not Game.fast and tester == null:
+			Game.cinematic = true
+			hud.visible = false
+			await overlay.fade_to(1.0, 0.6)
+			intro.play_story("end")
+			await intro.finished
+			Game.cinematic = false
 		var here: Dictionary = Game.chapters[0]
 		var coming: Dictionary = Game.chapters[1]
 		await overlay.end_card(Game.t("End of Chapter %s") % Game.t(here["number"]), Game.t(here["title"]),

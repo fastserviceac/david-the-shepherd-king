@@ -39,7 +39,7 @@
    "text": "Night had fallen on the ridge. Somewhere above, the lamb was crying."
   },
   "1sam17_34": {
-   "text": "Your servant was keeping his father’s sheep; and when a lion or a bear came and took a lamb out of the flock, I went out after him, struck him, and rescued it out of his mouth.",
+   "text": "Your servant was keeping his father’s sheep; and when a lion or a bear came, and took a lamb out of the flock, I went out after him, and struck him, and rescued it out of his mouth.",
    "ref": "1 Samuel 17:34–35"
   },
   "n_s3_remember": {
@@ -207,7 +207,7 @@
   },
   "n_place_threshing": {
    "text": "A threshing floor, on high ground where the evening wind carries off the chaff. On such a floor at Bethlehem Boaz winnowed his barley; and Ruth bore him Obed, the father of Jesse, the father of David.",
-   "ref": "Ruth 3:2; 4:17"
+   "ref": "Ruth 3:2; 4:13, 17"
   },
   "n_place_cistern": {
    "text": "A cistern cut into the rock by hands long dead. No river runs in these hills: the winter rain is caught and kept, and a land is counted rich by its cisterns.",
@@ -222,20 +222,40 @@
    "ref": "Judges 6:2"
   },
   "n_place_outlook": {
-   "text": "From here the land falls away eastward, more than a thousand metres down through bare wilderness to the Salt Sea, the lowest shore on earth. Beyond it rise the mountains of Moab, where Ruth was born.",
-   "ref": "Ruth 1:1-4"
+   "text": "From here the land falls away eastward, about a thousand metres down through bare wilderness to the Salt Sea, the lowest shore on earth. Beyond it rise the mountains of Moab, where Ruth was born.",
+   "ref": "Ruth 1:4; 2:11"
   },
   "n_place_stars": {
    "text": "A flat rock under the open sky. Shepherds told the seasons by the stars: the Pleiades rising before dawn, Orion in the winter night. A herdsman of Tekoa would one day say that their Maker is the one to seek.",
    "ref": "Amos 1:1; 5:8"
   },
   "n_place_rachel": {
-   "text": "A pillar of stones beside the road. Here Jacob buried Rachel, who died giving birth to Benjamin on the way to Ephrath, which is Bethlehem; and he set up a pillar on her grave.",
+   "text": "A pillar of stones beside the road. Here, as it is told, Jacob buried Rachel, who died giving birth to Benjamin on the way to Ephrath, which is Bethlehem; and he set up a pillar on her grave.",
    "ref": "Genesis 35:19-20"
   },
   "n_place_foldcave": {
    "text": "Shepherds penned their flocks in caves like this one when the weather turned. Years on, Saul would walk into such a cave by the sheepfolds, not knowing who sat in the dark at the back of it.",
    "ref": "1 Samuel 24:3"
+  },
+  "n_dawn_samuel": {
+   "text": "That same day an old man came up the road to Bethlehem, leading a heifer for sacrifice. It was the prophet Samuel. The elders of the town came out to meet him, trembling.",
+   "ref": "1 Samuel 16:4"
+  },
+  "n_end_samuel": {
+   "text": "Then Samuel rose up and went to Ramah.",
+   "ref": "1 Samuel 16:13"
+  },
+  "n_end_david": {
+   "text": "And David went back to his father's sheep. The oil was still in his hair. Nothing had changed, and nothing would be the same.",
+   "ref": ""
+  },
+  "n_end_saul": {
+   "text": "But there was already a king in Israel. And the LORD's Spirit departed from Saul, and an evil spirit from the LORD troubled him.",
+   "ref": "1 Samuel 16:14"
+  },
+  "n_end_lyre": {
+   "text": "The king's servants went looking for a man who could play the lyre. One of them had seen a son of Jesse, the Bethlehemite.",
+   "ref": "1 Samuel 16:16–18"
   }
  }
 }

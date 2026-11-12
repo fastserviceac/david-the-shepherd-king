@@ -70,8 +70,16 @@ func _emblem(craft: String, at: Vector2, a: float) -> void:
 				draw_arc(at + Vector2(4, -6), 10.0 + k * 7.0, -0.7, 0.5, 8, Color(gold.r, gold.g, gold.b, a * (1.0 - k * 0.28)), 2.0, true)
 
 
-func _on_stone(_total: int) -> void:
-	stone_t = 4.0
+func _on_stone(total: int) -> void:
+	stone_grew = total % 3 == 0 and total <= 15
+	stone_t = 9.0 if stone_grew else 6.0
+	stone_full = stone_t
+	if stone_grew:
+		Game.sfx("gather", -6.0, 0.0)
+
+
+var stone_grew := false      # this stone made the pouch one larger
+var stone_full := 6.0
 
 
 var hurt_flash := 0.0
@@ -144,7 +152,12 @@ func _draw() -> void:
 		var full: bool = k < Game.pouch()
 		draw_texture_rect(STONE, Rect2(at.x - 9.0, at.y, 18.0, 18.0 * STONE.get_height() / STONE.get_width()), false, Color(1, 1, 1, 0.95) if full else Color(0.5, 0.5, 0.6, 0.3))
 	if stone_t > 0.0:
-		var sa := clampf(minf(stone_t, 4.0 - stone_t) * 1.5, 0.0, 1.0)
+		var sa := clampf(minf(stone_t, stone_full - stone_t) * 1.5, 0.0, 1.0)
+		# what the stone is for, said every time: how far to the next place in the pouch, or what a pouch stone does
+		var n := Game.stones().size()
+		var why := Game.t("The pouch holds %d.  Hold the sling to its full wind: a smooth stone strikes harder and staggers any beast.") % Game.pouch_max() if stone_grew else (Game.t("%d more and the pouch holds another") % (3 - n % 3) if n < 15 else "")
+		draw_rect(Rect2(866.0, 58.0, 400.0, 74.0 if stone_grew else 52.0), Color(0.04, 0.03, 0.06, 0.55 * sa))
+		draw_multiline_string(Game.serif, Vector2(880.0, 100.0), why, HORIZONTAL_ALIGNMENT_RIGHT, 370.0, 15, 3, Color(cream.r, cream.g, cream.b, 0.9 * sa))
 		draw_string(Game.serif, Vector2(880.0, 78.0), Game.t("Smooth stone  %d of %d") % [Game.stones().size(), Game.stones_total], HORIZONTAL_ALIGNMENT_RIGHT, 370.0, 17, Color(1.0, 0.88, 0.6, sa))
 
 	# a place come upon: its name, quietly, under the top edge

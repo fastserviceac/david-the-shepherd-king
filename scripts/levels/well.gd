@@ -94,6 +94,8 @@ func _populate() -> void:
 
 	add_stone("well_start", on_ground(44.0))
 	add_stone("well_terrace", Vector2(1240.0, platforms[2].position.y))
+	add_store("well_store", 1520.0)    # hung in the olive past the terraces: for when he has a sling
+	add_leap("well_leap", 540.0)                     # and a ledge for when he can leap at a run
 
 	_well_prop(on_ground(WELL_X) + Vector2(0, 8))
 	for i in TROUGHS.size():

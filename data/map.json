@@ -181,14 +181,19 @@
     "s1_start",
     "s1_step",
     "s1_leap",
-    "s1_cave"
+    "s1_cave",
+    "s1_store"
    ],
    "finds": [
     [
      "foldcave",
      "The Fold Cave"
     ]
-   ]
+   ],
+   "later": {
+    "s1_leap": "feet",
+    "s1_store": "sling"
+   }
   },
   "well": {
    "lat": 31.7076,
@@ -196,14 +201,20 @@
    "about": "The well by the gate of Bethlehem (2 Samuel 23:15).",
    "stones": [
     "well_start",
-    "well_terrace"
+    "well_terrace",
+    "well_store",
+    "well_leap"
    ],
    "finds": [
     [
      "threshing",
      "The Threshing Floor"
     ]
-   ]
+   ],
+   "later": {
+    "well_store": "sling",
+    "well_leap": "feet"
+   }
   },
   "section2": {
    "lat": 31.6835,
@@ -212,14 +223,18 @@
    "stones": [
     "s2_brake",
     "s2_trial",
-    "s2_cistern"
+    "s2_cistern",
+    "s2_leap"
    ],
    "finds": [
     [
      "cistern",
      "The Hewn Cistern"
     ]
-   ]
+   ],
+   "later": {
+    "s2_leap": "feet"
+   }
   },
   "wadi": {
    "lat": 31.661,
@@ -240,7 +255,10 @@
      "refuge",
      "The Refuge"
     ]
-   ]
+   ],
+   "later": {
+    "wadi_leap": "feet"
+   }
   },
   "den": {
    "lat": 31.639,
@@ -263,7 +281,10 @@
      "outlook",
      "The Outlook"
     ]
-   ]
+   ],
+   "later": {
+    "s3_leap": "feet"
+   }
   },
   "watch": {
    "lat": 31.6985,

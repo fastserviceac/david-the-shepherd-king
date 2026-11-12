@@ -386,6 +386,8 @@ func _draw() -> void:
 			draw_circle(p, 9.0, Color(0.08, 0.05, 0.03, 0.85))
 			draw_circle(p, 7.0, col)
 			draw_circle(p, 3.0, Color(0.95, 0.9, 0.78))
+			if known and _reach_now(pl):       # a gift given since opens something here: a beckoning ring
+				draw_arc(p, 13.0 + fmod(t * 9.0, 12.0), 0.0, TAU, 30, Color(1.0, 0.86, 0.5, 1.0 - fmod(t * 9.0, 12.0) / 12.0), 2.0, true)
 			if known and _all_found(pl):       # nothing left to find here
 				draw_arc(p, 9.5, 0.0, TAU, 30, Color(0.78, 0.56, 0.2), 2.0, true)
 		# David himself: standing where he is, or walking the road to the place chosen
@@ -508,6 +510,17 @@ func _card(secs: Array) -> void:
 			var found: bool = e[0] in Game.places()
 			draw_string(f, Vector2(tx + 14.0, y + 4.0), Game.t(e[1]) if found else Game.t("?   a place not yet found"), HORIZONTAL_ALIGNMENT_LEFT, tw - 14.0, 16, gold if found else Color(1, 1, 1, 0.45))
 			y += 24.0
+	# what waits here for a gift given later: the reason to come back
+	var later: Dictionary = pl.get("later", {})
+	for sid in later:
+		if sid in Game.stones():
+			continue
+		var gname: String = Game.t(Game.GIFTS[later[sid]]["name"])
+		var can: bool = Game.has(later[sid])
+		var line: String = (Game.t("Within his reach now, with %s") if can else Game.t("Something here waits for %s")) % gname
+		y += 8.0
+		draw_multiline_string(f, Vector2(tx, y + 4.0), line, HORIZONTAL_ALIGNMENT_LEFT, tw, 15, -1, gold if can else Color(1, 1, 1, 0.5))
+		y += f.get_multiline_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, tw, 15).y
 	var go := Game.t("He is here") if _here() == index else Game.keys(Game.t("Enter:  go there"))
 	draw_string(f, Vector2(tx, 618), go, HORIZONTAL_ALIGNMENT_LEFT, tw, 18, Color(1, 1, 1, 0.7))
 
@@ -588,3 +601,12 @@ func _toggle() -> void:
 	_show("land" if view == "hills" else "hills")
 	pull = 2.6 if view == "land" else 1.6      # the camera draws back to the whole land, or comes down to the hills
 	look = _ground(Vector2(0.0, 0.6)) if view == "land" else _world_of(index)
+
+
+## Is there something here he could not reach before and can now?
+func _reach_now(pl: Dictionary) -> bool:
+	var later: Dictionary = pl.get("later", {})
+	for sid in later:
+		if not sid in Game.stones() and Game.has(later[sid]):
+			return true
+	return false

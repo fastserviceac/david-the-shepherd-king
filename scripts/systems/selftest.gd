@@ -605,6 +605,22 @@ func placeshots(m, dir: String) -> void:
 	Game.cinematic = false
 	Game.save["places"] = []
 	Game.save["has_sling"] = true
+	if OS.has_environment("SPOTS"):      # SPOTS=section1:1485,well:540 : stand him there and take a picture
+		Game.save["stones"] = []
+		Game.save["gifts"] = []
+		for spot in OS.get_environment("SPOTS").split(","):
+			var nm := spot.get_slice(":", 0)
+			var sx := float(spot.get_slice(":", 1))
+			await m.load_level(_index(nm), 0)
+			Game.cinematic = false
+			m.level.player.global_position = m.level.on_ground(sx - 120.0)
+			m.level.player.velocity = Vector2.ZERO
+			m.level.player.cam.reset_smoothing()
+			await _frames(50)
+			await _snap(dir, "spot_%s_%d" % [nm, int(sx)])
+		print("PLACESHOTS done")
+		tree.quit()
+		return
 	if OS.has_environment("MAP_ONLY"):
 		await m.load_level(_index("wadi"), 0)
 		Game.cinematic = false

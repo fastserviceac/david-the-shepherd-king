@@ -35,12 +35,13 @@ LANGS = {'en': ('audio/narration/%s.mp3', 'data/narration/chapter1.json', ''),
 plan = {}
 for lang, (pat, words, _) in LANGS.items():
     text = json.load(open(words))['lines']
-    if not all(os.path.exists(pat % l) for l in lines):
-        print(lang, 'narration missing for', [l for l in lines if not os.path.exists(pat % l)], ': that language is skipped'); continue
     t = LEAD; cues = []
     for l in lines:
-        d = dur(pat % l)
-        cues.append({'t': round(t, 2), 'd': round(d + 0.4, 2), 'text': text[l]['text'], 'ref': text[l].get('ref', ''), 'file': pat % l})
+        # a line not yet recorded is shown as words only, held long enough to read
+        have = os.path.exists(pat % l)
+        if not have: print(lang, l, 'has no recording yet: shown as text only')
+        d = dur(pat % l) if have else max(5.0, len(text[l]['text']) / 13.0)
+        cues.append({'t': round(t, 2), 'd': round(d + 0.4, 2), 'text': text[l]['text'], 'ref': text[l].get('ref', ''), 'file': (pat % l) if have else None})
         t += d + GAP
     plan[lang] = (cues, t - GAP)
 if not plan: sys.exit('no narration found')
@@ -78,9 +79,12 @@ for lang, (cues, _) in plan.items():
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-stream_loop', '-1', '-i', music]
     mix = ['[0:a]volume=0.30,afade=t=in:st=0:d=2.5,afade=t=out:st=%.2f:d=2.5,atrim=0:%.2f[m]' % (length - 2.5, length)]
     names = ['[m]']
-    for i, c in enumerate(cues):
+    k = 0
+    for c in cues:
+        if not c['file']: continue
+        k += 1
         cmd += ['-i', c['file']]
-        mix.append('[%d:a]volume=0.85,adelay=%d:all=1[n%d]' % (i + 1, int(c['t'] * 1000), i)); names.append('[n%d]' % i)
+        mix.append('[%d:a]volume=0.85,adelay=%d:all=1[n%d]' % (k, int(c['t'] * 1000), k)); names.append('[n%d]' % k)
     mix.append('%samix=inputs=%d:normalize=0:duration=first[a]' % (''.join(names), len(names)))
     wav = '%s/story_%s%s.wav' % (work, fid, suffix)
     subprocess.check_call(cmd + ['-filter_complex', ';'.join(mix), '-map', '[a]', '-t', '%.2f' % length, '-ar', '44100', '-ac', '2', wav])

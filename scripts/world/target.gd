@@ -45,5 +45,7 @@ func _draw() -> void:
 	var h := tex.get_height() * sc
 	# the jar body is centred here; its rope loop sits at the top of the image
 	draw_line(Vector2(0, -rope), Vector2(0, -h * 0.62), Color(0.45, 0.36, 0.25), 2.5, true)
+	for k in 3:      # where it is tied round the bough
+		draw_line(Vector2(-5, -rope - 3.0 + k * 3.0), Vector2(5, -rope - 1.0 + k * 3.0), Color(0.45, 0.36, 0.25), 2.0, true)
 	draw_texture_rect(tex, Rect2(-w * 0.5, -h * 0.66, w, h), false, tint)
 	draw_arc(Vector2(0, 2), 26.0, 0.0, TAU, 28, Color(1.0, 0.85, 0.55, 0.35 + sin(t * 3.0) * 0.25), 2.0, true)

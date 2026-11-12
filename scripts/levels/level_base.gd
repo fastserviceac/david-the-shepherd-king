@@ -923,6 +923,73 @@ func add_stone(id: String, pos: Vector2) -> void:
 	keepsakes.append([node, id, glow, tw])
 
 
+## A dead tree with one long bough reaching to the right, for things to hang from. `tip_x` is where the bough ends.
+func add_bough_tree(tip_x: float, base_y: float, size: float = 0.78) -> Sprite2D:
+	var tree := Sprite2D.new()
+	tree.texture = load("res://art/props/deadtree.png")
+	tree.centered = false
+	var sc := size / ART
+	tree.scale = Vector2(sc, sc)
+	tree.position = Vector2(tip_x - tree.texture.get_width() * sc, base_y + 10.0 - tree.texture.get_height() * sc)
+	tree.z_index = 1
+	tree.modulate = pal.get("char", Color(1, 1, 1))
+	add_child(tree)
+	return tree
+
+
+## Where the bough of that tree is, straight above x: read from the painting itself, so a rope ends on wood.
+var _bough_img: Image
+func bough_y(tree: Sprite2D, x: float) -> float:
+	if _bough_img == null:
+		_bough_img = tree.texture.get_image()
+		if _bough_img.is_compressed():
+			_bough_img.decompress()
+	var sc := tree.scale.x
+	var px := clampi(int((x - tree.position.x) / sc), 0, _bough_img.get_width() - 1)
+	var best := 0
+	var best_mid := _bough_img.get_height() * 0.16
+	var run := 0
+	for py in int(_bough_img.get_height() * 0.45):
+		if _bough_img.get_pixel(px, py).a > 0.5:
+			run += 1
+			if run > best:
+				best = run
+				best_mid = py - run * 0.5
+		else:
+			run = 0
+	return tree.position.y + best_mid * sc
+
+
+## A jar hung from that tree's bough at `at`: its rope is tied where the bough really is.
+func hang_jar(tree: Sprite2D, at: Vector2):
+	var jar = Target.new()
+	jar.position = at
+	jar.rope = at.y - bough_y(tree, at.x)
+	add_child(jar)
+	return jar
+
+
+## A shepherd's store: a jar hung high in a dead tree, out of the jackals' reach, with a smooth stone kept in it.
+## Only a sling stone brings it down, so before the sling is his it is something to come back for.
+func add_store(id: String, x: float, up: float = 112.0) -> void:
+	if id in Game.stones() or Game.backdrop:
+		return
+	var gy := on_ground(x).y
+	var tree := add_bough_tree(x + 46.0, on_ground(x - 150.0).y, 0.62)
+	var jar = hang_jar(tree, Vector2(x, gy - up))
+	jar.struck.connect(func() -> void: add_stone(id, Vector2(x, gy)))
+	if not Game.has("sling"):
+		add_hint(x, up + 70.0, "A shepherd's store, hung out of reach.  It wants a sling")
+
+
+## A ledge a little too high for a standing jump, with a smooth stone on it: it wants the running leap.
+func add_leap(id: String, x: float, w: float = 120.0) -> void:
+	var top := add_perch(x, 114.0, w)
+	add_stone(id, top)
+	if not Game.has("feet") and not id in Game.stones() and not Game.backdrop:
+		add_hint(x + w * 0.5, 175.0, "Too high, for now")
+
+
 ## A place where a gift waits: a shaft of light standing on the ground, faint until he has done what is asked
 ## of him there (`ready` returns true), then bright. Walking into it when it is bright gives the gift.
 func add_gift(id: String, x: float, ready: Callable, wait: String = "") -> void:
