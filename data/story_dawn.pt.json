@@ -1,5 +1,5 @@
 {
- "length": 26.02,
+ "length": 16.72,
  "cues": [
   {
    "t": 1.2,
@@ -8,10 +8,10 @@
    "ref": ""
   },
   {
-   "t": 13.46,
-   "d": 11.21,
-   "text": "Naquele mesmo dia, um velho subia pela estrada de Belém, trazendo uma novilha para o sacrifício. Era o profeta Samuel. Os anciãos da cidade saíram ao seu encontro, tremendo.",
-   "ref": "1 Samuel 16:4"
+   "t": 8.43,
+   "d": 6.9,
+   "text": "Naquele mesmo dia, o profeta Samuel subia pela estrada de Belém, trazendo uma novilha para o sacrifício.",
+   "ref": "1 Samuel 16:2–4"
   }
  ]
 }
