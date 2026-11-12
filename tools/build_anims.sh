@@ -71,3 +71,6 @@ run $V/r_bear_daze art/bear/anim daze mode=range a=16 b=76 step=3 hframe=0 wide=
 run $V/r_bear_daze art/bear/anim brace mode=range a=78 b=120 step=3 hframe=0 wide=1.8 tall=1.4 size=150 steady=999
 run $V/r_lion_run art/lion/anim run mode=range a=30 b=118 step=2 hframe=0 halo=0 erode=3 wide=2.2 tall=1.4 size=150
 run $V/r_lion_rake art/lion/anim rake mode=range a=20 b=52 step=2 hframe=0 halo=0 erode=3 wide=2.2 tall=1.4 size=150 steady=999
+# the bear's rear-up and slam, from a clip started on the game's own bear (tools/src/bear_start.png)
+run $V/h_bear_slam art/bear/anim slamup key=blue mode=range a=2 b=26 step=2 hframe=0 wide=1.8 tall=2.3 size=150
+run $V/h_bear_slam art/bear/anim slam key=blue mode=range a=64 b=94 step=2 hframe=0 wide=1.8 tall=2.3 size=150

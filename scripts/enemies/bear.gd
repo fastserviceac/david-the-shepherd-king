@@ -301,16 +301,16 @@ func _draw() -> void:
 	var u := 1.0 - st / st0
 	match state:
 		"rear", "slam_up":     # rises onto its hind legs, paws high
-			show_frame(action_frame("rear", u), 0.68, 2.3)
+			show_frame(action_frame("slamup", u), 0.68, 2.3)
 		"roar":
-			show_frame(action_frame("rear", 1.0), 0.68, 2.3, Vector2(1.0 + sin(t * 46.0) * 0.012, 1.0))
+			show_frame(action_frame("slamup", 1.0), 0.68, 2.3, Vector2(1.0 + sin(t * 46.0) * 0.012, 1.0))
 		"swipe", "slam":       # crashes forward and down
-			show_frame(action_frame("swipe", u, 0, 12), 0.68, 2.3)
+			show_frame(action_frame("slam", u, 0, 13), 0.68, 2.3)
 		"swipe2":              # stays low, shoulders bunched, for the second blow
 			show_frame(action_frame("brace", 1.0), 0.68, 1.4)
 		"rest":                # back on all fours, heaving
 			if u < 0.2:
-				show_frame(action_frame("swipe", u / 0.2, 12, 18), 0.68, 2.3)
+				show_frame(action_frame("slam", u / 0.2, 13, 15), 0.68, 2.3)
 			else:
 				show_frame(walk_frame(), 0.68, 1.4, Vector2(1.0, 1.0 + sin(t * 9.0) * 0.025))
 		"reel", "stunned":     # staggered or dazed: it stands and shakes its head
