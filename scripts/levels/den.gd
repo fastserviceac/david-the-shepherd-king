@@ -196,15 +196,17 @@ func _back_passages() -> void:
 	var pool := on_ground(POOL_X)
 	add_glow(pool + Vector2(0, -8), Color(0.55, 0.7, 1.0, 0.3), 150.0)
 	add_painter(pool + Vector2(0, 4), 3, func(ci: CanvasItem) -> void:
-		# seen low from the side: a dark stone lip, the water lying in it, and the moon broken on the water
+		# seen low from the side: wet rock darkening to still water, and the moon broken on it. Soft-edged,
+		# in the colours of the ground round it, until there is a painting of it
 		var f := sin(Time.get_ticks_msec() * 0.002)
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.2))
-		ci.draw_circle(Vector2.ZERO, 74.0, Color(0.05, 0.06, 0.12, 0.95))
-		ci.draw_circle(Vector2(0.0, -6.0), 64.0, Color(0.2, 0.33, 0.62, 0.95))
-		ci.draw_circle(Vector2(-6.0, -12.0), 50.0, Color(0.38, 0.54, 0.86, 0.85))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.07))
-		ci.draw_circle(Vector2(14.0 + f * 5.0, -70.0), 30.0, Color(0.92, 0.96, 1.0, 0.85))
-		ci.draw_circle(Vector2(-26.0 - f * 4.0, -20.0), 16.0, Color(0.92, 0.96, 1.0, 0.6))
+		var tone: Color = pal.get("char", Color(1, 1, 1))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.17))
+		for k in 7:
+			var u := k / 6.0
+			ci.draw_circle(Vector2(0.0, -3.0 * k), 78.0 - 7.0 * k, (Color(0.06, 0.08, 0.14).lerp(Color(0.2, 0.28, 0.46), u) * tone).lerp(Color(0, 0, 0), 0.15) * Color(1, 1, 1, 0.18 + 0.1 * u))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.05))
+		for g in [[10.0, -90.0, 22.0, 0.28], [-22.0, -30.0, 12.0, 0.2], [30.0, -150.0, 9.0, 0.16]]:
+			ci.draw_circle(Vector2(g[0] + f * 4.0, g[1]), g[2], Color(0.85, 0.92, 1.0, g[3]))
 		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE), true)
 	add_task(POOL_X, "drink at the pool", 1.2, func() -> void:
 		Game.sfx("step", -4.0, 0.3)
@@ -222,8 +224,6 @@ func _back_passages() -> void:
 
 	# the way out goes up over a shelf of rock. A bear takes it in one heave; a boy needs a step
 	add_light(Vector2(SHELF_X - 60.0, 440.0), 290.0)
-	var face := add_sprite("res://art/props/rock_mid.png", on_ground(SHELF_X - 30.0) + Vector2(0, 10), 1.0, 1, pal.get("char", Color(1, 1, 1)))
-	face.scale = Vector2(200.0 / face.texture.get_width(), (SHELF_UP + 40.0) / face.texture.get_height())      # broken rock at the foot of the shelf
 	step_rock = add_pushable(7650.0, 58.0, 50.0, "res://art/props/rock_low.png", 7650.0, SHELF_X - 31.0)
 	add_trigger(SHELF_X - 120.0, SHELF_X - 20.0, func() -> void:
 		if step_rock["body"].position.x < SHELF_X - 60.0:
