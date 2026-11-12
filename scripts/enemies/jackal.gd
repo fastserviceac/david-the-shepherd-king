@@ -39,6 +39,8 @@ func _ai(delta: float) -> void:
 		retreat -= delta
 		dir = -1 if dx >= 0.0 else 1
 		velocity.x = move_toward(velocity.x, dir * 150.0, 900.0 * delta)
+	elif _worry(delta, dx, dy):
+		pass
 	elif absf(dx) < 330.0 and dy < 130.0:
 		face_player()
 		if is_on_floor():
@@ -50,6 +52,37 @@ func _ai(delta: float) -> void:
 				velocity.x = move_toward(velocity.x, dir * 190.0, 900.0 * delta)
 	else:
 		patrol(delta, speed)
+
+
+const TAKE := 4.0        # seconds at a sheep's side before it is carried off
+
+## A jackal would sooner have a sheep than a fight. If one is within its ground and the shepherd is not right on
+## top of it, it goes for the sheep and worries it; left there long enough, it carries the sheep off.
+func _worry(delta: float, dx: float, dy: float) -> bool:
+	if absf(dx) < 135.0 and dy < 130.0:      # he is on it: it has him to deal with first
+		return false
+	var prey = null
+	var best := 330.0
+	for s in get_tree().get_nodes_in_group("sheep"):
+		if not is_instance_valid(s) or not (s.gathered or s.gatherable) or s.leap >= 0.0:
+			continue
+		var sx: float = s.global_position.x
+		if sx < min_x - 30.0 or sx > max_x + 30.0 or absf(s.global_position.y - global_position.y) > 80.0:
+			continue
+		if absf(sx - global_position.x) < best:
+			best = absf(sx - global_position.x)
+			prey = s
+	if prey == null:
+		return false
+	dir = 1 if prey.global_position.x >= global_position.x else -1
+	if best > 30.0:
+		velocity.x = move_toward(velocity.x, dir * 200.0, 900.0 * delta)
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, 1200.0 * delta)
+		prey.worried = 0.25
+		prey.threat += delta / TAKE
+		level.sheep_in_danger()
+	return true
 
 
 func _draw() -> void:

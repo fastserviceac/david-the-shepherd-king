@@ -274,5 +274,9 @@
  "%d more and the pouch holds another": "Mais %d e a bolsa leva outra",
  "Within his reach now, with %s": "Agora ao seu alcance, com %s",
  "Something here waits for %s": "Algo aqui espera por %s",
- "A shepherd's store, hung out of reach.  It wants a sling": "A reserva de um pastor, pendurada fora de alcance.  Pede uma funda"
+ "A shepherd's store, hung out of reach.  It wants a sling": "A reserva de um pastor, pendurada fora de alcance.  Pede uma funda",
+ "A sheep was taken.  A shepherd answers for every one of them": "Uma ovelha foi levada.  O pastor responde por cada uma delas",
+ "A beast is at the sheep.  Drive it off before the ring closes": "Uma fera está junto às ovelhas.  Afaste-a antes que o anel se feche",
+ "← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close": "← →  ou  1–8  escolher um lugar      Enter  ir até lá      Tab  a região inteira      M ou Esc  fechar",
+ "Go back to %s": "Voltar para %s"
 }

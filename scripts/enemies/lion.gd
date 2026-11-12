@@ -5,6 +5,8 @@ extends "res://scripts/enemies/enemy.gd"
 ## Three stages. First it pounces, and sometimes only pretends to. Then it starts to rake at close quarters,
 ## and to slink out of the light and come back along the ground at a run from whichever side its eyes show.
 ## Last, it springs twice together, and it turns on the lamb: get between them or turn it with a blow.
+## It also vaults clean over him and rakes from behind (duck the leap, then skip back), follows a pounce with a
+## rake when he stands too near where it lands, and in its last stage roars to stagger him before it springs.
 
 var state := "prowl"
 var st := 1.6
@@ -17,13 +19,14 @@ var rake_cd := 0.0
 var rush_dir := 1
 var edge_x := 0.0
 var slips := 0
+var vault := false          # this spring goes over his head, to come at him from behind
 var lamb_x := NAN          # where the lamb lies, if the level has one for it to go after
 
 
 func _init_enemy() -> void:
 	anim = "lion"
 	stride = 250.0
-	hp = 16
+	hp = 20
 	speed = 125.0
 	hit_r = 38.0
 	hit_h = 46.0
@@ -39,6 +42,8 @@ func reset() -> void:
 	st = 1.8
 	feint = false
 	doubled = false
+	vault = false
+	touch_kind = "body"
 	modulate.a = 1.0
 	global_position = home
 	velocity = Vector2.ZERO
@@ -144,21 +149,29 @@ func _ai(delta: float) -> void:
 			elif absf(dx) < 210.0:
 				want = -dir * speed * 0.8
 			velocity.x = move_toward(velocity.x, want, 700.0 * delta)
-			if stage >= 2 and absf(dx) < 112.0 and rake_cd <= 0.0:
+			if absf(dx) < 112.0 and rake_cd <= 0.0:
 				state = "rake"       # he has come too close: a quick blow along the ground
-				st = 0.4 * warn
-				rake_cd = 2.4
+				st = (0.5 if stage == 1 else 0.4) * warn
+				rake_cd = 2.4 if stage == 1 else 1.8
 			elif st <= 0.0:
 				var r := randf()
 				if stage == 3 and not is_nan(lamb_x) and r < 0.32:
 					state = "hunt"
 					Game.sfx("lion_growl", -1.0)
-				elif stage >= 2 and r < (0.72 if stage == 3 else 0.5):
+				elif stage == 3 and r < 0.44:      # it roars to stagger him, and springs while he reels: crouch low
+					state = "roar"
+					st = 0.85
+					Game.sfx("lion_roar", -1.0, 0.0)
+					level.player.shake = 8.0
+					if absf(dx) < 300.0 and not player.ducking and player.invuln <= 0.0:
+						player.stun = maxf(player.stun, 0.6)
+				elif r < [0.0, 0.22, 0.5, 0.66][stage]:
 					state = "slink"
 					edge_x = (min_x + 24.0) if global_position.x - min_x < max_x - global_position.x else (max_x - 24.0)
 				else:
 					state = "crouch"
 					feint = randf() < 0.3
+					vault = stage >= 2 and not feint and absf(dx) < 300.0 and randf() < 0.38
 					Game.sfx("lion_growl", -3.0)
 					st = (0.8 - 0.12 * (stage - 1)) * warn
 		"roar":
@@ -179,12 +192,25 @@ func _ai(delta: float) -> void:
 					state = "pounce"
 					st = 0.12
 					touch_on = true
-					velocity = Vector2(dir * clampf(absf(dx) * 1.55, 330.0, 640.0), -440.0)
+					if vault:        # high and long: clean over his head, to land behind him
+						velocity = Vector2(dir * clampf((absf(dx) + 200.0) * 1.3, 430.0, 760.0), -560.0)
+						touch_kind = "high"
+					else:
+						velocity = Vector2(dir * clampf(absf(dx) * 1.55, 330.0, 640.0), -440.0)
 		"pounce":
 			if st <= 0.0 and is_on_floor():
 				Game.sfx("lion_land", -2.0)
 				level.player.shake = maxf(level.player.shake, 4.0)
-				if stage == 3 and not doubled:      # it lands and is in the air again
+				touch_kind = "body"
+				if vault or (stage >= 2 and absf(to_player()) < 150.0 and randf() < 0.5):
+					vault = false      # it lands, turns and rakes before he has turned round
+					doubled = false
+					face_player()
+					state = "rake"
+					st = 0.36 * warn
+					rake_cd = 1.8
+					_last_state = ""
+				elif stage == 3 and not doubled:      # it lands and is in the air again
 					doubled = true
 					state = "crouch"
 					st = 0.3 * warn
@@ -192,7 +218,7 @@ func _ai(delta: float) -> void:
 				else:
 					doubled = false
 					state = "recover"
-					st = 1.15 / quick
+					st = 0.95 / quick
 		"rake":
 			velocity.x = move_toward(velocity.x, 0.0, 1400.0 * delta)
 			if st <= 0.0:
@@ -200,7 +226,7 @@ func _ai(delta: float) -> void:
 				if ahead > -10.0 and ahead < 130.0 and player.is_on_floor() and absf(player.global_position.y - global_position.y) < 90.0:
 					player.hurt(1, global_position.x, "low")
 				state = "recover"
-				st = 0.75
+				st = 0.65
 		"slink":                 # out of the light, to the edge of the ridge
 			touch_on = false
 			dir = 1 if edge_x > global_position.x else -1
@@ -231,7 +257,7 @@ func _ai(delta: float) -> void:
 			var past: bool = (player.global_position.x - global_position.x) * rush_dir < -210.0
 			if st <= 0.0 or past or is_on_wall() or global_position.x <= min_x + 3.0 or global_position.x >= max_x - 3.0:
 				state = "recover"
-				st = 1.3 / quick
+				st = 1.05 / quick
 				Game.sfx("lion_land", -4.0)
 		"hunt":                  # it has turned from him to the lamb
 			touch_on = true

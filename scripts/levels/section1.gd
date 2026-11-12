@@ -56,6 +56,7 @@ func _populate() -> void:
 	add_sheep(0.0, Vector2(3600.0, platforms[4].position.y))
 	add_sheep(4280.0)
 
+	add_jackal(4420.0, 4060.0, 4560.0)      # dusk brings the first of them down to the flock: the reason there is a shepherd
 	add_bush(1800.0)
 	add_bush(3950.0)
 

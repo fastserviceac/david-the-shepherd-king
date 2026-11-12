@@ -118,6 +118,7 @@ func _ready() -> void:
 	_spawn_player()
 	_build_checkpoints()
 	_populate()
+	_way_back()
 	_build_motes()
 	_build_atmosphere()
 	_build_life()
@@ -1408,6 +1409,25 @@ func say(ids: Array) -> void:
 	await Game.main.overlay.say(ids)
 
 
+## A beast has carried off a sheep: the flock is his to answer for, so it is back to the last watchfire.
+func sheep_taken(_s) -> void:
+	for n in get_tree().get_nodes_in_group("sheep"):
+		n.threat = 0.0
+		n.worried = 0.0
+	if respawning or done or Game.cinematic or Game.fast or not is_instance_valid(player) or player.dead:
+		return
+	Game.sfx("jackal_snarl", -3.0)
+	show_tip("A sheep was taken.  A shepherd answers for every one of them", 6.0)
+	respawn()
+
+
+var _danger_told := false
+func sheep_in_danger() -> void:
+	if not _danger_told and not Game.fast:
+		_danger_told = true
+		show_tip("A beast is at the sheep.  Drive it off before the ring closes", 6.0)
+
+
 func on_sheep(s) -> void:
 	sheep_count += 1
 	s.follow_index = followers.size()
@@ -1571,6 +1591,17 @@ func _process(_delta: float) -> void:
 
 ## A place where David does something by standing there and holding the grab key: draw water, light a torch.
 ## Returns the task; set task["on"] = false to close it, or task["again"] = true to let it be done repeatedly.
+## The road he came by: at the near edge of every place after the first, he can turn back to the one before it
+## and come out at its last watchfire. Earlier places hold things only later gifts can reach.
+func _way_back() -> void:
+	if section_idx <= 0 or Game.backdrop or not is_instance_valid(Game.main):
+		return
+	var prev: String = Game.t(Game.sections()[section_idx - 1]["title"])
+	var tk := add_task(46.0, Game.t("Go back to %s") % prev, 0.7, func() -> void:
+		Game.main.start_section(section_idx - 1, 99), 60.0)
+	tk["again"] = true
+
+
 func add_task(x: float, text: String, hold: float, fn: Callable, reach: float = 50.0) -> Dictionary:
 	var tk := {"x": x, "text": text, "hold": hold, "fn": fn, "reach": reach, "t": 0.0, "on": true, "again": false}
 	tasks.append(tk)

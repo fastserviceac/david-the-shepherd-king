@@ -32,17 +32,32 @@ var leap := -1.0          # 0..1 while it jumps a gap
 var leap_a := Vector2.ZERO
 var leap_b := Vector2.ZERO
 var leap_dur := 0.4
+var threat := 0.0        # 0..1: how near a beast at its side is to carrying it off
+var worried := 0.0       # seconds since a beast was last at it (counts down)
+var bleat := 0.0
 
 
 func _ready() -> void:
 	z_index = 3
 	t = randf() * 10.0
 	home_x = position.x
+	add_to_group("sheep")
 
 
 func _process(delta: float) -> void:
 	t += delta
 	hop = maxf(0.0, hop - delta * 2.5)
+	if worried > 0.0:          # a beast is at it: it cries out, and will be carried off if he does not come
+		worried -= delta
+		bleat -= delta
+		if bleat <= 0.0:
+			bleat = 0.7
+			hop = 1.0
+			Game.sfx("lamb" if size < 0.9 else "sheep", -3.0, 0.25)
+		if threat >= 1.0:
+			level.sheep_taken(self)
+	else:
+		threat = maxf(0.0, threat - delta * 0.3)
 	var player = level.player
 	if not is_instance_valid(player):
 		return
@@ -151,6 +166,11 @@ func _draw() -> void:
 		var k := int(t * 12.0) % maxi(1, 2 * n - 2)
 		tex = g[k if k < n else 2 * n - 2 - k]
 	FA.draw(self, tex, face, 0.46 * size, wool, 1.4, 0.0, Vector2.ZERO, Vector2.ONE, lift)
+	if threat > 0.02:          # how close it is to being lost: a ring closing over it
+		var at := Vector2(0, -62.0 * size + lift)
+		var hot := Color(1.0, 0.36, 0.22, 0.55 + 0.4 * absf(sin(t * 9.0)))
+		draw_arc(at, 11.0, 0.0, TAU, 24, Color(0.05, 0.03, 0.03, 0.6), 5.0, true)
+		draw_arc(at, 11.0, -PI * 0.5, -PI * 0.5 + TAU * minf(threat, 1.0), 24, hot, 3.5, true)
 	if mark.a > 0.0:
 		var mc := Vector2(-face * 13.0 * size, -39.0 * size + lift)
 		for k in 6:          # soft-edged: many faint layers, widest first

@@ -295,6 +295,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("move_left") or event.is_action_pressed("aim_up"):
 		index = posmod(index - 1, n)
 		Game.sfx("ui_move", -8.0)
+	elif event is InputEventKey and event.pressed and event.keycode >= KEY_1 and event.keycode < KEY_1 + n:
+		index = event.keycode - KEY_1      # a place by its number
+		Game.sfx("ui_move", -8.0)
 	elif event.is_action_pressed("growth"):
 		_toggle()
 		Game.sfx("ui_move", -8.0)
@@ -430,7 +433,7 @@ func _draw() -> void:
 	_text(Vector2(1218, 84), "N", 22, ink)
 	draw_line(Vector2(1218, 150), Vector2(1218, 96), ink, 2.5)
 	draw_colored_polygon(PackedVector2Array([Vector2(1218, 90), Vector2(1212, 104), Vector2(1224, 104)]), ink)
-	var keys := Game.t("← →  choose a place      Tab  the wider land      M or Esc  close" if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close")
+	var keys := Game.t("← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close" if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close")
 	if Game.pad:
 		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
 	var ky := 700.0
