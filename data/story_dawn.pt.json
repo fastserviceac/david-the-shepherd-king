@@ -1,17 +1,17 @@
 {
- "length": 16.72,
+ "length": 25.39,
  "cues": [
   {
    "t": 1.2,
+   "d": 15.84,
+   "text": "Samuel nunca mais voltou a ver Saul até o dia de sua morte. E o SENHOR disse: “Encha o seu chifre de óleo e vá. Eu o enviarei a Jessé, o belemita, pois escolhi para mim um rei entre os seus filhos.”",
+   "ref": "1 Samuel 15:35; 16:1"
+  },
+  {
+   "t": 19.46,
    "d": 4.56,
    "text": "Ao amanhecer, ele desceu das colinas com o rebanho inteiro.",
    "ref": ""
-  },
-  {
-   "t": 8.43,
-   "d": 6.9,
-   "text": "Naquele mesmo dia, o profeta Samuel subia pela estrada de Belém, trazendo uma novilha para o sacrifício.",
-   "ref": "1 Samuel 16:2–4"
   }
  ]
 }

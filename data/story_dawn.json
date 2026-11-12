@@ -1,17 +1,17 @@
 {
- "length": 16.72,
+ "length": 25.39,
  "cues": [
   {
    "t": 1.2,
+   "d": 17.36,
+   "text": "Samuel came no more to see Saul until the day of his death. And the LORD said: “Fill your horn with oil, and go. I will send you to Jesse the Bethlehemite, for I have provided a king for myself amongst his sons.”",
+   "ref": "1 Samuel 15:35; 16:1"
+  },
+  {
+   "t": 19.46,
    "d": 4.4,
    "text": "At dawn he came down from the hills with the whole flock.",
    "ref": ""
-  },
-  {
-   "t": 8.43,
-   "d": 6.34,
-   "text": "That same day the prophet Samuel came up the road to Bethlehem, leading a heifer for sacrifice.",
-   "ref": "1 Samuel 16:2–4"
   }
  ]
 }
