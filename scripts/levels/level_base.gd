@@ -788,10 +788,11 @@ func add_sheep(x: float, pos = null, lamb: bool = false):
 	return s
 
 
-func add_bush(x: float) -> void:
+func add_bush(x: float):
 	var b = Bush.new()
 	b.position = on_ground(x)
 	add_child(b)
+	return b
 
 
 func add_jackal(x: float, x0: float, x1: float):
@@ -1381,7 +1382,8 @@ func add_trigger(x0: float, x1: float, fn: Callable, once: bool = true) -> void:
 
 
 ## A log bridge that falls into place across a gap when drop.call() runs.
-func add_bridge(x0: float, x1: float, y: float) -> Callable:
+## `lying`: it is not hung anywhere but lies on the near bank where a flood left it, and is dragged across.
+func add_bridge(x0: float, x1: float, y: float, lying: bool = false) -> Callable:
 	var r := Rect2(x0 - 24.0, y, x1 - x0 + 48.0, 20.0)
 	var body := add_block(r, false)
 	var cs: CollisionShape2D = body.get_child(0)
@@ -1395,10 +1397,21 @@ func add_bridge(x0: float, x1: float, y: float) -> Callable:
 	sp.modulate = pal.get("char", Color(1, 1, 1))
 	body.add_child(sp)
 	body.z_index = 2
-	body.visible = false
+	body.visible = lying
+	if lying:
+		sp.position = Vector2(-(r.size.x + 36.0), -15.0)
+		sp.rotation = -0.05
 	return func() -> void:
 		body.visible = true
 		cs.set_deferred("disabled", false)
+		if lying:
+			var over := create_tween().set_parallel(true)
+			over.tween_property(sp, "position", Vector2.ZERO, 0.01 if Game.fast else 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			over.tween_property(sp, "rotation", 0.0, 0.01 if Game.fast else 1.1)
+			over.chain().tween_callback(func() -> void:
+				Game.sfx("logs", -2.0, 0.04)
+				Game.burst(self, Vector2(r.position.x + r.size.x * 0.5, y), Color(0.8, 0.7, 0.55, 0.5), 10, 110.0))
+			return
 		if Game.fast:
 			return
 		get_tree().create_timer(0.42).timeout.connect(func() -> void: Game.sfx("logs", 1.0, 0.04))      # heard as the logs land, not as they start to fall

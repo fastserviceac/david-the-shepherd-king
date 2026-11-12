@@ -256,7 +256,7 @@ func _physics_process(delta: float) -> void:
 	var g := GRAVITY * (1.35 if velocity.y > 0.0 else 1.0)
 	velocity.y = minf(velocity.y + g * delta, 900.0)
 
-	if buffer > 0.0 and coyote > 0.0 and not charging:
+	if buffer > 0.0 and coyote > 0.0 and not charging and act != "carry":      # with a lamb on his shoulders he does not leap
 		velocity.y = JUMP
 		if Game.has("feet") and absf(velocity.x) > RUN * 0.92:      # the running leap
 			velocity.y = JUMP * 1.14

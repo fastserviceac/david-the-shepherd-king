@@ -529,15 +529,16 @@ func _s3(lv) -> void:
 
 
 func _s4(lv) -> void:
-	await _goto(3780.0)
+	await _goto(lv.SERVANT_X - 120.0)
 	await _frames(20)
 	_check(not lv.met, "the servant does not take the flock while part of it is still out on the hill")
+	_check(lv.wild_ewe.wild and not lv.bay_jackal.fleeing, "one stray will come only to his call, and a jackal has another cut off")
 	for sh in lv.get_children():
 		if sh.get("gatherable") != null and not sh.gathered:
 			lv.player.position = sh.position
 			lv.player.velocity = Vector2.ZERO
 			await _frames(10)
-	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 3, "the three strays are brought in")
+	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 5, "the five strays are brought in")
 	await _goto(2100.0)
 	await _frames(10)
 	_check(not lv.ambush["walls"].is_empty(), "the jackals try the flock once more on the road")
@@ -546,19 +547,35 @@ func _s4(lv) -> void:
 		for n in tree.get_nodes_in_group("enemies"):
 			n.hit(9, 1, "staff")
 	_check(lv.ambush["cleared"], "and are driven off")
-	await _goto(2950.0)
+	await _goto(lv.LAMB_X - 60.0)
 	await _frames(20)
-	_check(not is_nan(lv.lamb.stay), "the lamb lies down in the road")
-	lv.do_task(lv.tasks[lv.tasks.size() - 1])
+	_check(not is_nan(lv.lamb.stay), "the lamb lies down at the washout")
+	lv.do_task(lv.lift_task)
 	await _frames(5)
 	_check(lv.player.act == "carry" and lv.carrying, "he lifts it and carries it")
-	await _goto(3780.0)
+	Input.action_press("move_right")
+	Input.action_press("jump")
+	await _frames(240)
+	Input.action_release("jump")
+	_check(lv.player.position.x < lv.WASH_X0 and lv.player.position.y < 600.0, "with the lamb he cannot leap the washout, and does not walk into it")
+	lv.do_task(lv.bridge_task)
+	await _frames(400)
+	Input.action_release("move_right")
+	_check(lv.bridged and lv.player.position.x > lv.WASH_X1 and lv.player.position.y < 600.0, "he drags the footbridge across and carries the lamb over it")
+	await _goto(lv.SERVANT_X - 120.0)
 	await _frames(30)
 	_check(lv.met and lv.player.act == "" and lv.lamb.visible and not is_nan(lv.followers[0].stay), "at the servant he sets it down, and the flock is left there")
-	await _goto(4900.0)
+	await _goto(lv.PILLAR_X - 300.0)
+	await _frames(20)
+	_check(lv._goal_now() == "Cut the thorn back from Rachel's grave", "thorn has come up round the grave, and it is his to cut")
+	for b in lv.thorn:
+		for k in 5:
+			b.hit(1, 1, "staff")
+	await _goto(lv.SAMUEL_X - 700.0)
 	await _frames(90)
-	_check(absf(lv.followers[0].global_position.x - 3800.0) < 260.0, "the flock stays with the servant when David goes on")
-	await _goto(5890.0)
+	_check(absf(lv.followers[0].global_position.x - (lv.SERVANT_X - 100.0)) < 260.0, "the flock stays with the servant when David goes on")
+	_check(lv.player.position.y < lv.TOP + 20.0, "the town stands above the road, on its terraces")
+	await _goto(lv.SAMUEL_X - 50.0)
 	await _frames(20)
 
 
@@ -1068,7 +1085,7 @@ func flow(m, dir: String) -> void:
 	m.start_section(Game.sections().size() - 1)
 	await _wait(7.0)
 	await _skip_story(15.0)
-	await _goto(5890.0)
+	await _goto(m.level.SAMUEL_X - 50.0)
 	await _wait(1.0)
 	if snap:
 		await _wait(2.0)
