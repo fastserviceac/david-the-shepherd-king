@@ -8,6 +8,9 @@ var lion
 var lamb
 var arena_walls: Array = []
 var lion_started := false
+var end_x := 7150.0       # the foot of the ridge, where the way down ends
+var carrying := false
+var told := false
 
 
 func _setup() -> void:
@@ -18,7 +21,7 @@ func _setup() -> void:
 	midground_art = "res://art/s3_mid.png"
 	mid_tint = Color(0.8, 0.84, 1.0)
 	mood = "ridge"
-	width = 5400.0
+	width = 7400.0
 	pal.merge({
 		"mist": Color(0.6, 0.72, 1.0, 0.11),
 		"grass": Color(0.34, 0.44, 0.75), "ground": Color(0.3, 0.35, 0.56), "char": Color(0.6, 0.67, 0.92),
@@ -30,7 +33,11 @@ func _setup() -> void:
 	segments = [
 		make_ground(0.0, 1210.0, 610.0, 10.0, 0.3),
 		make_ground(1200.0, 2570.0, 530.0, 6.0, 1.2),
-		make_ground(2560.0, width, 468.0, 5.0, 2.2),
+		make_ground(2560.0, 4420.0, 468.0, 5.0, 2.2),
+		# the way down, in long steps, with the lamb on his shoulders
+		make_ground(4410.0, 5320.0, 510.0, 6.0, 0.6),
+		make_ground(5310.0, 6240.0, 556.0, 6.0, 1.7),
+		make_ground(6230.0, width, 604.0, 8.0, 0.2),
 	]
 	platforms.append(Rect2(1110.0, 570.0, 100.0, 60.0))
 	checkpoints = [150.0, 1290.0, 2440.0]
@@ -67,6 +74,7 @@ func _populate() -> void:
 	lamb = add_sheep(3950.0, null, true)
 	lamb.gatherable = false
 	sheep_total = 0
+	_way_down()
 
 
 const RUN_FROM := 1340.0
@@ -163,10 +171,43 @@ func _on_respawn() -> void:
 
 
 func _on_sheep(s) -> void:
-	# he lifts the lamb onto his shoulders and walks on with it as the narrator speaks
+	# he lifts the lamb onto his shoulders. The fight is over; what is left is the long way down with it, and
+	# the player walks it while the narrator speaks
 	s.visible = false
+	carrying = true
 	player.facing = 1
 	player.act = "carry"
 	player.act_t = 0.0
+	player.carry_free = true
+	player.calm = true
+	for w in arena_walls:
+		if is_instance_valid(w):
+			w.queue_free()
+	arena_walls.clear()
+	add_hint(4150.0, 150.0, "Carry it down off the ridge")
 	await say(["n_s3_end", "n_s3_remember", "1sam17_37"])
-	complete()
+	told = true
+	if is_instance_valid(player) and player.global_position.x > end_x - 60.0:
+		complete()
+
+
+## The way down. Nothing attacks a second time; the ridge only watches.
+func _way_down() -> void:
+	if Game.backdrop:
+		return
+	for tx in [4560.0, 5080.0, 5700.0, 6420.0, 6900.0]:
+		add_tree(tx, rng.randf_range(0.9, 1.5), rng.randf() < 0.7)
+	# from the rocks above the path, two eyes: beaten, it watches him go
+	var eyes := on_ground(4840.0) + Vector2(0, -150.0)
+	for dx in [-7.0, 7.0]:
+		add_glow(eyes + Vector2(dx, 0), Color(1.0, 0.85, 0.35, 0.9), 14.0)
+	add_trigger(4700.0, 4800.0, func() -> void:
+		if carrying:
+			show_tip("It watches him go, from the rocks.  It does not come down", 5.5))
+	add_trigger(5750.0, 5850.0, func() -> void:
+		if carrying:
+			show_tip("Far below, one spark in the dark: the watchfire at the fold", 5.5))
+	add_glow(on_ground(end_x + 160.0) + Vector2(0, -30.0), Color(1.0, 0.6, 0.25, 0.8), 120.0)
+	add_trigger(end_x - 60.0, end_x + 90.0, func() -> void:
+		if carrying and told:
+			complete(), false)

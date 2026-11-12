@@ -522,6 +522,10 @@ func _s3(lv) -> void:
 	await _frames(5)
 	_check(lv.lamb.gatherable, "lamb can be rescued")
 	await _goto(3950.0)
+	await _frames(20)
+	_check(lv.carrying and not lv.done, "he lifts the lamb, and the way down is still ahead of him")
+	await _goto(lv.end_x)
+	await _frames(20)
 
 
 func _s4(lv) -> void:
