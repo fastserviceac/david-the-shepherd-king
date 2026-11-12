@@ -207,6 +207,23 @@ func _draw() -> void:
 			draw_circle(tp + Vector2(tw + 16.0 + k * 13.0, -6.0), 3.6, Color(1.0, 0.86, 0.5, ta) if k < int(tt[1]) else Color(1, 1, 1, 0.25 * ta))
 		draw_string(Game.serif, tp + Vector2(0, 22), Game.t(tc["gifts"][int(tt[1]) - 1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(cream.r, cream.g, cream.b, 0.85 * ta))
 
+	# a sheep in danger that he cannot see: a mark at the edge of the screen, on the side it is on
+	if is_instance_valid(level) and is_instance_valid(level.player):
+		var centre: float = level.player.cam.get_screen_center_position().x
+		var half: float = 640.0 / maxf(level.player.cam.zoom.x, 0.01)
+		for sh in get_tree().get_nodes_in_group("sheep"):
+			if not is_instance_valid(sh) or sh.threat <= 0.02:
+				continue
+			var off: float = sh.global_position.x - centre
+			if absf(off) < half:
+				continue
+			var side := signf(off)
+			var at := Vector2(640.0 + side * 596.0, 380.0)
+			var hot := Color(1.0, 0.36, 0.22, 0.6 + 0.4 * absf(sin(Time.get_ticks_msec() * 0.009)))
+			draw_arc(at, 17.0, 0.0, TAU, 28, Color(0.05, 0.03, 0.03, 0.7), 7.0, true)
+			draw_arc(at, 17.0, -PI * 0.5, -PI * 0.5 + TAU * minf(sh.threat, 1.0), 28, hot, 5.0, true)
+			draw_colored_polygon(PackedVector2Array([at + Vector2(side * 30.0, 0), at + Vector2(side * 21.0, -8), at + Vector2(side * 21.0, 8)]), hot)
+
 	# the journal, held open with Tab: what he is doing and why, what has been given him and what has not,
 	# how his crafts stand, and what the stones and places he has found are worth
 	if panel > 0.01:

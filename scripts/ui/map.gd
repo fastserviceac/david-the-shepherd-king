@@ -430,6 +430,24 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([at + Vector2(0, -12), at + Vector2(-7, -26), at + Vector2(7, -26)]), RED)
 		_card(secs)
 	# title, scale bar, keys
+	if view == "land" and lit:      # the road the story takes next: north along the ridge, to the king at Gibeah
+		var from_t := {}
+		var to_t := {}
+		for tw in data["towns"]:
+			if tw["name"] == "Bethlehem":
+				from_t = tw
+			elif str(tw["name"]).begins_with("Gibeah"):
+				to_t = tw
+		if not from_t.is_empty() and not to_t.is_empty():
+			var done: bool = Game.save.get("finished", false)
+			var road_col := Color(1.0, 0.82, 0.5, 0.95 if done else 0.45)
+			for k in range(1, 24):
+				var u := k / 24.0
+				var q := _at(lerpf(from_t["lat"], to_t["lat"], u), lerpf(from_t["lon"], to_t["lon"], u) + sin(u * PI) * 0.012)
+				draw_circle(q, 2.2, road_col)
+			var gp := _at(to_t["lat"], to_t["lon"])
+			draw_arc(gp, 13.0 + fmod(t * 8.0, 12.0), 0.0, TAU, 30, Color(1.0, 0.82, 0.5, (1.0 - fmod(t * 8.0, 12.0) / 12.0) * (1.0 if done else 0.5)), 2.0, true)
+			_text(gp + Vector2(-215, 8), Game.t("Chapter Two  ·  The Lyre") if done else Game.t("The road north"), 17, road_col)
 	if view == "land" and lit:      # where the hills of this chapter lie in the whole land
 		var hb: Dictionary = data["views"]["hills"]
 		var box := PackedVector2Array()

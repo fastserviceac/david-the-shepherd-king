@@ -52,7 +52,7 @@ func _process(delta: float) -> void:
 	if worried > 0.0:          # a beast is at it: it cries out, and will be carried off if he does not come
 		worried -= delta
 		bleat -= delta
-		threat += delta / TAKE       # however many are at it, it is one sheep and one count
+		threat += delta / (TAKE * float(Game.diff()["warning"]))       # however many are at it, it is one sheep and one count; a gentler game gives him longer
 		if bleat <= 0.0:
 			bleat = 0.7
 			hop = 1.0
@@ -172,8 +172,10 @@ func _draw() -> void:
 	if threat > 0.02:          # how close it is to being lost: a ring closing over it
 		var at := Vector2(0, -62.0 * size + lift)
 		var hot := Color(1.0, 0.36, 0.22, 0.55 + 0.4 * absf(sin(t * 9.0)))
-		draw_arc(at, 11.0, 0.0, TAU, 24, Color(0.05, 0.03, 0.03, 0.6), 5.0, true)
-		draw_arc(at, 11.0, -PI * 0.5, -PI * 0.5 + TAU * minf(threat, 1.0), 24, hot, 3.5, true)
+		draw_arc(at, 14.0, 0.0, TAU, 28, Color(0.05, 0.03, 0.03, 0.65), 6.0, true)
+		draw_arc(at, 14.0, -PI * 0.5, -PI * 0.5 + TAU * minf(threat, 1.0), 28, hot, 4.5, true)
+		draw_line(at + Vector2(0, -6), at + Vector2(0, 2), hot, 3.0, true)      # and a mark inside it, so it reads from across the screen
+		draw_circle(at + Vector2(0, 6.5), 1.8, hot)
 	if mark.a > 0.0:
 		var mc := Vector2(-face * 13.0 * size, -39.0 * size + lift)
 		for k in 6:          # soft-edged: many faint layers, widest first
