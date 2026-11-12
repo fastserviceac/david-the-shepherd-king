@@ -70,6 +70,7 @@ var ambush := {}              # a pack closing in: walls, beasts and the trigger
 var tasks: Array = []         # places where he does something with his hands by holding the grab key
 var task_label: Label
 var task_now = null
+var pools: Array = []         # rain pools he can walk through: {x, y of the water, half width, tint}
 var pushables: Array = []     # heavy things he can lean on and move
 var push_t := 0.0             # above zero while he is shoving one of them along
 var dark: ColorRect           # darkness over the scene, with pools of light cut out of it
@@ -987,8 +988,40 @@ func add_pool(x: float, tint: Color) -> void:
 	var at := on_ground(x)
 	var sp := add_sprite("res://art/props/pool.png", at + Vector2(0, 30), 1.0, 3, tint)
 	sp.scale.y *= 0.64
+	pools.append({"x": x, "y": at.y + 13.0, "half": 84.0, "tint": tint})
 	var lit: Color = pal.get("char", Color(1, 1, 1))      # the stones are lit like the other loose stones of the place
 	add_rubble(at + Vector2(0, 17), [[-116.0, 0.62, false], [78.0, 0.3, true], [112.0, 0.5, true]], Color(lit.r * 0.55, lit.g * 0.56, lit.b * 0.66))      # at its ends, on the ground, not down the face
+
+
+## Is that spot in the shallow water of a pool? He walks along its far edge with his feet in it.
+func pool_at(pos: Vector2):
+	for pl in pools:
+		if absf(pos.x - pl["x"]) < pl["half"] and absf(pos.y - (pl["y"] - 13.0)) < 24.0:
+			return pl
+	return null
+
+
+## A foot has come down in the water: rings spread from it over the surface and die away.
+func ripple(pl: Dictionary, x: float, strength: float = 1.0) -> void:
+	if Game.fast or Game.backdrop:
+		return
+	var cx := clampf(x, pl["x"] - pl["half"] + 30.0, pl["x"] + pl["half"] - 30.0)
+	var room: float = minf(cx - (pl["x"] - pl["half"]), pl["x"] + pl["half"] - cx)      # the rings stop at the stone lip
+	var born := Time.get_ticks_msec()
+	var tint: Color = pl["tint"]
+	var node := add_painter(Vector2(cx, pl["y"] - 3.0), 3, func(ci: CanvasItem) -> void:
+		var age := (Time.get_ticks_msec() - born) / 1000.0
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.2))
+		for k in 3:
+			var u := (age - k * 0.16) / 1.1
+			if u <= 0.0 or u >= 1.0:
+				continue
+			var r := minf(6.0 + 46.0 * u * strength, room)
+			var a := (1.0 - u) * (1.0 - u) * 0.55
+			ci.draw_arc(Vector2.ZERO, r, 0.0, TAU, 28, Color(0.85 * tint.r + 0.15, 0.9 * tint.g + 0.1, minf(1.0, tint.b + 0.2), a), 1.6, true)
+			ci.draw_arc(Vector2(0.0, 5.0), r, 0.15, PI - 0.15, 14, Color(0.02, 0.03, 0.06, a * 0.6), 1.4, true)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE), true)
+	get_tree().create_timer(1.6).timeout.connect(node.queue_free)
 
 
 ## Loose painted stones lying in front of something, to break its edge: each [dx, size, flipped].

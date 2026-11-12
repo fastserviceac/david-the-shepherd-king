@@ -145,6 +145,38 @@ func _s1(lv) -> void:
 	_check(Game.keys("J  staff") == "X  staff" and Game.keys("Run, then Space") == "Run, then A" and Game.keys("A D  move") == "Stick  move", "with a controller in hand the prompts name its buttons")
 	Game.pad = false
 	_check(Game.keys("J  staff") == "J  staff", "and with the keyboard they name keys")
+	Game.touch = true
+	var tk := [Game.keys("J  staff"), Game.keys("Enter:  go there"), Game.keys("Sling:  hold K, then let go"),
+			Game.keys("Two have broken from the fold.  Call them (Q), or go to them"), Game.keys("A D  move"),
+			Game.keys("A nervous ewe bolts if he runs at her.  Walk up (Shift), or call her (Q)")]
+	_check(tk == ["Staff  staff", "Jump:  go there", "Sling:  hold Sling, then let go",
+			"Two have broken from the fold.  Call them (Call), or go to them", "Stick  move",
+			"A nervous ewe bolts if he runs at her.  Walk up (a gentle push of the stick), or call her (Call)"],
+			"on a touchscreen the prompts name the buttons on screen %s" % [tk])
+	# a thumb on the on-screen buttons and stick works the same actions as the keys
+	var lv_paused := tree.paused
+	var tap := func(i: int, at: Vector2, down: bool) -> void:
+		var e := InputEventScreenTouch.new()
+		e.index = i
+		e.position = at
+		e.pressed = down
+		Input.parse_input_event(e)
+	tap.call(0, Vector2(1172, 616), true)
+	await _frames(2)
+	var jump_held := Input.is_action_pressed("jump")
+	tap.call(1, Vector2(200, 600), true)
+	var dr := InputEventScreenDrag.new()
+	dr.index = 1
+	dr.position = Vector2(280, 600)
+	Input.parse_input_event(dr)
+	await _frames(2)
+	var runs := Input.is_action_pressed("move_right") and not Input.is_action_pressed("walk")
+	tap.call(0, Vector2(1172, 616), false)
+	tap.call(1, Vector2(280, 600), false)
+	await _frames(2)
+	_check(jump_held and runs and not Input.is_action_pressed("jump") and not Input.is_action_pressed("move_right") and lv_paused == tree.paused,
+			"the on-screen buttons and stick press and let go of the game's actions")
+	Game.touch = false
 	var had_places: Array = Game.places().duplicate()
 	Game.save["places"] = []
 	for pl in lv.finds:
@@ -575,6 +607,7 @@ func _s3(lv) -> void:
 	Input.action_release("move_right")
 	lv.do_task(lv.tend_task)
 	_check(lv.tended, "he washes and binds its wound at the pool")
+	_check(lv.pool_at(lv.player.global_position) != null and lv.pool_at(lv.on_ground(lv.WATER_X + 300.0)) == null, "his feet are in the water there, and nowhere else")
 	await _goto(lv.ROCK_X - 80.0)
 	Input.action_press("move_right")
 	var shoved := 0
@@ -731,7 +764,13 @@ func placeshots(m, dir: String) -> void:
 			m.level.player.global_position = m.level.on_ground(sx - 120.0)
 			m.level.player.velocity = Vector2.ZERO
 			m.level.player.cam.reset_smoothing()
-			await _frames(50)
+			var wet = m.level.pool_at(m.level.player.global_position)
+			if wet != null:      # standing in a pool: show the rings a step makes
+				await _frames(15)
+				m.level.ripple(wet, m.level.player.global_position.x + 8.0)
+				await _frames(12)
+				m.level.ripple(wet, m.level.player.global_position.x - 30.0)
+			await _frames(50 if wet == null else 22)
 			await _snap(dir, "spot_%s_%d" % [nm, int(sx)])
 		print("PLACESHOTS done")
 		tree.quit()

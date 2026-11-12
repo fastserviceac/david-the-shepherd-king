@@ -306,7 +306,12 @@ func _physics_process(delta: float) -> void:
 	var before := ph
 	_update_pose(delta)
 	if is_on_floor() and absf(velocity.x) > 40.0 and (int(before * 2.0) != int(ph * 2.0) or ph < before):
-		Game.sfx("step", -13.0 if act == "carry" else -10.0, 0.14)
+		var wet = level.pool_at(global_position) if level != null else null
+		if wet != null:       # a foot in standing water
+			Game.sfx("step_wet", -9.0 if act == "carry" else -7.0, 0.16)
+			level.ripple(wet, global_position.x + facing * 8.0, clampf(absf(velocity.x) / 200.0, 0.6, 1.2))
+		else:
+			Game.sfx("step", -13.0 if act == "carry" else -10.0, 0.14)
 	Game.sfx_hold("sling_whirl", charging and not dead)
 	queue_redraw()
 
