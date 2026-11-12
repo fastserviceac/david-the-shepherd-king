@@ -126,8 +126,8 @@ func _populate() -> void:
 		add_tree(tx, rng.randf_range(0.9, 1.4), rng.randf() < 0.5)
 
 	# The road home is the last of the night's work, not a walk.
-	# First: the flock scattered at first light. Three are with him, the lamb among them; five are not.
-	for i in 3:
+	# First: the flock scattered at first light. Four of the nine are with him, the lamb among them; five are not.
+	for i in 4:
 		var s = add_sheep(140.0 - i * 30.0, null, i == 0)
 		s.gathered = true
 		s.follow_index = i

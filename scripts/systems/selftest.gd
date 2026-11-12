@@ -314,7 +314,7 @@ func _well(lv) -> void:
 		await _frames(2)
 	_check(lv.watered, "every one of his flock has drunk")
 	print("  other men's sheep reached the water unchecked: %s" % stolen)
-	_check(lv.own[4]["state"] == "gone", "the lamb slips away while he deals with the jackal")
+	_check(lv.own[lv.LAMB]["state"] == "gone", "the lamb slips away while he deals with the jackal")
 	lv.do_task(lv.back_task)
 	await _frames(5)
 	_check(lv.closed, "the stone goes back over the well")
@@ -330,7 +330,7 @@ func _well(lv) -> void:
 			lv.rod()
 			turned += 1
 		await _frames(1)
-	_check(turned == 2 and lv.in_fold == 4, "two strangers turned back at the gate, four of his own counted in")
+	_check(turned == 2 and lv.in_fold == 8, "two strangers turned back at the gate, eight of his own counted in")
 
 
 ## The Wadi: every perched boulder comes down to a sling stone and leaves a way up.

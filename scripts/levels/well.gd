@@ -11,6 +11,7 @@ const WELL_X := 2300.0
 const OPEN_X := 2415.0
 const TROUGHS := [2030.0, 1890.0]
 const GATE := 3840.0
+const LAMB := 8             # which of his own is the lamb: the flock is eight ewes and the lamb
 const BUCKET_X := 1720.0
 
 var stone: Dictionary
@@ -76,9 +77,9 @@ func _populate() -> void:
 	var floor_sp := add_sprite("res://art/props/threshing.png", tf + Vector2(0, 16), 1.0, 1, pal.get("char", Color(1, 1, 1)))
 	floor_sp.scale = Vector2.ONE * (250.0 / floor_sp.texture.get_width())
 	add_place("threshing", tf + Vector2(60, 0), "The Threshing Floor", "hand")
-	# his own flock comes down with him: four ewes and the lamb
-	for i in 5:
-		var s = add_sheep(130.0 - i * 30.0, null, i == 4)
+	# his own flock comes down with him: eight ewes and the lamb
+	for i in 9:
+		var s = add_sheep(130.0 - i * 14.0, null, i == LAMB)
 		s.gathered = true
 		s.follow_index = i
 		followers.append(s)
@@ -269,7 +270,7 @@ func _run_ahead() -> void:
 	mixed_up = true
 	for i in own.size():
 		own[i]["state"] = "mixed"
-		own[i]["s"].stay = 2540.0 + i * 46.0
+		own[i]["s"].stay = 2530.0 + i * 34.0
 		own[i]["s"].hop = 1.0
 	Game.sfx("sheep", -6.0, 0.2)
 
@@ -351,7 +352,7 @@ func _poured(which: int) -> void:
 	for tk in pour_tasks:
 		tk["on"] = false
 	draw_task["on"] = not watered
-	drinks[which] = mini(3, drinks[which] + 2)
+	drinks[which] = mini(6, drinks[which] + 4)      # a bucket waters four; the trough holds six mouthfuls
 	Game.sfx("step", -3.0, 0.3)
 	Game.burst(self, on_ground(TROUGHS[which]) + Vector2(0, -40), Color(0.6, 0.8, 1.0, 0.8), 12, 90.0)
 	if not hints_on.is_empty() and not watered:
@@ -387,7 +388,7 @@ func _process(delta: float) -> void:
 		Game.sfx("gather", -8.0, 0.0)
 		show_tip("Bucket and rope.  Now the stone, then the water")
 	for i in waters.size():          # the water stands at the level of what is left, and sinks as they drink
-		var lvl: int = clampi(drinks[i], 0, 3)
+		var lvl: int = clampi((drinks[i] + 1) / 2, 0, 3)
 		var wt: Sprite2D = waters[i]
 		if lvl > 0 and lvl != water_shown[i]:
 			wt.texture = load("res://art/props/trough_water%d.png" % lvl)
@@ -395,8 +396,8 @@ func _process(delta: float) -> void:
 		wt.modulate.a = move_toward(wt.modulate.a, 1.0 if lvl > 0 else 0.0, delta * 1.6)
 		if lvl == 0 and wt.modulate.a <= 0.0:
 			water_shown[i] = 0
-	var lamb = own[4]["s"]
-	if own[4]["state"] == "gone" and lamb.visible and lamb.global_position.x > 3700.0:
+	var lamb = own[LAMB]["s"]
+	if own[LAMB]["state"] == "gone" and lamb.visible and lamb.global_position.x > 3700.0:
 		lamb.visible = false          # gone, with nobody watching
 	if counting:
 		_count_step()
@@ -422,7 +423,7 @@ func _process(delta: float) -> void:
 					o["state"] = "drinking"
 					o["at"] = wet
 					o["t"] = 0.0
-					s.stay = TROUGHS[wet] + (-52.0 + k * 22.0)
+					s.stay = TROUGHS[wet] + (-80.0 + k * 20.0)
 			"drinking":
 				left += 1
 				var tr: int = o["at"]
@@ -434,7 +435,7 @@ func _process(delta: float) -> void:
 					if o["t"] > 2.0:
 						drinks[tr] -= 1
 						o["state"] = "watered"
-						s.stay = 1770.0 - k * 34.0
+						s.stay = 1770.0 - k * 30.0
 						s.hop = 0.6
 						Game.burst(self, s.global_position + Vector2(0, -40), Color(0.6, 0.8, 1.0, 0.8), 6, 70.0)
 						Game.grow("heart", 0.5)
@@ -472,7 +473,7 @@ func _process(delta: float) -> void:
 					o["sip"] = o["t"]
 					if o["t"] > 2.6:
 						o["sip"] = 0.0
-						drinks[tr] -= 1
+						drinks[tr] = maxi(0, drinks[tr] - 2)      # a stranger at the trough costs him half a bucket
 						o["state"] = "shooed"
 						o["t"] = 7.0
 						s.stay = o["home"]
@@ -498,7 +499,7 @@ func _jackal_comes() -> void:
 	jackal.dir = -1
 	Game.music("battle", 0.8)
 	jackal.defeated.connect(func() -> void: Game.music(mood, 2.0))
-	var lamb: Dictionary = own[4]
+	var lamb: Dictionary = own[LAMB]
 	if lamb["state"] != "gone":
 		lamb["state"] = "gone"
 		lamb["s"].safe = true
@@ -561,7 +562,7 @@ func _begin_count() -> void:
 		if o["state"] != "gone":
 			mine.append({"s": o["s"], "mine": true})
 	var theirs: Array = [{"s": others[0]["s"], "mine": false}, {"s": others[1]["s"], "mine": false}]
-	var order := [0, 2, 0, 0, 1, 0] if count_tries % 2 == 1 else [1, 0, 0, 2, 0, 0]      # 0 one of his; 1 and 2 the two strangers, once each
+	var order := [0, 0, 2, 0, 0, 0, 1, 0, 0, 0] if count_tries % 2 == 1 else [0, 1, 0, 0, 0, 0, 2, 0, 0, 0]      # 0 one of his; 1 and 2 the two strangers, once each
 	var mi := 0
 	for code in order:
 		if code == 0 and mi < mine.size():
@@ -575,7 +576,7 @@ func _begin_count() -> void:
 	for i in queue.size():
 		var s = queue[i]["s"]
 		s.max_speed = 92.0
-		s.global_position = on_ground(GATE - 250.0 - i * 44.0)
+		s.global_position = on_ground(GATE - 250.0 - i * 40.0)
 		s.stay = s.global_position.x
 	passing = null
 	_hint(GATE - 60.0, 290.0, "J  turn back the marked ones")
@@ -598,11 +599,11 @@ func rod() -> void:
 	s.hop = 1.0
 	Game.sfx("sheep", -6.0, 0.25)
 	if u["mine"]:           # one of his own: it shies, and must come round again
-		s.stay = GATE - 250.0 - queue.size() * 44.0
+		s.stay = GATE - 250.0 - queue.size() * 40.0
 		queue.append(u)
 	else:
 		s.max_speed = 160.0
-		s.stay = GATE - 700.0
+		s.stay = GATE - 820.0
 		Game.grow("eye", 2.0)
 	passing = null
 
@@ -615,9 +616,9 @@ func _count_step() -> void:
 			_count_done()
 			return
 		passing = queue.pop_front()
-		passing["s"].stay = GATE + 110.0 + in_fold * 26.0 + strangers_in * 26.0
+		passing["s"].stay = GATE + 110.0 + in_fold * 20.0 + strangers_in * 20.0
 		for i in queue.size():      # the rest shuffle up
-			queue[i]["s"].stay = GATE - 250.0 - i * 44.0
+			queue[i]["s"].stay = GATE - 250.0 - i * 40.0
 	elif passing["s"].global_position.x > GATE - 20.0:
 		if passing["mine"]:
 			in_fold += 1

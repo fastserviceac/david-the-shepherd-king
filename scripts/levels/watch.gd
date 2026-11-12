@@ -85,8 +85,8 @@ func _populate() -> void:
 	add_stone("watch_far", on_ground(2940.0))
 	var at := on_ground(FOLD)
 	add_sprite("res://art/props/fold.png", at + Vector2(0, 14), 1.6, 1)
-	for i in 6:
-		var s = add_sheep(FOLD - 100.0 + i * 38.0)
+	for i in 8:      # eight ewes in the fold, and the lamb at his side: nine
+		var s = add_sheep(FOLD - 105.0 + i * 30.0)
 		s.gathered = true
 		s.gatherable = false
 		s.stay = s.position.x
@@ -191,9 +191,9 @@ func _keep_watch() -> void:
 ## The flock has the smell of the lion on it still: two break from the fold, one each way.
 func _stir() -> void:
 	var run: int = holder["run"]
-	out = [flock[0], flock[5]]
+	out = [flock[0], flock[7]]
 	flock[0].stay = 800.0
-	flock[5].stay = 2260.0
+	flock[7].stay = 2260.0
 	for s in out:
 		s.hop = 1.0
 	Game.sfx("sheep", -5.0, 0.2)

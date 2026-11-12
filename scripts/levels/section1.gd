@@ -51,7 +51,7 @@ func _populate() -> void:
 	for tx in [120.0, 860.0, 1560.0, 2600.0, 2760.0, 3020.0, 4420.0]:
 		add_tree(tx, rng.randf_range(0.8, 1.3), rng.randf() < 0.4)
 
-	add_sheep(700.0)
+	add_sheep(700.0, null, true)      # the flock is nine: eight ewes and this year's lamb, in every section
 	add_sheep(0.0, Vector2(1320.0, platforms[1].position.y))
 	# two nervous ones in the meadow: they bolt from a running boy, and must be walked up to
 	for nx in [1640.0, 1935.0]:
