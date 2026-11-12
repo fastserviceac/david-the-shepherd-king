@@ -980,6 +980,20 @@ func add_bones_at(at: Vector2, tint: Color = Color(0.7, 0.7, 0.85)) -> void:
 		add_sprite("res://art/props/bones.png", at, 0.07, 2, tint)
 
 
+## Rain standing in a hollow of the rock, with its own stone lip (painted by tools/pool.py), set into the
+## ground. `tint` is the light it is seen in.
+func add_pool(x: float, tint: Color) -> void:
+	add_sprite("res://art/props/pool.png", on_ground(x) + Vector2(0, 14), 1.0, 3, tint)
+
+
+## Loose painted stones lying in front of something, to break its edge: each [dx, size, flipped].
+func add_rubble(at: Vector2, stones: Array, tint: Color, z: int = 4) -> void:
+	for st in stones:
+		var sp := add_sprite("res://art/props/d_stones.png", at + Vector2(st[0], 0.0), st[1], z, tint)
+		if st[2]:
+			sp.scale.x = -sp.scale.x
+
+
 ## A shepherd's store: a jar hung high in a dead tree, out of the jackals' reach, with a smooth stone kept in it.
 ## Only a sling stone brings it down, so before the sling is his it is something to come back for.
 func add_store(id: String, x: float, up: float = 112.0) -> void:

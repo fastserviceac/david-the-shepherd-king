@@ -194,20 +194,8 @@ func _back_passages() -> void:
 	# water standing in the rock under a crack in the roof. He has not drunk since the well
 	add_light(Vector2(POOL_X, 440.0), 250.0)
 	var pool := on_ground(POOL_X)
-	add_glow(pool + Vector2(0, -8), Color(0.55, 0.7, 1.0, 0.3), 150.0)
-	add_painter(pool + Vector2(0, 4), 3, func(ci: CanvasItem) -> void:
-		# seen low from the side: wet rock darkening to still water, and the moon broken on it. Soft-edged,
-		# in the colours of the ground round it, until there is a painting of it
-		var f := sin(Time.get_ticks_msec() * 0.002)
-		var tone: Color = pal.get("char", Color(1, 1, 1))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.17))
-		for k in 7:
-			var u := k / 6.0
-			ci.draw_circle(Vector2(0.0, -3.0 * k), 78.0 - 7.0 * k, (Color(0.06, 0.08, 0.14).lerp(Color(0.2, 0.28, 0.46), u) * tone).lerp(Color(0, 0, 0), 0.15) * Color(1, 1, 1, 0.18 + 0.1 * u))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.05))
-		for g in [[10.0, -90.0, 22.0, 0.28], [-22.0, -30.0, 12.0, 0.2], [30.0, -150.0, 9.0, 0.16]]:
-			ci.draw_circle(Vector2(g[0] + f * 4.0, g[1]), g[2], Color(0.85, 0.92, 1.0, g[3]))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE), true)
+	add_glow(pool + Vector2(0, -8), Color(0.55, 0.7, 1.0, 0.14), 150.0)
+	add_pool(POOL_X, pal.get("char", Color(1, 1, 1)))
 	add_task(POOL_X, "drink at the pool", 1.2, func() -> void:
 		Game.sfx("step", -4.0, 0.3)
 		player.hp = player.max_hp
@@ -223,7 +211,11 @@ func _back_passages() -> void:
 		show_tip("Quiet.  The broad tracks go on, and up"))
 
 	# the way out goes up over a shelf of rock. A bear takes it in one heave; a boy needs a step
-	add_light(Vector2(SHELF_X - 60.0, 440.0), 290.0)
+	add_light(Vector2(SHELF_X - 90.0, 450.0), 230.0)
+	# the face of the shelf is the same painted rock as the outcrops, at its own size, so it is stone and not a dark block
+	var face := add_sprite("res://art/props/rock_low.png", Vector2(SHELF_X - 30.0, BASE - SHELF_UP - 13.0), 1.0, 3, Color(0.33, 0.39, 0.6))      # as dark and cool as the cave it stands in
+	face.offset = Vector2.ZERO
+	add_rubble(on_ground(SHELF_X - 34.0) + Vector2(0, 8), [[-30.0, 0.7, false], [4.0, 0.95, true], [-62.0, 0.45, true]], Color(0.3, 0.35, 0.54))      # what has come down off its edge
 	step_rock = add_pushable(7650.0, 58.0, 50.0, "res://art/props/rock_low.png", 7650.0, SHELF_X - 31.0)
 	add_trigger(SHELF_X - 120.0, SHELF_X - 20.0, func() -> void:
 		if step_rock["body"].position.x < SHELF_X - 60.0:

@@ -300,20 +300,8 @@ func _way_down() -> void:
 
 	# rain standing in a hollow of the rock: he washes the wound the lion's teeth left, and binds it
 	var pool := on_ground(WATER_X)
-	add_glow(pool + Vector2(0, -8), Color(0.6, 0.75, 1.0, 0.35), 150.0)
-	add_painter(pool + Vector2(0, 4), 3, func(ci: CanvasItem) -> void:
-		# seen low from the side: wet rock darkening to still water, and the moon broken on it. Soft-edged,
-		# in the colours of the ground round it, until there is a painting of it
-		var f := sin(Time.get_ticks_msec() * 0.002)
-		var tone: Color = pal.get("char", Color(1, 1, 1))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.17))
-		for k in 7:
-			var u := k / 6.0
-			ci.draw_circle(Vector2(0.0, -3.0 * k), 78.0 - 7.0 * k, (Color(0.06, 0.08, 0.14).lerp(Color(0.2, 0.28, 0.46), u) * tone).lerp(Color(0, 0, 0), 0.15) * Color(1, 1, 1, 0.18 + 0.1 * u))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.05))
-		for g in [[10.0, -90.0, 22.0, 0.28], [-22.0, -30.0, 12.0, 0.2], [30.0, -150.0, 9.0, 0.16]]:
-			ci.draw_circle(Vector2(g[0] + f * 4.0, g[1]), g[2], Color(0.85, 0.92, 1.0, g[3]))
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE), true)
+	add_glow(pool + Vector2(0, -8), Color(0.6, 0.75, 1.0, 0.16), 150.0)
+	add_pool(WATER_X, Color(0.7, 0.72, 0.8))      # grey stone and grey water under the moon, not the blue of the grass
 	tend_task = add_task(WATER_X, "wash the lamb's wound", 1.6, _tend)
 	water_wall = add_wall(WATER_X + 250.0)
 	add_trigger(WATER_X + 130.0, WATER_X + 236.0, func() -> void:
