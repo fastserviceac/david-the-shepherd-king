@@ -20,6 +20,8 @@ var back_task: Dictionary
 var draw_task: Dictionary
 var pour_tasks: Array = []
 var carrying := false
+var has_bucket := false     # the bucket and rope are kept by the terraces, out of the dust of the well-head
+var bucket_prop: Sprite2D
 var drinks: Array = [0, 0]          # mouthfuls left in each trough
 var waters: Array = []              # the water sprite lying in each trough
 var water_shown: Array = [0, 0]
@@ -134,6 +136,17 @@ func _populate() -> void:
 		_hint(2225.0, 250.0, "Too heavy.  Find something to lever it with")
 		say(["n_well_heavy"]))
 	add_hint(430.0, 150.0, "Lead them to the well")
+	# the bucket and its rope: every shepherd who waters here takes them from the foot of the terraces and puts them back
+	has_bucket = Game.fast or Game.backdrop
+	if not has_bucket:
+		bucket_prop = add_sprite("res://art/props/bucket.png", on_ground(1400.0) + Vector2(0, 4), 1.0, 2, pal.get("char", Color(1, 1, 1)))
+		bucket_prop.scale = Vector2.ONE * (34.0 / bucket_prop.texture.get_width())
+		add_glow(on_ground(1400.0) + Vector2(0, -14), Color(1.0, 0.85, 0.6, 0.35), 110.0)
+		add_task(1400.0, "take the bucket and rope", 0.6, func() -> void:
+			has_bucket = true
+			bucket_prop.visible = false
+			Game.sfx("gather", -8.0, 0.0)
+			show_tip("Bucket and rope.  Now the stone, then the water"))
 
 	draw_task = add_task(WELL_X - 14.0, "draw water", 1.3, _drew, 50.0)
 	draw_task["again"] = true
@@ -286,6 +299,10 @@ func _open_well() -> void:
 
 
 func _drew() -> void:
+	if not has_bucket:          # nothing to draw with: it is back by the terraces
+		draw_task["on"] = true
+		show_tip("Nothing to draw with.  The bucket and rope are kept back by the terraces", 6.0)
+		return
 	carrying = true
 	player.calm = true
 	draw_task["on"] = false

@@ -630,6 +630,7 @@ func placeshots(m, dir: String) -> void:
 	if OS.has_environment("SPOTS"):      # SPOTS=section1:1485,well:540 : stand him there and take a picture
 		Game.save["stones"] = []
 		Game.save["gifts"] = []
+		Game.fast = false
 		for spot in OS.get_environment("SPOTS").split(","):
 			var nm := spot.get_slice(":", 0)
 			var sx := float(spot.get_slice(":", 1))

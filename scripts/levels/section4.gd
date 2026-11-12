@@ -109,6 +109,19 @@ func _populate() -> void:
 	pillar.scale = Vector2.ONE * (120.0 / pillar.texture.get_width())
 	add_place("rachel", grave + Vector2(-70, 0), "Rachel's Pillar", "heart")
 
+	# the spring below the town: a boy called in from a night on the hills washes before he comes to a sacrifice
+	if not Game.backdrop:
+		add_glow(on_ground(4360.0) + Vector2(0, -10), Color(0.7, 0.85, 1.0, 0.4), 150.0)
+		if ResourceLoader.exists("res://art/props/trough.png"):
+			var basin := add_sprite("res://art/props/trough.png", on_ground(4360.0) + Vector2(0, 8), 1.0, 1, pal.get("char", Color(1, 1, 1)))
+			basin.scale = Vector2.ONE * (110.0 / basin.texture.get_width())
+		add_task(4360.0, "wash at the spring", 1.6, func() -> void:
+			Game.sfx("step", -4.0, 0.3)
+			player.hp = player.max_hp
+			show_tip("The dust and blood of the night come off.  He does not know yet what he is washing for", 6.5))
+		add_trigger(5150.0, 5250.0, func() -> void:
+			show_tip("Smoke over the town: a sacrifice.  And the elders are standing in the gate", 6.0))
+
 	# the servant sent to fetch him
 	add_actor("servant", on_ground(3900.0) + Vector2(0, 4), 0.31)
 	add_trigger(3720.0, 3840.0, _meet_servant, false)

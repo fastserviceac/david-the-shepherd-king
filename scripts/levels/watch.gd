@@ -45,7 +45,34 @@ func _setup() -> void:
 	Game.save["has_sling"] = true
 
 
+var gap_shut := false       # the gap in the fold wall, stopped with cut thorn for the night
+var has_thorn := false
+
+
+## Before the watch: thorn is cut from the brake beyond the fire and the gap in the wall is stopped with it.
+func _thorn_gate() -> void:
+	gap_shut = Game.fast or Game.backdrop
+	if gap_shut:
+		return
+	var brake := add_sprite("res://art/props/bush.png", on_ground(2330.0) + Vector2(0, 8), 1.0, 2, pal.get("char", Color(1, 1, 1)))
+	brake.scale = Vector2.ONE * (130.0 / brake.texture.get_width())
+	add_task(2330.0, "cut thorn for the gap", 1.2, func() -> void:
+		has_thorn = true
+		Game.sfx("swing", -6.0, 0.1)
+		show_tip("An armful of thorn.  Take it to the gap in the fold wall"))
+	var stop := add_task(FOLD - 110.0, "stop the gap with thorn", 1.2, func() -> void:
+		if not has_thorn:
+			show_tip("Nothing to stop it with.  There is a thorn brake beyond the fire", 6.0)
+			return
+		gap_shut = true
+		Game.sfx("gather", -8.0, 0.0)
+		_keep_watch())
+	stop["again"] = true
+	add_hint(FOLD - 300.0, 150.0, "The fold has a gap in its wall")
+
+
 func _populate() -> void:
+	_thorn_gate()
 	# off the path: past the fold, a flat rock under the whole sky
 	add_perch(2560.0, 62.0, 120.0)
 	var rock := add_perch(2720.0, 124.0, 180.0)
@@ -104,6 +131,9 @@ func begin() -> void:
 
 ## The whole night, from whichever watch he had reached.
 func _keep_watch() -> void:
+	if not gap_shut:          # the fold is not ready: a gap in a wall is a door for anything
+		show_tip("The gap of the fold stands open.  Cut thorn and stop it before the watch", 6.0)
+		return
 	var run: int = holder["run"]
 	if hour == 0:
 		for s in followers:          # the lamb goes in with the rest
