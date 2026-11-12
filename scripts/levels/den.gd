@@ -14,7 +14,13 @@ var lit_once := false
 var _far := 0.0           # the farthest he has come, for the goal
 
 
-var out_x := 6720.0       # where the cave lets him out, far beyond the bear's floor
+var out_x := 8120.0       # where the cave lets him out, far beyond the bear's floor
+var searched := false     # he has looked through the bear's larder
+var step_rock: Dictionary = {}
+
+const POOL_X := 6800.0    # water standing in the rock
+const SHELF_X := 7850.0   # the shelf the tracks go up over
+const SHELF_UP := 136.0
 
 
 func _setup() -> void:
@@ -25,7 +31,7 @@ func _setup() -> void:
 	backdrop_art = "res://art/den_backdrop.png"
 	midground_art = "res://art/den_mid.png"
 	mid_tint = Color(0.6, 0.66, 0.9)
-	width = 6880.0
+	width = 8300.0
 	pal.merge({
 		"mist": Color(0.5, 0.6, 0.9, 0.05),
 		"grass": Color(0.3, 0.34, 0.5), "ground": Color(0.3, 0.33, 0.48), "char": Color(0.72, 0.74, 0.92),
@@ -38,9 +44,10 @@ func _setup() -> void:
 		make_ground(0.0, 2480.0, BASE, 6.0, 0.4),
 		make_ground(2600.0, 2820.0, BASE, 3.0, 1.0),
 		make_ground(2950.0, 5400.0, BASE, 6.0, 2.0),
-		make_ground(5540.0, width, BASE, 5.0, 0.8),       # the back passages, past the bear's larder
+		make_ground(5540.0, SHELF_X + 10.0, BASE, 5.0, 0.8),       # the back passages, past the bear's larder
+		make_ground(SHELF_X, width, BASE - SHELF_UP, 4.0, 1.6),    # and the shelf of rock the way out goes up over
 	]
-	checkpoints = [140.0, 1850.0, 3080.0, 4580.0, 5620.0]
+	checkpoints = [140.0, 1850.0, 3080.0, 4580.0, 5620.0, 6660.0, 7560.0]
 	ledge(1340.0, 62.0, 110.0)
 	ledge(1480.0, 124.0, 120.0)
 	# a climb in the back passage, to a pocket under the roof
@@ -88,7 +95,7 @@ func _populate() -> void:
 		bones.scale = Vector2.ONE * (92.0 / bones.texture.get_width())
 		bones.flip_h = bx > 4000.0
 	add_trigger(3380.0, 3500.0, _start_bear, false)
-	add_light(Vector2(out_x + 80.0, 470.0), 330.0)      # the way out, and the night beyond it
+	add_light(Vector2(out_x + 80.0, 470.0 - SHELF_UP), 330.0)      # the way out, and the night beyond it
 	add_trigger(out_x - 20.0, out_x + 90.0, _out, false)
 	_back_passages()
 
@@ -173,6 +180,7 @@ func _back_passages() -> void:
 		bones.flip_h = rng.randf() < 0.5
 	add_wool(5170.0)
 	add_task(5130.0, "Search the bear's larder", 1.5, func() -> void:
+		searched = true
 		show_tip("Old bones, and wool gone grey.  Nothing new.  The lamb was not brought here", 6.5))
 	add_hint(5000.0, 150.0, "Its larder.  He has to look")
 	# the pocket under the roof
@@ -180,7 +188,46 @@ func _back_passages() -> void:
 	# the scavengers
 	add_jackal(6300.0, 6180.0, 6600.0)
 	add_jackal(6480.0, 6180.0, 6600.0)
-	add_tracks(6560.0, out_x - 40.0, true)
+	add_tracks(6560.0, SHELF_X - 60.0, true)
+	add_tracks(SHELF_X + 50.0, out_x - 40.0, true)
+
+	# water standing in the rock under a crack in the roof. He has not drunk since the well
+	add_light(Vector2(POOL_X, 440.0), 250.0)
+	var pool := on_ground(POOL_X)
+	add_glow(pool + Vector2(0, -8), Color(0.55, 0.7, 1.0, 0.3), 150.0)
+	add_painter(pool + Vector2(0, 4), 3, func(ci: CanvasItem) -> void:
+		# seen low from the side: a dark stone lip, the water lying in it, and the moon broken on the water
+		var f := sin(Time.get_ticks_msec() * 0.002)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.2))
+		ci.draw_circle(Vector2.ZERO, 74.0, Color(0.05, 0.06, 0.12, 0.95))
+		ci.draw_circle(Vector2(0.0, -6.0), 64.0, Color(0.2, 0.33, 0.62, 0.95))
+		ci.draw_circle(Vector2(-6.0, -12.0), 50.0, Color(0.38, 0.54, 0.86, 0.85))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.07))
+		ci.draw_circle(Vector2(14.0 + f * 5.0, -70.0), 30.0, Color(0.92, 0.96, 1.0, 0.85))
+		ci.draw_circle(Vector2(-26.0 - f * 4.0, -20.0), 16.0, Color(0.92, 0.96, 1.0, 0.6))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE), true)
+	add_task(POOL_X, "drink at the pool", 1.2, func() -> void:
+		Game.sfx("step", -4.0, 0.3)
+		player.hp = player.max_hp
+		show_tip("Cold water, out of the rock.  He has not drunk since the well", 5.5))
+
+	# beyond the pool there is no light but one crack of moon. What the bear left, the scavengers lived on;
+	# with the bear gone they want the cave, and him out of it
+	add_light(Vector2(7290.0, 430.0), 300.0)
+	add_ambush(6980.0, 7600.0, [2, 3], func() -> void:
+		Game.music("battle", 0.8)
+		show_tip("Eyes in the dark.  Fight them where the moon comes in", 5.5), func() -> void:
+		Game.music(mood, 2.5)
+		show_tip("Quiet.  The broad tracks go on, and up"))
+
+	# the way out goes up over a shelf of rock. A bear takes it in one heave; a boy needs a step
+	add_light(Vector2(SHELF_X - 60.0, 440.0), 290.0)
+	var face := add_sprite("res://art/props/rock_mid.png", on_ground(SHELF_X - 30.0) + Vector2(0, 10), 1.0, 1, pal.get("char", Color(1, 1, 1)))
+	face.scale = Vector2(200.0 / face.texture.get_width(), (SHELF_UP + 40.0) / face.texture.get_height())      # broken rock at the foot of the shelf
+	step_rock = add_pushable(7650.0, 58.0, 50.0, "res://art/props/rock_low.png", 7650.0, SHELF_X - 31.0)
+	add_trigger(SHELF_X - 120.0, SHELF_X - 20.0, func() -> void:
+		if step_rock["body"].position.x < SHELF_X - 60.0:
+			show_tip("A shelf of rock, higher than he can leap.  The bear took it in one heave: he needs a step", 6.0))
 
 
 ## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.
@@ -196,9 +243,23 @@ func _goal_now() -> String:
 	if bear_started:
 		if not is_instance_valid(bear) or not bear.fleeing:
 			return "Drive the bear off"
-		return "Leave the cave, east"
+		return _goal_after()
 	if _far > 4540.0:
-		return "Leave the cave, east"
+		return _goal_after()
 	if not lit_once:
 		return "Light a torch at the embers"
 	return "Follow the cave east, keep your torch lit"
+
+
+## The back passages, once the bear is gone.
+func _goal_after() -> String:
+	var at: Vector2 = player.global_position
+	if not ambush.is_empty() and not ambush["walls"].is_empty():
+		return "Drive the scavengers off"
+	if not searched and _far > 4900.0 and at.x < 5400.0:
+		return "Search the bear's larder"
+	if _far > SHELF_X - 320.0 and at.y > BASE - SHELF_UP + 20.0:
+		if not step_rock.is_empty() and step_rock["body"].position.x < SHELF_X - 60.0:
+			return "Roll the rock under the shelf for a step"
+		return "Climb the shelf and leave the cave, east"
+	return "Leave the cave, east"
