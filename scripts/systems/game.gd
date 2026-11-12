@@ -391,6 +391,23 @@ func find_stone(id: String) -> void:
 	grow("eye", 1.0)
 	save_game()
 	stone_found.emit(list.size())
+	if all_stones():
+		_tell("Every smooth stone in these hills is his.  From the pouch they strike harder still")
+
+
+## Every smooth stone in the hills found: the pouch's stones strike harder still.
+func all_stones() -> bool:
+	return stones_total > 0 and stones().size() >= stones_total
+
+
+## Every place off the path found: he knows these hills as no one else does, and it steadies him (one more heart).
+func all_places() -> bool:
+	return places_total > 0 and places().size() >= places_total
+
+
+func _tell(text: String) -> void:
+	if is_instance_valid(main) and is_instance_valid(main.level):
+		main.level.show_tip(text, 8.0)
 
 
 func places() -> Array:
@@ -407,6 +424,9 @@ func find_place(id: String, name: String, craft: String) -> void:
 	grow(craft, 3.0)
 	save_game()
 	place_found.emit(name)
+	if all_places():
+		grew.emit("heart", rank("heart"))      # the hearts are counted again
+		_tell("He knows every corner of these hills now.  It steadies him: one more heart")
 
 
 ## Soft additive light blob.

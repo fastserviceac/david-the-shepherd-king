@@ -248,9 +248,9 @@ func _journal(a: float) -> void:
 	draw_texture_rect(STONE, Rect2(x, 446, 22, 22.0 * STONE.get_height() / STONE.get_width()), false, Color(1, 1, 1, a))
 	draw_string(f, Vector2(x + 32, 464), Game.t("Smooth stones  %d of %d") % [Game.stones().size(), Game.stones_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, ink)
 	draw_string(f, Vector2(x + 32, 488), Game.t("In the pouch  %d of %d") % [Game.pouch(), Game.pouch_max()], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, gold)
-	draw_multiline_string(f, Vector2(x, 512), Game.t("For every three found, the pouch holds one more. A full-wound shot spends one: it strikes harder and staggers any beast. Watchfires refill it."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 5, dim)
-	draw_string(f, Vector2(x, 612), Game.t("Places found  %d of %d") % [Game.places().size(), Game.places_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, ink)
-	draw_multiline_string(f, Vector2(x, 634), Game.t("Each place found makes him whole and strengthens a craft."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 2, dim)
+	draw_multiline_string(f, Vector2(x, 512), Game.t("For every three found, the pouch holds one more. A full-wound shot spends one: it strikes harder and staggers any beast. Watchfires refill it.") + "  " + Game.t("All of them found: they strike harder still." if Game.all_stones() else "Find them all, and they strike harder still."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 13, 6, dim)
+	draw_string(f, Vector2(x, 618), Game.t("Places found  %d of %d") % [Game.places().size(), Game.places_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, ink)
+	draw_multiline_string(f, Vector2(x, 637), Game.t("Each place found makes him whole and strengthens a craft.") + "  " + Game.t("All of them found: one more heart." if Game.all_places() else "Find them all for one more heart."), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 13, 3, dim)
 
 	# --- the six gifts: given, or still to earn and where
 	x = 452.0

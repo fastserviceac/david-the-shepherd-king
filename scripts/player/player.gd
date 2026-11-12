@@ -109,7 +109,7 @@ func _ready() -> void:
 
 func _set_hearts() -> void:
 	var h := Game.rank("heart")
-	max_hp = int(Game.diff()["hearts"]) + (1 if Game.has("heart") else 0) + (1 if h >= 3 else 0)
+	max_hp = int(Game.diff()["hearts"]) + (1 if Game.has("heart") else 0) + (1 if h >= 3 else 0) + (1 if Game.all_places() else 0)
 
 
 ## A craft has strengthened: a small thing, marked quietly.
@@ -412,7 +412,7 @@ func _fire() -> void:
 	if charge >= 0.75 and Game.pouch() > 0:      # a smooth stone from the pouch
 		Game.save["pouch"] = Game.pouch() - 1
 		s.smooth = true
-		s.dmg += 2
+		s.dmg += 3 if Game.all_stones() else 2
 	s.tint = tint.lerp(Color(1, 1, 1), 0.35)
 	get_parent().add_child(s)
 	s.global_position = global_position + _hand()
