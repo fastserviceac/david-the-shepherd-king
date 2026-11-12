@@ -52,33 +52,53 @@ for lang, (pat, words, _) in LANGS.items():
     plan[lang] = (cues, t - GAP)
 if not plan: sys.exit('no narration found')
 
-natural = sum(dur(s) for s in shots) - X * (len(shots) - 1)
-for _ in range(8):       # held-back lines move with the picture's speed, so settle the two together
-    need = max(end for _, end in plan.values()) + TAIL
-    length = max(natural, need)
-    slow = length / natural
+nat = [dur(s) for s in shots]
+natural = sum(nat) - X * (len(shots) - 1)
+if on_shot:
+    # lines tied to shots: every shot runs as long as its own lines need (a still, slow shot can take two lines;
+    # a busy one is left at its own speed), and each line starts once its shot is on the screen
+    home = []; cur = 1
+    for l in lines:
+        cur = on_shot.get(l, cur); home.append(cur)
+    ds = []
+    for i in range(len(shots)):
+        need_i = 0.0
+        for lang, (cues, _) in plan.items():
+            mine = [c for c, h in zip(cues, home) if h == i + 1]
+            n = sum(c['d'] - 0.4 + GAP for c in mine) + (LEAD if i == 0 else 0.4) + (TAIL if i == len(shots) - 1 else X)
+            need_i = max(need_i, n)
+        ds.append(max(nat[i], need_i))
+    starts = [sum(ds[:i]) - X * i for i in range(len(shots))]
     for lang, (cues, _) in list(plan.items()):
-        t = LEAD
-        for c, l in zip(cues, lines):
-            if l in on_shot:
-                t = max(t, sum(dur(s) * slow - X for s in shots[:on_shot[l] - 1]) + 0.3)
+        t = 0.0
+        for c, h in zip(cues, home):
+            t = max(t, starts[h - 1] + (LEAD if h == 1 else 0.4))
             c['t'] = round(t, 2)
             t += c['d'] - 0.4 + GAP
         plan[lang] = (cues, t - GAP)
-print('shots run %.1fs, narration needs %.1fs: film is %.1fs (picture slowed x%.2f)' % (natural, need, length, slow))
+    length = sum(ds) - X * (len(shots) - 1)
+    slows = [d / n for d, n in zip(ds, nat)]
+    print('film is %.1fs; shots slowed x%s' % (length, ', x'.join('%.2f' % v for v in slows)))
+else:
+    need = max(end for _, end in plan.values()) + TAIL
+    length = max(natural, need)
+    slows = [length / natural] * len(shots)
+    ds = [n * slows[0] for n in nat]
+    print('shots run %.1fs, narration needs %.1fs: film is %.1fs (picture slowed x%.2f)' % (natural, need, length, slows[0]))
 
 # ---- picture: every shot scaled to the frame, cropped to the cinema bar, crossfaded, written as frames
 frames = work + '/frames'
 shutil.rmtree(frames, ignore_errors=True); os.makedirs(frames)
 cmd = ['ffmpeg', '-y', '-loglevel', 'error']
 for s in shots: cmd += ['-i', s]
-parts = []; at = 0.0; ds = []
-for i, s in enumerate(shots):
-    d = dur(s) * slow; ds.append(d)
+parts = []
+for i, s_ in enumerate(shots):
+    slow = slows[i]
     # a shot that fills the whole 16:9 frame is cut down to the cinema bar; "file.mp4@top" (or @bottom, or @0.3)
     # says which part of its height to keep, when the middle would lose a face
     y = '(ih-%d)*%.3f' % (PIC_H, keep[i])
-    parts.append('[%d:v]setpts=%.4f*PTS,fps=%d,scale=%d:-2:flags=lanczos,crop=%d:%d:0:%s,format=yuv420p,setsar=1[s%d]' % (i, slow, FPS, W, W, PIC_H, y, i))
+    smooth = (',minterpolate=fps=%d:mi_mode=blend' % FPS) if slow > 1.15 else ''      # slowed shots get in-between frames
+    parts.append(('[%d:v]setpts=%.4f*PTS' % (i, slow)) + smooth + (',fps=%d,scale=%d:-2:flags=lanczos,crop=%d:%d:0:%s,format=yuv420p,setsar=1[s%d]' % (FPS, W, W, PIC_H, y, i)))
 last = '[s0]'; offset = ds[0] - X
 for i in range(1, len(shots)):
     parts.append('%s[s%d]xfade=transition=fade:duration=%.2f:offset=%.3f[x%d]' % (last, i, X, offset, i))
