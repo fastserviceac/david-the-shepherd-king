@@ -572,6 +572,8 @@ func _s3(lv) -> void:
 	lv.lion.hit(lv.lion.max_hp / 2, 1, "test")
 	_check(lv.lion.stage >= 2, "the lion's fight changes as it weakens")
 	var seen_lion := {}          # let it fight on its own through every stage, David standing unharmed
+	var slink_run := 0
+	var slink_max := 0
 	for stg in [1, 2, 3]:
 		lv.lion.stage = stg
 		lv.lion.hp = maxi(1, int(lv.lion.max_hp * (1.0 - 0.33 * (stg - 1))) - 1)
@@ -581,12 +583,38 @@ func _s3(lv) -> void:
 			lv.player.invuln = 5.0
 			lv.player.hp = lv.player.max_hp
 			seen_lion[lv.lion.state] = true
+			slink_run = slink_run + 1 if lv.lion.state == "slink" else 0
+			slink_max = maxi(slink_max, slink_run)
 			if f > 500 and (stg < 3 or seen_lion.has_all(["pounce", "lurk", "rush", "recover"])):
 				break
 			await _frames(1)
-	print("  lion on its own went through: ", seen_lion.keys(), "  (it ended at x=%d, David at x=%d)" % [int(lv.lion.global_position.x), int(lv.player.global_position.x)])
+	print("  lion on its own went through: ", seen_lion.keys(), "  (it ended at x=%d in state %s, David at x=%d; longest slink %d frames)" % [int(lv.lion.global_position.x), lv.lion.state, int(lv.player.global_position.x), slink_max])
+	if not seen_lion.has_all(["lurk", "rush"]):      # whether it chose to slink away is chance; that slinking ends in a rush is not
+		lv.lion.state = "slink"
+		lv.lion.st = 3.0
+		lv.lion.edge_x = lv.lion.max_x - 24.0
+		for f in 600:
+			lv.player.invuln = 5.0
+			seen_lion[lv.lion.state] = true
+			if seen_lion.has_all(["lurk", "rush"]):
+				break
+			await _frames(1)
+		print("  the lion was sent to slink away, and went through: ", seen_lion.keys())
 	for need in ["pounce", "lurk", "rush", "recover"]:
 		_check(seen_lion.has(need), "the lion uses its " + need)
+	lv.lion.state = "slink"          # held up on its way into the dark, it still comes back
+	lv.lion.st = 0.3
+	lv.lion.edge_x = lv.lion.max_x - 24.0
+	lv.lion.global_position.x = lv.lion.min_x + 200.0
+	lv.lion.modulate.a = 0.0
+	var back := false
+	for f in 60:           # far too short a time to have run there
+		lv.player.invuln = 5.0
+		if lv.lion.state == "lurk":
+			back = true
+			break
+		await _frames(1)
+	_check(back, "a lion held up as it slinks away is still at the edge when its time is up")
 	lv.player.invuln = 0.0
 	for k in lv.lion.max_hp:      # his health depends on the difficulty
 		lv.lion.state = "recover"
@@ -640,6 +668,10 @@ func _s4(lv) -> void:
 	await _goto(lv.SERVANT_X - 120.0)
 	await _frames(20)
 	_check(not lv.met, "the servant does not take the flock while part of it is still out on the hill")
+	Input.action_press("move_right")
+	await _frames(150)
+	Input.action_release("move_right")
+	_check(lv.player.position.x < lv.SERVANT_X + 50.0, "and he does not go on to the town past him, leaving it there")
 	_check(lv.wild_ewe.wild and not lv.bay_jackal.fleeing, "one stray will come only to his call, and a jackal has another cut off")
 	for sh in lv.get_children():
 		if sh.get("gatherable") != null and not sh.gathered:
@@ -770,7 +802,14 @@ func placeshots(m, dir: String) -> void:
 				m.level.ripple(wet, m.level.player.global_position.x + 8.0)
 				await _frames(12)
 				m.level.ripple(wet, m.level.player.global_position.x - 30.0)
-			await _frames(50 if wet == null else 22)
+			if OS.get_environment("POSE") == "shove":      # carrying the lamb with his weight against something heavy
+				m.level.player.act = "carry"
+				m.level.player.facing = 1
+				for k in 60:
+					m.level.push_t = 0.18
+					await _frames(1)
+			else:
+				await _frames(50 if wet == null else 22)
 			await _snap(dir, "spot_%s_%d" % [nm, int(sx)])
 		print("PLACESHOTS done")
 		tree.quit()

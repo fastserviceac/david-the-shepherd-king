@@ -167,6 +167,7 @@ func _ai(delta: float) -> void:
 						player.stun = maxf(player.stun, 0.6)
 				elif r < [0.0, 0.22, 0.5, 0.66][stage]:
 					state = "slink"
+					st = 3.0             # by then it is long out of sight: it is at the edge whatever held it up
 					edge_x = (min_x + 24.0) if global_position.x - min_x < max_x - global_position.x else (max_x - 24.0)
 				else:
 					state = "crouch"
@@ -232,7 +233,8 @@ func _ai(delta: float) -> void:
 			dir = 1 if edge_x > global_position.x else -1
 			velocity.x = move_toward(velocity.x, dir * 330.0, 1400.0 * delta)
 			modulate.a = move_toward(modulate.a, 0.0, delta * 2.2)
-			if absf(edge_x - global_position.x) < 30.0:
+			if absf(edge_x - global_position.x) < 30.0 or (modulate.a <= 0.01 and (st <= 0.0 or is_on_wall())):
+				global_position.x = edge_x
 				if randf() < 0.45:      # it circles in the dark and may come from the other side
 					edge_x = (max_x - 24.0) if edge_x < (min_x + max_x) * 0.5 else (min_x + 24.0)
 					global_position.x = edge_x

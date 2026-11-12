@@ -11,6 +11,7 @@ var samuel: Node2D
 var lamb
 var carrying := false
 var met := false
+var servant_wall: StaticBody2D      # he does not walk on to the town and leave the flock on the road behind him
 var _far := 0.0           # the farthest he has come, for the goal
 var strays: Array = []    # the five that are out, west to east
 var bay_ewe               # the one a jackal has cut off
@@ -75,6 +76,8 @@ func _meet_servant() -> void:
 		show_tip("The lamb is still lying in the road", 4.0)
 		return
 	met = true
+	if is_instance_valid(servant_wall):
+		servant_wall.queue_free()
 	player.facing = 1
 	if carrying:          # he sets the lamb down among the others
 		carrying = false
@@ -196,6 +199,7 @@ func _populate() -> void:
 	# the servant sent to fetch him
 	add_actor("servant", on_ground(SERVANT_X) + Vector2(0, 4), 0.31)
 	add_trigger(SERVANT_X - 180.0, SERVANT_X - 60.0, _meet_servant, false)
+	servant_wall = add_wall(SERVANT_X + 50.0)      # his father's servant stands in the road: the flock is given into his hand first
 
 	# Bethlehem, then Samuel, Jesse and the seven brothers
 	add_sprite("res://art/s4_town.png", Vector2(SAMUEL_X + 80.0, TOP + 20.0), 1.3, 1, Color(0.86, 0.82, 0.86))
@@ -226,6 +230,8 @@ func _resume(from: float) -> void:
 	if is_instance_valid(bay_jackal):
 		bay_jackal.queue_free()
 	met = true
+	if is_instance_valid(servant_wall):
+		servant_wall.queue_free()
 	bridged = true
 	lay_bridge.call()
 	bridge_task["on"] = false

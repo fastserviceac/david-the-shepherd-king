@@ -576,6 +576,7 @@ var hip_y := -234.0
 var arm_near := Vector2(0.3, 1.35)   # upper arm angle, forearm angle
 var arm_far := Vector2(0.05, 0.35)
 var lean_s := 0.0
+var shove := 0.0          # with the lamb on his shoulders he cannot set his hands to a rock: he leans his weight into it
 var carry := 0.0                     # 0 staff planted, 1 staff carried
 var land := 0.0
 
@@ -796,7 +797,9 @@ func _draw() -> void:
 		col = col.lerp(Color(1.7, 1.5, 1.15), g * 0.55)
 	FA.shadow(self, 58.0, 1.0, 0.0 if is_on_floor() else shadow_drop)      # the shadow stays on the ground when he leaves it
 	var tall := 2.1 if tex.get_height() > 600 else 1.65      # sets with the staff raised high are cut on a taller canvas
-	FA.draw(self, tex, float(facing), SPRITE_SCALE, col, tall, 0.0, Vector2.ZERO, Vector2.ONE)      # the footage already crouches and stretches; scaling it as well read as a size glitch
+	var shoving: bool = act == "carry" and level != null and level.get("push_t") != null and level.push_t > 0.0
+	shove = move_toward(shove, 1.0 if shoving else 0.0, get_process_delta_time() * 5.0)
+	FA.draw(self, tex, float(facing), SPRITE_SCALE, col, tall, shove * 0.27, Vector2.ZERO, Vector2.ONE)      # the footage already crouches and stretches; scaling it as well read as a size glitch
 	if charging:
 		_draw_aim()
 	if ring_t > 0.0:      # the call going out across the hillside
