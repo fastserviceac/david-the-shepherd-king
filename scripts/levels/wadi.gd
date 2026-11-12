@@ -3,6 +3,7 @@ extends "res://scripts/levels/level_base.gd"
 ## come down to a sling stone: as a step, as a plug in a gap, or onto whatever waits underneath.
 
 var shelf: Rect2
+var end_x := 7660.0       # the bear's cave, at the head of the wadi
 
 
 func _setup() -> void:
@@ -13,7 +14,7 @@ func _setup() -> void:
 	backdrop_art = "res://art/wadi_backdrop.png"
 	midground_art = "res://art/wadi_mid.png"
 	mid_tint = Color(0.72, 0.7, 0.9)
-	width = 5600.0
+	width = 7900.0
 	pal.merge({
 		"mist": Color(0.7, 0.6, 0.95, 0.08),
 		"grass": Color(0.6, 0.52, 0.74), "ground": Color(0.5, 0.45, 0.62), "char": Color(0.78, 0.7, 0.9),
@@ -26,9 +27,10 @@ func _setup() -> void:
 		make_ground(0.0, 1310.0, 610.0, 7.0, 0.3),
 		make_ground(1300.0, 2600.0, 500.0, 7.0, 1.4),
 		make_ground(2780.0, 4010.0, 500.0, 7.0, 2.2),
-		make_ground(4000.0, width, 390.0, 6.0, 0.9),
+		make_ground(4000.0, 5700.0, 390.0, 6.0, 0.9),
+		make_ground(5930.0, width, 390.0, 6.0, 1.9),       # the upper wadi, beyond the last break in the bed
 	]
-	checkpoints = [150.0, 1420.0, 2880.0, 4120.0]
+	checkpoints = [150.0, 1420.0, 2880.0, 4120.0, 6000.0, 6700.0]
 	# perches the floods left, too high to climb to
 	platforms.append(Rect2(1110.0, 400.0, 110.0, 24.0))
 	platforms.append(Rect2(2500.0, 340.0, 90.0, 24.0))
@@ -39,6 +41,8 @@ func _setup() -> void:
 	shelf = Rect2(2040.0, 312.0, 420.0, 28.0)
 	platforms.append(shelf)
 	ledge(4480.0, 114.0, 120.0)        # needs the running leap
+	platforms.append(Rect2(5600.0, 232.0, 100.0, 24.0))      # perches in the upper wadi
+	platforms.append(Rect2(6390.0, 232.0, 100.0, 24.0))
 	Game.save["has_sling"] = true
 
 
@@ -113,20 +117,13 @@ func _populate() -> void:
 	add_gift("eye", 3810.0, func() -> bool: return jars["n"] <= 0 and b1.fallen and b2.fallen and b3.fallen, "Three jars hang in the dead tree, and every boulder below must be down")
 
 	add_trigger(4660.0, 4780.0, func() -> void: say(["n_wadi_wool"]))
-	# the cave mouth
-	# the cave mouth: an arch of rock with the dark behind it
-	var mouth := on_ground(5400.0)
-	add_painter(mouth, 0, func(ci: CanvasItem) -> void:
-		for k in 6:          # darkness deepening toward the middle of the opening
-			var f := 1.0 - k / 6.0
-			var pts := PackedVector2Array()
-			for i in 25:
-				var a := TAU * i / 24.0
-				pts.append(Vector2(-12.0 + cos(a) * 150.0 * f, -92.0 + sin(a) * 96.0 * f))
-			ci.draw_colored_polygon(pts, Color(0.01, 0.01, 0.03, 0.55)))
-	var arch := add_sprite("res://art/props/cave_arch.png", mouth + Vector2(0, 14), 1.0, 1, Color(0.6, 0.55, 0.72))      # pulled toward the wadi's dusk rock, so it belongs to this place
-	arch.scale = Vector2(0.86, 0.86)
-	add_trigger(5330.0, 5480.0, _at_cave)
+	_upper_wadi()
+	# the bear's cave: a great broken outcrop painted for this dusk, its mouth black and tall enough for what lives in it
+	var mouth := on_ground(end_x + 20.0)
+	var den_mouth := add_sprite("res://art/props/mouth_s2.png", mouth + Vector2(0, 16), 1.0, 1, Color(0.74, 0.76, 1.0))
+	den_mouth.scale = Vector2.ONE * (600.0 / den_mouth.texture.get_width())
+	add_bones_at(mouth + Vector2(-150.0, 6.0))
+	add_trigger(end_x - 70.0, end_x + 80.0, _at_cave)
 
 
 func begin() -> void:
@@ -137,3 +134,30 @@ func begin() -> void:
 func _at_cave() -> void:
 	await say(["n_wadi_cave"])
 	complete()
+
+
+## The upper wadi. The bed breaks once more; beyond it the tracks part company, jackals wait under a perched
+## boulder, and where the walls close in a pack that has been following the same trail turns on him.
+func _upper_wadi() -> void:
+	if Game.backdrop:
+		return
+	# the last break: a slab the floods left on a perch comes down across it
+	add_boulder(Vector2(5650.0, 232.0), Rect2(5716.0, 388.0, 200.0, 60.0))
+	add_hint(5560.0, 230.0, "The bed is broken ahead.  Look up")
+	# where the trails part: he must read the ground to know which is the lamb's
+	add_tracks(5980.0, 6200.0, true)
+	add_tracks(6000.0, 6160.0, false)
+	add_wool(6110.0)
+	add_task(6090.0, "Kneel and read the ground", 1.3, func() -> void:
+		show_tip("The small prints stop.  From here the lamb was carried: only the broad pads go on", 6.5))
+	# two jackals on the trail, and a boulder on the perch over them
+	add_jackal(6390.0, 6280.0, 6620.0)
+	add_jackal(6520.0, 6280.0, 6620.0)
+	add_boulder(Vector2(6408.0, 232.0), Rect2(6306.0, 335.0, 72.0, 55.0))
+	# the walls close in. The pack has been following the same scent
+	add_ambush(6760.0, 7440.0, [2, 3], func() -> void:
+		Game.music("battle", 0.8)
+		show_tip("The walls close in.  They were after the same lamb", 5.5), func() -> void:
+		Game.music(mood, 2.5)
+		show_tip("Ahead, the rock opens.  The broad tracks go straight in"))
+	add_tracks(7460.0, end_x - 60.0, true)

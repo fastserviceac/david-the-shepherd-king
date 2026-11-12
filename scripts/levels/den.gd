@@ -13,6 +13,9 @@ var walls: Array = []
 var lit_once := false
 
 
+var out_x := 6720.0       # where the cave lets him out, far beyond the bear's floor
+
+
 func _setup() -> void:
 	birds = false
 	barren = true
@@ -21,7 +24,7 @@ func _setup() -> void:
 	backdrop_art = "res://art/den_backdrop.png"
 	midground_art = "res://art/den_mid.png"
 	mid_tint = Color(0.6, 0.66, 0.9)
-	width = 5000.0
+	width = 6880.0
 	pal.merge({
 		"mist": Color(0.5, 0.6, 0.9, 0.05),
 		"grass": Color(0.3, 0.34, 0.5), "ground": Color(0.3, 0.33, 0.48), "char": Color(0.72, 0.74, 0.92),
@@ -33,11 +36,16 @@ func _setup() -> void:
 	segments = [
 		make_ground(0.0, 2480.0, BASE, 6.0, 0.4),
 		make_ground(2600.0, 2820.0, BASE, 3.0, 1.0),
-		make_ground(2950.0, width, BASE, 6.0, 2.0),
+		make_ground(2950.0, 5400.0, BASE, 6.0, 2.0),
+		make_ground(5540.0, width, BASE, 5.0, 0.8),       # the back passages, past the bear's larder
 	]
-	checkpoints = [140.0, 1850.0, 3080.0, 4580.0]
+	checkpoints = [140.0, 1850.0, 3080.0, 4580.0, 5620.0]
 	ledge(1340.0, 62.0, 110.0)
 	ledge(1480.0, 124.0, 120.0)
+	# a climb in the back passage, to a pocket under the roof
+	ledge(5760.0, 62.0, 110.0)
+	ledge(5900.0, 124.0, 110.0)
+	ledge(6040.0, 186.0, 150.0)
 	torch_max = 46.0
 	Game.save["has_sling"] = true
 
@@ -79,8 +87,9 @@ func _populate() -> void:
 		bones.scale = Vector2.ONE * (92.0 / bones.texture.get_width())
 		bones.flip_h = bx > 4000.0
 	add_trigger(3380.0, 3500.0, _start_bear, false)
-	add_light(Vector2(4980.0, 470.0), 330.0)      # the way out, and the night beyond it
-	add_trigger(4880.0, 4990.0, _out, false)
+	add_light(Vector2(out_x + 80.0, 470.0), 330.0)      # the way out, and the night beyond it
+	add_trigger(out_x - 20.0, out_x + 90.0, _out, false)
+	_back_passages()
 
 
 func begin() -> void:
@@ -147,3 +156,27 @@ func _process(delta: float) -> void:
 	if is_instance_valid(player):
 		var px: float = player.global_position.x
 		draught = 3.0 if px > 2250.0 and px < 2990.0 else 1.0
+
+
+## Behind the bear's floor the cave goes on. Its larder, where he must look for what he dreads to find; a break
+## in the floor; a climb to a pocket under the roof; and the scavengers that live on what the bear leaves.
+func _back_passages() -> void:
+	if Game.backdrop:
+		return
+	for lx in [5080.0, 5680.0, 6240.0]:        # grey light leaks in from cracks above: he can see his way
+		add_light(Vector2(lx, 440.0), 260.0)
+	# the larder
+	for bx in [5040.0, 5130.0, 5230.0]:
+		var bones := add_sprite("res://art/props/bones.png", on_ground(bx) + Vector2(0, 5), 1.0, 2, Color(0.62, 0.62, 0.72))
+		bones.scale = Vector2.ONE * (rng.randf_range(70.0, 110.0) / bones.texture.get_width())
+		bones.flip_h = rng.randf() < 0.5
+	add_wool(5170.0)
+	add_task(5130.0, "Search the bear's larder", 1.5, func() -> void:
+		show_tip("Old bones, and wool gone grey.  Nothing new.  The lamb was not brought here", 6.5))
+	add_hint(5000.0, 150.0, "Its larder.  He has to look")
+	# the pocket under the roof
+	add_stone("den_roof", Vector2(6130.0, platforms[4].position.y))
+	# the scavengers
+	add_jackal(6300.0, 6180.0, 6600.0)
+	add_jackal(6480.0, 6180.0, 6600.0)
+	add_tracks(6560.0, out_x - 40.0, true)

@@ -294,7 +294,10 @@ func _draw() -> void:
 			var sl: Array = FA.frames("lion", "run")
 			show_frame(sl[int(dist / 330.0 * sl.size()) % sl.size()] if not sl.is_empty() else walk_frame(), 0.66, 1.4)
 		"pounce":   # the leap itself
-			show_frame(action_frame("pounce", air_t / 0.6, 3, 21), 0.66, 1.8)
+			if vault:      # the high, long leap clean over him
+				show_frame(action_frame("vault", air_t / 0.8), 0.66, 1.8)
+			else:
+				show_frame(action_frame("pounce", air_t / 0.6, 3, 21), 0.66, 1.8)
 		"rush":     # flat out, low and long
 			var rn: Array = FA.frames("lion", "run")
 			show_frame(rn[int(dist / 330.0 * rn.size()) % rn.size()] if not rn.is_empty() else walk_frame(), 0.66, 1.4)

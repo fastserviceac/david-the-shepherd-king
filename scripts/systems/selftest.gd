@@ -351,7 +351,7 @@ func _wadi(lv) -> void:
 			n_b += 1
 			b.hit(1, 1, "stone")
 	await _frames(10)
-	_check(n_b == 5, "five perched boulders, one of them in the side cave")
+	_check(n_b == 7, "seven perched boulders, one of them in the side cave")
 	var n_j := 0
 	for b in tree.get_nodes_in_group("hittable"):
 		if b.has_signal("struck"):
@@ -368,7 +368,7 @@ func _wadi(lv) -> void:
 	_check(lv.player.position.y < 520.0, "the slab bridges the gap")
 	for n in tree.get_nodes_in_group("enemies"):
 		n.hit(9, 1, "staff")
-	await _goto(5400.0)
+	await _goto(main.level.end_x)
 
 
 ## The Bear's Den: a torch from the embers, the bear under the moon shaft.
@@ -384,7 +384,7 @@ func _den(lv) -> void:
 	await _goto(3440.0)
 	await _frames(20)
 	_check(lv.bear != null, "the bear rises in the heart of the cave")
-	await _goto(4900.0)
+	await _goto(lv.out_x + 30.0)
 	await _frames(10)
 	_check(not lv.done, "no way out while the bear holds the cave")
 	var bh: int = lv.bear.hp
@@ -425,7 +425,7 @@ func _den(lv) -> void:
 	await _frames(5)
 	_check(lv.boss == null, "bear driven off")
 	await _goto(4700.0)
-	await _goto(4940.0)
+	await _goto(lv.out_x + 30.0)
 
 
 ## The Night Watch: three watches of beasts, the strays called back, the fire fed, the psalm, dawn.
@@ -814,7 +814,7 @@ func newshots(m, dir: String) -> void:
 	await _goto(3760.0)
 	await _frames(50)
 	await _snap(dir, "wadi_3_high")
-	await _goto(5250.0)
+	await _goto(lv.end_x - 150.0)
 	await _frames(50)
 	await _snap(dir, "wadi_4_cave")
 	# the den

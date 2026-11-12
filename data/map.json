@@ -267,7 +267,8 @@
    "lon": 35.258,
    "about": "The wadi's limestone walls are full of caves, some of them very large.",
    "stones": [
-    "den_pocket"
+    "den_pocket",
+    "den_roof"
    ]
   },
   "section3": {

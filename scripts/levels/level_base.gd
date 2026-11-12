@@ -970,6 +970,12 @@ func hang_jar(tree: Sprite2D, at: Vector2):
 	return jar
 
 
+## Old bones lying on the ground: what a beast has left outside its door.
+func add_bones_at(at: Vector2, tint: Color = Color(0.7, 0.7, 0.85)) -> void:
+	if ResourceLoader.exists("res://art/props/bones.png"):
+		add_sprite("res://art/props/bones.png", at, 0.07, 2, tint)
+
+
 ## A shepherd's store: a jar hung high in a dead tree, out of the jackals' reach, with a smooth stone kept in it.
 ## Only a sling stone brings it down, so before the sling is his it is something to come back for.
 func add_store(id: String, x: float, up: float = 112.0) -> void:
