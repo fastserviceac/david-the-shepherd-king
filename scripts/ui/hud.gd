@@ -44,6 +44,38 @@ func _on_gift(id: String) -> void:
 	Game.sfx("fire", -8.0, 0.0)
 
 
+## One heart of his life: a deep red stone with the light on its shoulder and a thin gold edge, like the
+## emblems of the crafts. An empty one is only its edge.
+var _heart_shape: PackedVector2Array
+func _heart(at: Vector2, size: float, full: bool, a: float, glow: float = 0.0) -> void:
+	if _heart_shape.is_empty():
+		for k in 40:
+			var t := TAU * k / 40.0
+			_heart_shape.append(Vector2(16.0 * pow(sin(t), 3.0), -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))) * 0.74)
+	var edge := PackedVector2Array(_heart_shape)
+	edge.append(_heart_shape[0])
+	if glow > 0.0:
+		for r in 4:
+			draw_circle(at, (17.0 + r * 5.0) * size, Color(1.0, 0.8, 0.45, 0.09 * glow * a))
+	draw_set_transform(at + Vector2(1.5, 2.0), 0.0, Vector2(size, size))
+	draw_colored_polygon(_heart_shape, Color(0, 0, 0, 0.32 * a))
+	draw_set_transform(at, 0.0, Vector2(size, size))
+	if full:
+		draw_colored_polygon(_heart_shape, Color(0.5, 0.09, 0.09, a))
+		draw_set_transform(at + Vector2(-0.8, -1.2) * size, 0.0, Vector2(size, size) * 0.84)
+		draw_colored_polygon(_heart_shape, Color(0.8, 0.2, 0.16, a))
+		draw_set_transform(at + Vector2(-2.2, -3.0) * size, 0.0, Vector2(size, size) * 0.58)
+		draw_colored_polygon(_heart_shape, Color(0.93, 0.36, 0.27, 0.85 * a))
+		draw_set_transform(at + Vector2(-5.2, -6.0) * size, -0.5, Vector2(size, size * 0.6))
+		draw_circle(Vector2.ZERO, 2.6, Color(1.0, 0.88, 0.8, 0.55 * a))
+		draw_set_transform(at, 0.0, Vector2(size, size))
+		draw_polyline(edge, Color(1.0, 0.82, 0.5, 0.7 * a), 1.3, true)
+	else:
+		draw_colored_polygon(_heart_shape, Color(0.05, 0.04, 0.06, 0.38 * a))
+		draw_polyline(edge, Color(Game.CREAM.r, Game.CREAM.g, Game.CREAM.b, 0.32 * a), 1.2, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 ## The emblem of a craft, drawn in gold line: what the hand, eye, foot, heart or voice is for.
 func _emblem(craft: String, at: Vector2, a: float) -> void:
 	var gold := Color(1.0, 0.86, 0.5, a)
@@ -84,12 +116,22 @@ var stone_full := 6.0
 
 var hurt_flash := 0.0
 var hearts_t := 3.0      # seconds the hearts stay up
+var new_heart_t := 0.0   # seconds the newest heart goes on glowing, when one has just been earned
+var beat := 0.0
 var last_hp := -1
 
 
 func _process(delta: float) -> void:
 	hurt_flash = maxf(0.0, hurt_flash - delta * 2.2)
 	hearts_t = maxf(0.0, hearts_t - delta)
+	new_heart_t = maxf(0.0, new_heart_t - delta)
+	beat += delta
+	if Game.heart_news != "" and not Game.cinematic and is_instance_valid(Game.main) and is_instance_valid(Game.main.level) and Game.main.state == "play":
+		Game.main.level.show_tip(Game.heart_news, 7.0)
+		Game.heart_news = ""
+		new_heart_t = 6.0
+		hearts_t = 7.0
+		Game.sfx("gather", -4.0, 0.0)
 	stone_t = maxf(0.0, stone_t - delta)
 	place_t = maxf(0.0, place_t - delta)
 	if not toasts.is_empty():
@@ -120,14 +162,16 @@ func _draw() -> void:
 		hearts_t = 3.5
 	var ha := 1.0 if player.hp < player.max_hp else clampf(hearts_t, 0.0, 1.0)
 	for i in player.max_hp:
-		var c := Vector2(38.0 + i * 28.0, 36.0)
-		var col := Color(0.92, 0.36, 0.3, ha) if i < player.hp else Color(0, 0, 0, 0.3 * ha)
-		draw_set_transform(c, 0.0, Vector2(0.8, 0.8))
-		c = Vector2.ZERO
-		draw_circle(c + Vector2(-6, -4), 7.5, col)
-		draw_circle(c + Vector2(6, -4), 7.5, col)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(-13, -1), c + Vector2(13, -1), c + Vector2(0, 14)]), col)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var c := Vector2(40.0 + i * 31.0, 38.0)
+		var full: bool = i < player.hp
+		var size := 1.0
+		if full and player.hp == 1:                      # the last one beats
+			size += 0.1 * maxf(0.0, sin(beat * 7.0))
+		var glow := 0.0
+		if i == player.max_hp - 1 and new_heart_t > 0.0:      # one just earned
+			glow = clampf(new_heart_t / 1.5, 0.0, 1.0) * (0.6 + 0.4 * sin(beat * 5.0))
+			size += 0.12 * glow
+		_heart(c, size, full, ha, glow)
 
 	if level.sheep_total > 0:
 		# a small painted sheep and the count, quiet in the corner

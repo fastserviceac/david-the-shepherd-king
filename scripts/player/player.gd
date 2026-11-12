@@ -109,7 +109,7 @@ func _ready() -> void:
 
 func _set_hearts() -> void:
 	var h := Game.rank("heart")
-	max_hp = int(Game.diff()["hearts"]) + (1 if Game.has("heart") else 0) + (1 if h >= 3 else 0) + (1 if Game.all_places() else 0)
+	max_hp = int(Game.diff()["hearts"]) + Game.earned_hearts() + (1 if Game.has("heart") else 0) + (1 if h >= 3 else 0) + (1 if Game.all_places() else 0)
 
 
 ## A craft has strengthened: a small thing, marked quietly.

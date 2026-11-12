@@ -412,6 +412,25 @@ func all_stones() -> bool:
 	return stones_total > 0 and stones().size() >= stones_total
 
 
+## Hearts are earned. He begins with few, and each time he brings the flock through something, one more is his
+## to keep: counted from how far he has come, so it is right in any saved game.
+const HEART_DEEDS := {
+	"well": "The flock watered and counted in.  One more heart",
+	"section3": "The lamb brought down from the lion.  One more heart",
+	"watch": "The night kept, and not one lost.  One more heart",
+}
+var heart_news := ""      # a heart just earned, told at the start of what comes next
+
+
+func earned_hearts() -> int:
+	var n := 0
+	var reached := int(save.get("unlocked", 0))
+	for i in sections().size():
+		if (i < reached or save.get("finished", false)) and HEART_DEEDS.has(str(sections()[i]["script"]).get_file().get_basename()):
+			n += 1
+	return n
+
+
 ## Every place off the path found: he knows these hills as no one else does, and it steadies him (one more heart).
 func all_places() -> bool:
 	return places_total > 0 and places().size() >= places_total
@@ -530,9 +549,9 @@ func duck(on: bool) -> void:
 
 
 const DIFFICULTY := [
-	{"name": "Gentle", "about": "More hearts. Animals are weaker and give longer warnings.", "hearts": 7, "enemy_hp": 0.7, "warning": 1.35},
-	{"name": "Shepherd", "about": "The intended challenge.", "hearts": 5, "enemy_hp": 1.0, "warning": 1.0},
-	{"name": "Warrior", "about": "Fewer hearts. Animals are tougher and strike with little warning.", "hearts": 4, "enemy_hp": 1.4, "warning": 0.75},
+	{"name": "Gentle", "about": "More hearts. Animals are weaker and give longer warnings.", "hearts": 5, "enemy_hp": 0.7, "warning": 1.35},
+	{"name": "Shepherd", "about": "The intended challenge.", "hearts": 3, "enemy_hp": 1.0, "warning": 1.0},
+	{"name": "Warrior", "about": "Fewer hearts. Animals are tougher and strike with little warning.", "hearts": 2, "enemy_hp": 1.4, "warning": 0.75},
 ]
 
 

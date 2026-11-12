@@ -176,7 +176,10 @@ func complete_section() -> void:
 	state = "transition"
 	var next := section_idx + 1
 	if next < Game.sections().size():
+		var hearts_before := Game.earned_hearts()
 		Game.save["unlocked"] = maxi(int(Game.save.get("unlocked", 0)), next)
+		if Game.earned_hearts() > hearts_before:
+			Game.heart_news = str(Game.HEART_DEEDS.get(str(Game.sections()[section_idx]["script"]).get_file().get_basename(), ""))
 		start_section(next)
 	else:
 		Game.save["finished"] = true
