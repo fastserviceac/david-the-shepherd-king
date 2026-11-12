@@ -20,6 +20,12 @@ def opt(name, default=None):
     while i < len(args) and not args[i].startswith('--'): out.append(args[i]); i += 1
     return out
 shots, lines = opt('--shots'), opt('--lines')
+# "line@2" holds a line back until shot 2 is on the screen, when it is about someone that shot shows
+on_shot = {}
+for i, l in enumerate(lines):
+    name, _, n = l.partition('@')
+    lines[i] = name
+    if n: on_shot[name] = int(n)
 keep = []
 for i, sh in enumerate(shots):
     f, _, k = sh.partition('@')
@@ -40,16 +46,25 @@ for lang, (pat, words, _) in LANGS.items():
         # a line not yet recorded is shown as words only, held long enough to read
         have = os.path.exists(pat % l)
         if not have: print(lang, l, 'has no recording yet: shown as text only')
-        d = dur(pat % l) if have else max(5.0, len(text[l]['text']) / 13.0)
+        d = dur(pat % l) if have else max(5.0, len(text[l]['text']) / 16.0)
         cues.append({'t': round(t, 2), 'd': round(d + 0.4, 2), 'text': text[l]['text'], 'ref': text[l].get('ref', ''), 'file': (pat % l) if have else None})
         t += d + GAP
     plan[lang] = (cues, t - GAP)
 if not plan: sys.exit('no narration found')
 
 natural = sum(dur(s) for s in shots) - X * (len(shots) - 1)
-need = max(end for _, end in plan.values()) + TAIL
-length = max(natural, need)
-slow = length / natural
+for _ in range(8):       # held-back lines move with the picture's speed, so settle the two together
+    need = max(end for _, end in plan.values()) + TAIL
+    length = max(natural, need)
+    slow = length / natural
+    for lang, (cues, _) in list(plan.items()):
+        t = LEAD
+        for c, l in zip(cues, lines):
+            if l in on_shot:
+                t = max(t, sum(dur(s) * slow - X for s in shots[:on_shot[l] - 1]) + 0.3)
+            c['t'] = round(t, 2)
+            t += c['d'] - 0.4 + GAP
+        plan[lang] = (cues, t - GAP)
 print('shots run %.1fs, narration needs %.1fs: film is %.1fs (picture slowed x%.2f)' % (natural, need, length, slow))
 
 # ---- picture: every shot scaled to the frame, cropped to the cinema bar, crossfaded, written as frames

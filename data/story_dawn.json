@@ -1,9 +1,15 @@
 {
- "length": 16.31,
+ "length": 26.02,
  "cues": [
   {
    "t": 1.2,
-   "d": 13.48,
+   "d": 4.4,
+   "text": "At dawn he came down from the hills with the whole flock.",
+   "ref": ""
+  },
+  {
+   "t": 13.46,
+   "d": 11.03,
    "text": "That same day an old man came up the road to Bethlehem, leading a heifer for sacrifice. It was the prophet Samuel. The elders of the town came out to meet him, trembling.",
    "ref": "1 Samuel 16:4"
   }

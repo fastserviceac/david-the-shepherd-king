@@ -129,7 +129,8 @@ func _populate() -> void:
 
 
 func begin() -> void:
-	await say(["n_s4_intro"])      # the film before this section is the prophet's road; this line is David's
+	if not Game.main.intro.has_story("dawn"):      # the film before this section speaks the line itself
+		await say(["n_s4_intro"])
 
 
 ## Samuel's own pouring animation, in the scene.

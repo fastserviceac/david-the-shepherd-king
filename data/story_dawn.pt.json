@@ -1,9 +1,15 @@
 {
- "length": 16.31,
+ "length": 26.02,
  "cues": [
   {
    "t": 1.2,
-   "d": 13.71,
+   "d": 4.56,
+   "text": "Ao amanhecer, ele desceu das colinas com o rebanho inteiro.",
+   "ref": ""
+  },
+  {
+   "t": 13.46,
+   "d": 11.21,
    "text": "Naquele mesmo dia, um velho subia pela estrada de Belém, trazendo uma novilha para o sacrifício. Era o profeta Samuel. Os anciãos da cidade saíram ao seu encontro, tremendo.",
    "ref": "1 Samuel 16:4"
   }
