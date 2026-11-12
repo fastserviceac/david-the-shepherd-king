@@ -80,7 +80,8 @@ func smoke(m) -> void:
 	_check(not m.map.data.is_empty() and missing == 0, "every section has its place on the map")
 	m.map.open(true, 2)
 	var q: Vector2 = m.map._at(31.7054, 35.2024)
-	_check(q.x > 300.0 and q.x < 600.0 and q.y > 60.0 and q.y < 200.0, "Bethlehem falls where it should on the map")
+	var q2: Vector2 = m.map._spot(2)
+	_check(q.x > 0.0 and q.x < q2.x and q.y > 0.0 and q.y < q2.y, "Bethlehem falls north-west of the ravine on the map")
 	m.map.close()
 	var stale := 0
 	for who in DirAccess.get_directories_at("res://art"):
@@ -604,6 +605,30 @@ func placeshots(m, dir: String) -> void:
 	Game.cinematic = false
 	Game.save["places"] = []
 	Game.save["has_sling"] = true
+	if OS.has_environment("MAP_ONLY"):
+		await m.load_level(_index("wadi"), 0)
+		Game.cinematic = false
+		Game.fast = false
+		Game.save["unlocked"] = 4
+		Game.save["gifts"] = ["voice", "hand", "sling"]
+		Game.save["places"] = ["foldcave", "cistern"]
+		Game.save["stones"] = ["s1_start", "s1_step", "s1_leap", "s1_cave", "well_start", "s2_brake", "wadi_start"]
+		for lg in ["en", "pt"]:
+			Game.save["lang"] = lg
+			m.map.open(true, 3)
+			await _frames(110)
+			await _snap(dir, "map_" + lg)
+			m.map.index = 0
+			await _frames(5)
+			await _snap(dir, "map_first_" + lg)
+			m.map._start_walk()
+			await _frames(28)
+			await _snap(dir, "map_walk_" + lg)
+			m.map.walk = -1.0
+			m.map.close()
+		print("PLACESHOTS done")
+		tree.quit()
+		return
 	if OS.has_environment("JOURNAL_ONLY"):
 		await m.load_level(_index("section2"), 0)
 		Game.cinematic = false
