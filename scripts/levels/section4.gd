@@ -141,7 +141,8 @@ func pour() -> void:
 func _anointing() -> void:
 	player.facing = 1
 	Game.music("anointing", 3.0)
-	await say(["n_s4_brothers", "d_jesse_1", "1sam16_7"])
+	# the film before this section has already shown the brothers passing before the prophet
+	await say((["n_s4_brothers"] if not Game.main.intro.has_story("dawn") else []) + ["d_jesse_1", "1sam16_7"])
 	# David kneels before the prophet; the light comes down on him
 	Game.cinematic = true
 	player.act = "kneel"

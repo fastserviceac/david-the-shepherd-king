@@ -1,5 +1,5 @@
 {
- "length": 18.24,
+ "length": 25.62,
  "cues": [
   {
    "t": 1.2,
@@ -9,6 +9,12 @@
   },
   {
    "t": 11.38,
+   "d": 6.4,
+   "text": "Seven sons of Jesse had passed before the prophet. Not one of them was chosen.",
+   "ref": ""
+  },
+  {
+   "t": 18.76,
    "d": 4.4,
    "text": "At dawn he came down from the hills with the whole flock.",
    "ref": ""

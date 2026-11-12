@@ -1,5 +1,5 @@
 {
- "length": 18.24,
+ "length": 25.62,
  "cues": [
   {
    "t": 1.2,
@@ -9,6 +9,12 @@
   },
   {
    "t": 11.38,
+   "d": 6.48,
+   "text": "Sete filhos de Jessé haviam passado diante do profeta. Nenhum deles foi escolhido.",
+   "ref": ""
+  },
+  {
+   "t": 18.76,
    "d": 4.56,
    "text": "Ao amanhecer, ele desceu das colinas com o rebanho inteiro.",
    "ref": ""
