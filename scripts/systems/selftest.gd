@@ -82,6 +82,8 @@ func smoke(m) -> void:
 			"back_and_forth": await _back_and_forth(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
+	if not OS.has_environment("SMOKE_ONLY") or "lambing" in OS.get_environment("SMOKE_ONLY"):
+		await _lambing(m)
 	await _beasts(m)
 	var missing := 0
 	for i in Game.chapter_sections(0).size():      # the map is of Chapter One's hills; later chapters go back to it, and have no place of their own on it yet
@@ -687,6 +689,9 @@ func _old_save() -> void:
 	_check(Game.has("lyre") and Game.flock().size() == 9 and str(Game.flock()[0]["id"]) == "lamb", "and is given the lyre and his nine sheep")
 	_check(Game.has_line("p23_pastures") and Game.has_line("p23_waters") and Game.has_line("p23_valley") and not Game.has_line("p23_rod") and not Game.has_line("p23_goodness"),
 			"and the lines of the psalm from the places he has been through")
+	_check(Game.save.get("lamb_born") == true and not Game.interlude_due(0), "a journey begun before the lambing night has Shai already, and is not sent back to it")
+	Game.take_save({})
+	_check(Game.save.get("lamb_born") == false and Game.interlude_due(0), "a new journey begins with the lambing night")
 	var again: Dictionary = Game.save.duplicate(true)
 	again["psalm"] = ["p23_waters"]
 	again["flock"][2]["at"] = "section1"
@@ -695,6 +700,76 @@ func _old_save() -> void:
 	Game.take_save({"section": 3, "flock": "nine", "psalm": 4})
 	_check(Game.flock().size() == 9 and Game.psalm() is Array, "a spoiled flock or psalm in the file is made good")
 	Game.save = kept
+
+
+## The lambing night before the Pastures: the count at the fold, the ewe found among the rocks, the labour kept
+## quiet by the lyre and undone by a wolf, the lamb rubbed dry, laid at its mother's head, carried home at her pace.
+func _lambing(m) -> void:
+	print("Lambing Night (before section 1)")
+	Game.backdrop = false
+	Game.cinematic = false
+	var born_was = Game.save.get("lamb_born", false)
+	Game.save["lamb_born"] = false
+	await m.load_level(0, 0, true)
+	var lv = m.level
+	_check(m.in_interlude and lv.section_name() == "lambing" and m.here()["title"] == "Lambing Night", "the night before the Pastures loads as its own place")
+	lv.begin()
+	await _frames(5)
+	_check(lv.rachel.who == "rachel" and lv.lamb.who == "lamb" and lv.flock.size() == 7 and not "rachel" in lv.flock.map(func(s): return s.who),
+			"seven ewes are in the fold, Rachel is out among the rocks, and the lamb is not yet born")
+	_check(lv.tasks.any(func(tk): return tk["text"] == "take a brand from the fire"), "a brand can be taken from the fire")
+	await _goto(lv.FOLD)
+	await _frames(20)
+	_check(lv.part == 1, "at the fold he counts them, and one is missing")
+	await _goto(lv.BIRTH_X - 120.0)
+	await _frames(10)
+	_check(lv.part == 2 and lv.song_spot["on"], "he finds her lambing, and the lyre is asked for")
+	await _frames(30)
+	_check(lv.labour == 0.0, "without the lyre the labour does not go on")
+	lv.rachel.settle(30.0, false)
+	await _frames(60)
+	_check(lv.labour > 0.0, "quieted by the song, with him beside her, it goes on")
+	lv._spawn_wolf(lv.BIRTH_X + 300.0)
+	await _frames(5)
+	var before: float = lv.labour
+	await _frames(30)
+	_check(lv.wolf != null and lv.rachel.calm <= 0.0 and lv.labour == before and lv.song_noise(lv.rachel.global_position) > 0.0,
+			"a wolf near her breaks the quiet and stops the labour")
+	lv.wolf.drive_off()
+	await _frames(10)
+	lv.rachel.settle(30.0, false)
+	lv.labour = 0.999
+	await _frames(30)
+	_check(lv.part == 3 and lv.lamb.visible and lv.rub_task["on"], "the wolf gone and the labour done, the lamb lies still")
+	lv._rub()
+	await _frames(5)
+	_check(lv.part == 3, "it cannot be rubbed dry with bare hands")
+	await _goto(lv.GRASS_X)
+	lv.do_task(lv.grass_task)
+	_check(lv.has_grass, "dry grass is pulled from under the rock shelf")
+	await _goto(lv.BIRTH_X - 52.0)
+	await lv._rub()
+	_check(lv.part == 4 and lv.lay_head_task["on"], "rubbed with grass it breathes")
+	await lv._to_mother()
+	_check(lv.part == 5 and Game.save["lamb_born"] == true and lv.rachel.pose == "ewe_tend" and lv.lamb.named == "Shai", "laid at its mother's head, she knows it, and he calls it Shai")
+	await lv._gather()
+	await _frames(5)
+	_check(lv.part == 6 and lv.carrying and lv.player.act == "carry" and lv.player.carry_set == "cradle" and lv.rachel in lv.followers and lv.rachel.max_speed < 270.0,
+			"he carries it in his arms, and she follows at a pace slower than his run")
+	lv._lay()
+	_check(not lv.carrying and lv.lamb.visible and lv.lamb.safe, "he can lay it down to have his hands free")
+	await _frames(3)
+	lv._lift_again()
+	_check(lv.carrying, "and take it up again")
+	lv.rachel.global_position = lv.on_ground(lv.FOLD + 200.0)
+	await _goto(lv.FOLD + 120.0)
+	var t := 0
+	while not lv.done and t < 600:
+		await _frames(1)
+		t += 1
+	_check(lv.part == 7 and lv.done and str(Game.flock_one("lamb")["at"]) == "" and str(Game.flock_one("rachel")["at"]) == "", "home at the fold the lamb stands, and the night is done")
+	Game.save["lamb_born"] = born_was
+	m.in_interlude = false
 
 
 ## The lyre, played by holding the key and letting go at the top of the breath: three phrases, and the sheep

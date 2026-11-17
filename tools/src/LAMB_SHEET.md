@@ -14,7 +14,7 @@ Standing and walking with the lyre are on `tools/src/C2_SHEET.md` (`c2_lyre_stan
 
 Video settings: 720p, 16:9, no audio, one at a time. Seconds are given per clip.
 
-Estimated cost for all 11 clips: about 660 credits on Runway (kling-4, about 60 a clip) or about 26,700 on ElevenLabs (veo-3.1-lite, about 2,424 a clip). The start picture is about 1,200 ElevenLabs credits if made there.
+Estimated cost for all 11 clips (12 with `david_cradle`, added for tranche 3 so he carries the newborn in his arms, not on his shoulders): about 660 credits on Runway (kling-4, about 60 a clip) or about 26,700 on ElevenLabs (veo-3.1-lite, about 2,424 a clip). The start picture is about 1,200 ElevenLabs credits if made there.
 
 ## Start picture for the newborn (image)
 
@@ -57,6 +57,7 @@ Every prompt ends with:
 |---|---|---|
 | david_rub | 6 | The young shepherd kneels on both knees and, with a handful of dry grass in each hand, rubs briskly and gently at something small lying on the ground in front of him, pauses to look at it, and rubs again. |
 | david_gather | 6 | The young shepherd kneels on one knee, slides both hands under a very small newborn lamb lying on the ground in front of him, lifts it against his chest, wraps the edge of his cloak round it, and stands. |
+| david_cradle | 5 | The young shepherd walks steadily on the spot as if on a treadmill, holding a very small newborn lamb against his chest in both arms, wrapped in the edge of his cloak, his head bowed toward it, a full walking cycle repeated. |
 
 ## After the clips arrive
 

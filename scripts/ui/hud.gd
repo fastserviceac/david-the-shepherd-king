@@ -497,7 +497,7 @@ func _journal(a: float) -> void:
 
 	# --- where he is, what he is doing there, and why
 	var x := 86.0
-	var sec: Dictionary = Game.sections()[clampi(Game.main.section_idx, 0, Game.sections().size() - 1)]
+	var sec: Dictionary = Game.main.here()
 	draw_string(f, Vector2(x, 142), Game.t("What he is doing").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
 	draw_string(f, Vector2(x, 172), Game.t(sec["title"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
 	draw_multiline_string(f, Vector2(x, 198), Game.t(str(sec.get("aim", ""))), HORIZONTAL_ALIGNMENT_LEFT, 320.0, 18, 3, ink)

@@ -57,6 +57,8 @@ func open(new_mode: String, at: int = -1) -> void:
 			var first := Game.chapter_start(chapter)
 			var secs: Array = Game.chapter_sections(chapter)
 			for i in secs.size():
+				if Game.interlude_ready(first + i):      # the night before a section, listed before it
+					items.append(["interlude_%d" % (first + i), Game.interlude(first + i)["title"], Game.section_open(first + i)])
 				items.append(["section_%d" % (first + i), secs[i]["title"], Game.section_open(first + i)])
 			for c in Game.chapters.size():
 				if c != chapter and Game.chapter_open(c):

@@ -104,6 +104,9 @@ func _build_fold(x: float) -> void:
 
 
 func begin() -> void:
+	if is_instance_valid(Game.main) and Game.main.from_night:
+		await say(["ps78_70"])      # the lambing night has already said who he is and where
+		return
 	await say(["n_s1_intro", "ps78_70"])
 
 
