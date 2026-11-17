@@ -138,3 +138,9 @@ run $V/c2_bearer $D bear mode=loop double=0 href=605 step=2 soft=1 steady=40    
 # The start picture was shrunk to give room above his head, so he is 400 px tall here, not 605.
 run $V/c2_lamp $D lamp mode=range a=12 b=58 step=2 href=400 soft=1 steady=999     # he raises the taper to the lamp and shields the new flame
 # the lamp gone out, from the burning one: python3 tools/lamp_out.py
+
+# Chapter Two, Back and Forth (Higgsfield seedance_2_0 clip tools/src/clips/c2/runner_run.mp4, job 8ca821ba; frames extracted with
+# ffmpeg -vf fps=24 into <dir>/runner_run/f%03d.png, the outer 8 rows and 3 columns overwritten with their neighbours).
+# The screen is a bright true green (107,169,92): halo=3. The loop found is two strides (66 frames).
+run $V/runner_run art/runner/anim run key=green halo=3 wide=1.9 tall=1.3 size=152 erode=3 mode=loop double=1 steady=40     # the men running south; drawn mirrored
+# painting: cp tools/src/art_in/c2/c2_elah_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_elah   (fades its foot to dark, as the road's)

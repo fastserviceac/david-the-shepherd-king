@@ -59,7 +59,7 @@ def fade_foot(im, start=0.6, floor=(26, 19, 17)):
     return Image.fromarray((a * (1 - t) + np.array(floor, np.float32) * t).astype(np.uint8))
 
 
-FADE = {'c2_road': (26, 19, 17), 'c2_court': (26, 19, 17), 'c2_yard': (118, 104, 88)}      # the yard by day sinks to trodden earth, not to dark
+FADE = {'c2_road': (26, 19, 17), 'c2_elah': (26, 19, 17), 'c2_court': (26, 19, 17), 'c2_yard': (118, 104, 88)}      # the yard by day sinks to trodden earth, not to dark
 def pier(im, wide=96):
     """A wall band that repeats unmirrored: its left end becomes a pier standing a little proud of the wall
     (the wall's own stone from further along, lighter, with a shadow down its right side), so the join is an edge of masonry."""

@@ -28,6 +28,7 @@ var vel := 0.0            # its speed along the ground just now
 var going := false
 var pace := 0.0
 var mark := Color(0, 0, 0, 0)    # another man's mark daubed on its rump, if it is not David's
+var mark_big := 1.0        # how large that daub is drawn (the road home wants it seen from a distance)
 var leap := -1.0          # 0..1 while it jumps a gap
 var leap_a := Vector2.ZERO
 var leap_b := Vector2.ZERO
@@ -240,5 +241,5 @@ func _draw() -> void:
 		for k in 6:          # soft-edged: many faint layers, widest first
 			var f := 1.0 - k / 6.0
 			draw_set_transform(mc, -face * 0.35, Vector2(1.5, 0.8))
-			draw_circle(Vector2.ZERO, 7.5 * size * f, Color(mark.r, mark.g, mark.b, mark.a * 0.16))
+			draw_circle(Vector2.ZERO, 7.5 * size * f * mark_big, Color(mark.r, mark.g, mark.b, mark.a * 0.16))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

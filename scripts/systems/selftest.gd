@@ -79,6 +79,7 @@ func smoke(m) -> void:
 			"kings_hall": await _kings_hall(lv)
 			"armour_bearer": await _armour_bearer(lv)
 			"night_fit": await _night_fit(lv)
+			"back_and_forth": await _back_and_forth(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -127,6 +128,9 @@ func _chapters() -> void:
 			"Chapter One's eight sections keep their numbers")
 	_check(Game.sections().size() > first and Game.chapter_of(first - 1) == 0 and Game.chapter_of(first) == 1 and Game.chapter_start(1) == first
 			and str(Game.sections()[first]["script"]).get_file().get_basename() == "summons", "Chapter Two's sections follow them")
+	var two: Array = Game.chapter_sections(1).map(func(e): return str(e["script"]).get_file().get_basename())
+	_check(two == ["summons", "ridge_road", "gibeah_gate", "kings_hall", "armour_bearer", "night_fit", "back_and_forth"] and not Game.chapters[1].get("more", false)
+			and first + two.size() == Game.sections().size(), "Chapter Two is whole: its seven sections, and no longer marked as still being made")
 	# a finished Chapter One, saved by the game as it was: "unlocked" 99, no chapter anywhere in the file
 	var done := {"section": 0, "checkpoint": 0, "has_sling": true, "unlocked": 99, "started": false, "finished": true, "difficulty": 1,
 			"growth": {"hand": 120.0, "voice": 20.0}, "stones": ["s1_start", "well_start", "s1_cave"], "pouch": 1,
@@ -2325,6 +2329,179 @@ func _armour_bearer(lv) -> void:
 
 # ---- real-flow check: narration, pause, section change, chapter end ----
 
+## Chapter Two, Back and Forth: the wolves at another man's sheep on the road south; at Bethlehem nine by the rod
+## and eight by name, the stranger picked out, Devorah quieted and brought in, the flock watered and played to rest;
+## the red ewe led north by the song, bolting from a runner unquieted and standing through one quieted; the news,
+## and the height toward Elah.
+func _back_and_forth(lv) -> void:
+	var p = lv.player
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	for g in ["lyre", "voice", "sling", "walksong", "steady", "nightsong"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling"]:
+		Input.action_release(a)
+	await _frames(5)
+	_check(lv.part == 0 and lv.sheep_total == 0 and lv.red_a.size() == 5 and not lv.led, "he takes the road south alone; the count of the flock is the keeper's")
+	_check(lv.fars[0].visible and not lv.fars[1].visible and not lv.fars[2].visible and p.cam.limit_right == int(lv.A_W), "the road south has its own far view, and the camera keeps to it")
+	await _goto(lv.A_FOLD - 300.0)
+	await _frames(20)
+	_check(lv.wolves_out and lv.wolves.size() == 2, "above the ford two wolves are at another man's sheep (%d)" % lv.wolves.size())
+	if not lv.wolves_gone:
+		_check(not lv.down_task["on"] and lv.red_a[0].prey and lv.red_a[0].mark.a > 0.0, "the red-daubed sheep are left out for them, and he cannot go on while they are")
+		for w in lv.wolves:
+			if is_instance_valid(w) and not w.fleeing:
+				_check(w.is_prey(lv.red_a[0]) and not w.is_prey(lv.stranger), "a wolf will take a marked sheep the story has left out, and no other marked one")
+				w.hp = 1
+				w.hit(1, -1, "staff")
+	await _until(func() -> bool: return lv.wolves_gone and lv.down_task["on"], 200)
+	_check(lv.wolves_gone and lv.down_task["on"] and not lv.red_a[0].prey, "the wolves driven off, the road down to Bethlehem is open")
+	lv.do_task(lv.down_task)
+	await _until(func() -> bool: return lv.part == 1 and not Game.cinematic, 400)
+	# Bethlehem
+	_check(lv.part == 1 and lv.fars[1].visible and not lv.fars[0].visible and p.cam.limit_left == int(lv.H) and p.global_position.x > lv.H, "he comes down to Bethlehem: its own far view, and the road is behind him")
+	_check(lv.wolves.is_empty() and lv.pen.size() == 8 and not lv.pen.has("devorah") and lv.stranger.mark.a > 0.0 and lv.stranger.who == "",
+			"nine stand in the day fold: eight of his father's, and one that wears another man's mark")
+	var dv = lv.devorah
+	_check(dv.who == "devorah" and not dv.gatherable and not dv.gathered and absf(dv.global_position.x - lv.NIGHT_FOLD_X) < 120.0, "Devorah is shut in the night fold by the house")
+	await _goto(lv.KEEPER_X)
+	await _frames(20)
+	_check(lv.step == lv.COUNT and lv.count_task["on"], "at the day fold the keeper has nine to show him")
+	lv.do_task(lv.count_task)
+	await _frames(10)
+	_check(lv.step == lv.CALL and lv.call_task["on"], "nine go under the rod, and then he calls them by name")
+	await _goto(lv.COUNT_X)
+	for k in 3:
+		lv.do_task(lv.call_task)
+		await _frames(20)
+	_check(lv.call_i == 3 and lv.step == lv.CALL and lv.pen["noga"].name_t > 0.0, "the lamb, Rachel and Noga answer to their names")
+	lv.do_task(lv.call_task)
+	await _frames(10)
+	_check(lv.step == lv.PICK and lv.pick_task["on"] and not lv.call_task["on"], "Devorah is called and nothing answers: nine by the rod, eight by name")
+	await _goto(lv.pen["rachel"].global_position.x)
+	await _frames(6)
+	lv.do_task(lv.pick_task)
+	_check(lv.wrong == 1 and lv.step == lv.PICK, "shown one of his father's, he is not satisfied")
+	await _goto(lv.stranger.global_position.x)
+	await _frames(6)
+	lv.do_task(lv.pick_task)
+	await _frames(10)
+	_check(lv.step == lv.FIND and lv.bar_task["on"] and not lv.pick_task["on"], "the ewe with the worn daub of red is found out")
+	await _goto(lv.BAR_X)
+	lv.do_task(lv.bar_task)
+	await _frames(5)
+	_check(dv.gatherable and dv.restless, "the bar of the night fold lifted, Devorah is there, and shy of him")
+	await _goto(dv.global_position.x - 130.0)
+	await _frames(40)
+	_check(not dv.gathered, "unquieted, she will not stand for his hand")
+	await _goto(dv.home_x - 260.0)
+	await _frames(10)
+	await _play_song(p, 3)
+	_check(dv.calm > lv.SETTLE * 1.5, "the lyre quiets her, and with the Night Song the quiet holds half as long again (%.0f s)" % dv.calm)
+	Input.action_press("jump")
+	await _frames(3)
+	Input.action_release("jump")
+	await _frames(40)
+	await _goto(dv.global_position.x)
+	await _frames(12)
+	_check(dv.gathered and lv.step == lv.BRING and not dv.restless, "quieted, she comes to his hand")
+	await _goto(lv.FOLD_X - 80.0)
+	dv.global_position = lv.on_ground(p.global_position.x - 50.0)
+	await _until(func() -> bool: return lv.step == lv.WATER, 300)
+	_check(lv.step == lv.WATER and lv.pen.size() == 9 and lv.followers.is_empty() and lv.well_task["on"], "brought to the day fold she goes to her own place: nine of his father's, and one that is not")
+	lv.do_task(lv.well_task)
+	await _frames(10)
+	_check(lv.step == lv.REST and lv.rest_song["on"], "watered, they are to be played to rest")
+	await _goto(lv.FOLD_X - 60.0)
+	await _frames(10)
+	await _play_song(p, 3)
+	await _until(func() -> bool: return lv.step == lv.MORNING and lv.ewe_task["on"] and not Game.cinematic, 600)
+	_check(lv.step == lv.MORNING and lv.ewe_task["on"], "three phrases by the fold, and the night passes")
+	await _frames(20)
+	var e = lv.stranger
+	await _goto(e.global_position.x)
+	lv.do_task(lv.ewe_task)
+	await _frames(10)
+	_check(lv.led and lv.step == lv.LEAD and lv.quiet == 0.0, "in the morning the red ewe is his to take home")
+	var ex0: float = e.global_position.x
+	await _goto(ex0 - 200.0)
+	Input.action_press("call")
+	await _frames(3)
+	Input.action_release("call")
+	await _frames(80)
+	_check(absf(e.global_position.x - ex0) < 12.0, "she does not know his voice: called, she stays where she is")
+	Input.action_press("lyre")
+	await _until(func() -> bool: return p.act == "play" and p.breath_v < 0.5, 200)
+	await _until(func() -> bool: return p.breath_v >= 0.93, 300)
+	Input.action_release("lyre")
+	await _frames(4)
+	_check(lv.quiet > 0.0, "a phrase of the lyre puts its quiet on her (act %s, breath %.2f)" % [p.act, p.breath_v])
+	await _until(func() -> bool: return absf(e.global_position.x - p.global_position.x) < 90.0, 400)
+	_check(absf(e.global_position.x - p.global_position.x) < 90.0, "and while it lasts she comes after him")
+	Input.action_press("jump")
+	await _frames(3)
+	Input.action_release("jump")
+	await _frames(40)
+	await _goto(lv.GATE_X + 60.0)
+	e.global_position = lv.on_ground(p.global_position.x + 70.0)
+	e.stay = e.global_position.x
+	await _frames(10)
+	_check(lv.leave_task["on"], "with her at his father's gate, he can set out again")
+	lv.do_task(lv.leave_task)
+	await _until(func() -> bool: return lv.part == 2 and not Game.cinematic, 400)
+	# the road north
+	_check(lv.part == 2 and lv.fars[2].visible and not lv.fars[1].visible and p.cam.limit_left == int(lv.N) and lv.led
+			and absf(e.global_position.x - p.global_position.x) < 200.0, "he is on the road north, and the red ewe with him")
+	lv.quiet = 0.0
+	await _frames(5)
+	ex0 = e.global_position.x
+	Input.action_press("move_right")
+	Input.action_press("walk")
+	await _frames(150)
+	Input.action_release("move_right")
+	Input.action_release("walk")
+	_check(absf(e.global_position.x - ex0) < 12.0 and p.global_position.x > ex0 + 150.0, "walked away from unplayed, she does not follow")
+	await _goto(e.global_position.x + 60.0)
+	var feet: bool = await _lead_playing(p, e, func() -> bool: return e.global_position.x > lv.N + 520.0, 3000)
+	_check(feet and e.global_position.x > lv.N + 500.0, "played to as he walks, she follows the lyre up the road (x=%d)" % int(e.global_position.x - lv.N))
+	# a runner: unquieted she bolts, quieted she stands through it
+	lv._clear_runners()
+	lv.quiet = 0.0
+	await _frames(5)
+	ex0 = e.global_position.x
+	lv._runners(1)
+	_check(lv.runners.size() == 1 and lv.song_noise(Vector2(float(lv.runners[0]["x"]) - 100.0, 0)) > 0.0 and lv.song_noise(p.global_position) == 0.0,
+			"a man comes down the road at a run, and close to him his playing is unsettled")
+	await _until(func() -> bool: return lv.bolts >= 1, 500)
+	await _frames(100)
+	_check(lv.bolts == 1 and e.global_position.x < ex0 - 150.0, "unquieted, she bolts back down the road from him (%d back)" % int(ex0 - e.global_position.x))
+	lv._clear_runners()
+	lv.bolt_t = 0.0
+	lv.quiet = 20.0
+	var stood: int = lv.held
+	lv._runners(1)
+	await _until(func() -> bool: return lv.held > stood, 600)
+	_check(lv.held == stood + 1 and lv.bolts == 1 and lv.quiet > 0.0 and lv.quiet < 17.5, "quieted, she stands through the next, and it eats some of her quiet (%.1f s left)" % lv.quiet)
+	lv._clear_runners()
+	_check(not lv.give_task["on"] and not lv.given, "she is not given back before she is at her own fold")
+	await _goto(lv.N_FOLD - 60.0)
+	e.global_position = lv.on_ground(p.global_position.x - 60.0)
+	lv.quiet = 5.0
+	await _frames(10)
+	_check(lv.give_task["on"], "at the fold above the ford she can be put in with her own")
+	lv.do_task(lv.give_task)
+	await _frames(10)
+	_check(lv.given and not lv.led and not lv.news and not lv.end_task["on"], "the ford man's ewe is home, and the road is his own again")
+	await _goto(lv.N_JEBUS)
+	await _until(func() -> bool: return lv.news, 200)
+	_check(lv.news and lv.end_task["on"] and lv.runners.size() == 3, "under Jebus the runners come by with the news of Socoh (%d of them)" % lv.runners.size())
+	await _goto(lv.N_HEIGHT)
+	await _frames(90)
+	_check(lv.elah == null or lv.elah.modulate.a > 0.9, "on the height the far view opens westward")
+	lv.do_task(lv.end_task)
+	await _frames(30)
+	Game.save["gifts"] = had
+
+
 func _press(action: String) -> void:
 	var e := InputEventAction.new()
 	e.action = action
@@ -2486,11 +2663,26 @@ func flow(m, dir: String) -> void:
 	_check(m.state == "play" and m.section_idx == first + 5 and Game.has("shieldarm"), "the king's arms carried back to his door, the Night Fit follows it")
 	m.level._rest()
 	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 6 and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first + 6 and Game.has("nightsong"), "the king brought to rest in the night and the Night Song given, the road home follows it")
+	_check(m.level.part == 0 and not m.level.led, "Back and Forth begins on the road south, alone")
+	m.level._end()
+	t = 0.0
 	while t < 90.0 and m.state != "menu":
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 6 and Game.has("nightsong"), "the king brought to rest in the night and the Night Song given, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 7 and first + 7 == Game.sections().size(), "looking toward Elah, Chapter Two ends and the game returns to the menu (unlocked %d)" % int(Game.save["unlocked"]))
+	_check(int(Game.save["section"]) == first and Game.save["started"] == false and Game.save["finished"] == true and not Game.chapter_open(2),
+			"the journey is saved at the head of the finished chapter, and Chapter Three is not opened")
+	m.menu.chapter = 1
+	m.menu.open("sections")
+	_check(m.menu.items.size() >= 7 and m.menu.items[6][0] == "section_%d" % (first + 6) and m.menu.items[6][2] == true, "all seven sections of Chapter Two can be walked into again")
+	m.menu.close()
+	m.menu.open("main")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

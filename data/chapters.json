@@ -67,9 +67,8 @@
     {
       "number": "Two",
       "title": "The Lyre",
-      "scripture": "1 Samuel 16:14–23",
+      "scripture": "1 Samuel 16:14–23; 17:15",
       "available": true,
-      "more": true,
       "narration": "res://data/narration/chapter2.json",
       "sections": [
         {
@@ -184,6 +183,26 @@
             "frames:david/lamp",
             "frames:saul/idle",
             "frames:saul/rest"
+          ]
+        },
+        {
+          "title": "Back and Forth",
+          "script": "res://scripts/levels/back_and_forth.gd",
+          "aim": "Go home to your father's sheep, set right what only their shepherd would see, and come again.",
+          "why": "The king's harpist is still his father's shepherd. No one has told him to stop being either.",
+          "needs": [
+            "res://art/c2_road_backdrop.png",
+            "res://art/c2_road_mid.png",
+            "res://art/c2_home_backdrop.png",
+            "res://art/c2_home_mid.png",
+            "res://art/c2_elah_backdrop.png",
+            "frames:david/lyre",
+            "frames:david/lyre_walk",
+            "frames:wolf/walk",
+            "frames:jesse/idle",
+            "frames:keeper/idle",
+            "frames:keeper/count",
+            "frames:runner/run"
           ]
         }
       ]

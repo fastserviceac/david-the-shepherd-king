@@ -58,9 +58,10 @@ func put(tex: Texture2D, sc: float, tall: float = 1.4, stretch: Vector2 = Vector
 		show_frame(tex, sc, tall, stretch)
 
 
-## Is this sheep fair game? The same rule the jackal keeps: not another man's, and not one the story has put away.
+## Is this sheep fair game? The same rule the jackal keeps: not another man's (unless the story has left that
+## man's sheep out for it: `prey` on a marked one, as on the road home), and not one the story has put away.
 func is_prey(s) -> bool:
-	return is_instance_valid(s) and (s.gathered or s.gatherable or s.prey) and s.leap < 0.0 and s.mark.a <= 0.0 \
+	return is_instance_valid(s) and (s.gathered or s.gatherable or s.prey) and s.leap < 0.0 and (s.mark.a <= 0.0 or s.prey) \
 			and not s.safe and not s.carried
 
 
