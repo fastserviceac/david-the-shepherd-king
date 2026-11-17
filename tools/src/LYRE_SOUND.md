@@ -1,13 +1,16 @@
 # The lyre's sound (Chapter One, tranche 2)
 
-Nothing here has been generated or paid for. The game already asks for these files and plays the old stand-in
-(three rising tones) until they exist: `Game.lyre()` in `scripts/systems/game.gd`.
+Made 17 November 2026 (owner approved): one ElevenLabs music piece (900 credits) and four sounds (17 each). Sources are in
+`tools/src/audio/`. `lyre_music.mp3` was cut at its rests into `lyre_phrase_00` to `_11` (each held to 3.2 s with a fade,
+levelled to -24 LUFS) and its ringing close (37.55 to 43.0 s) became `lyre_song`; the separately made strum
+(`tools/src/audio/lyre_song.mp3`) is kept but not used. `lyre_lost` and `lyre_sit` are levelled to -30 LUFS,
+`sheep_settle` to -28. Played by `Game.lyre()` in `scripts/systems/game.gd`.
 
 ## Files the game looks for
 
 | File | When it plays | Length |
 |---|---|---|
-| `audio/sfx/lyre_phrase_00.mp3` … `_05.mp3` | a phrase lands (played in turn, so a song is never the same three) | 1.5 to 3 s each |
+| `audio/sfx/lyre_phrase_00.mp3` … `_11.mp3` | a phrase lands (played in turn, so a song is never the same three) | 1.5 to 3 s each |
 | `audio/sfx/lyre_song.mp3` | the third phrase: the song goes out to the flock | 3 to 5 s |
 | `audio/sfx/lyre_lost.mp3` | a phrase let go too soon | under 1 s |
 | `audio/sfx/lyre_sit.mp3` | he takes the lyre up | under 1 s |
