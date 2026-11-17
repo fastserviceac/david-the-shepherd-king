@@ -16,6 +16,10 @@
    "lat1": 31.93,
    "title": "Judah, from the lowland to the Salt Sea",
    "km": 100.4
+  },
+  "gibeah": {
+   "title": "Gibeah of Saul",
+   "plan": true
   }
  },
  "towns": [
@@ -170,6 +174,26 @@
     "land"
    ],
    "small": true
+  },
+  {
+   "text": "The cistern",
+   "x": -0.5,
+   "y": 0.0,
+   "z": 1.3,
+   "views": [
+    "gibeah"
+   ],
+   "small": true
+  },
+  {
+   "text": "The storehouse",
+   "x": 2.95,
+   "y": 0.8,
+   "z": 1.0,
+   "views": [
+    "gibeah"
+   ],
+   "small": true
   }
  ],
  "places": {
@@ -314,6 +338,24 @@
      "Rachel's Pillar"
     ]
    ]
+  },
+  "gibeah_gate": {
+   "view": "gibeah",
+   "x": -1.7,
+   "z": 2.95,
+   "about": "The gate and the yard of Saul's house (1 Samuel 15:34). Scripture describes no fortress at Gibeah: this plan follows the remains usually identified at Tell el-Ful, whose identification and date are disputed."
+  },
+  "kings_hall": {
+   "view": "gibeah",
+   "x": 1.0,
+   "z": -0.2,
+   "about": "The text does not say where in Gibeah David played for the king. The hall is set against the north wall."
+  },
+  "armour_bearer": {
+   "view": "gibeah",
+   "x": -2.3,
+   "z": -0.5,
+   "about": "The open yard, where the king's arms are carried and the drill is done."
   }
  },
  "relief": {

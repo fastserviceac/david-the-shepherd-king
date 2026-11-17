@@ -91,6 +91,7 @@ func smoke(m) -> void:
 	var q2: Vector2 = m.map._spot(2)
 	_check(q.x > 0.0 and q.x < q2.x and q.y > 0.0 and q.y < q2.y, "Bethlehem falls north-west of the ravine on the map")
 	m.map.close()
+	await _fort_map(m)
 	var stale := 0
 	for who in DirAccess.get_directories_at("res://art"):
 		var d := "res://art/%s/anim" % who
@@ -519,6 +520,50 @@ func _gibeah_gate(lv) -> void:
 	lv.do_task(lv.wait_task)
 	await _frames(30)
 	Game.save["gifts"] = had
+
+
+## The map's third view: the fortress at Gibeah. It is not shown before he has come there; once he has, the map
+## opens on it when he is in it, lists Chapter Two's fortress sections as its places, and Tab goes round all three.
+func _fort_map(m) -> void:
+	var gate_i := _index("gibeah_gate")
+	var was_unlocked: int = int(Game.save.get("unlocked", 0))
+	var was_sec: int = m.section_idx
+	Game.save["unlocked"] = gate_i - 1
+	m.section_idx = 3
+	m.map.open(true, 3)
+	_check(not m.map._fort_known() and m.map.view == "hills" and m.map.ids == range(8) and m.map._here() == 3, "before he has come to Gibeah the map is the hills, with Chapter One's eight places")
+	m.map._toggle()
+	_check(m.map.view == "land", "and Tab goes to the wider land, as it did")
+	m.map._toggle()
+	_check(m.map.view == "hills" and m.map.index == 3, "and back to the hills, at the place he had chosen")
+	m.map.close()
+	Game.save["unlocked"] = gate_i + 1
+	m.section_idx = gate_i
+	m.map.open(true, gate_i)
+	_check(m.map._fort_known() and m.map.view == "gibeah" and m.map._g(m.map.index) == gate_i and m.map._here() == m.map.index,
+			"opened at the Gate of Gibeah, the map is the fortress and he stands at its gate")
+	var names: Array = m.map.ids.map(func(g): return m.map._key(m.map.ids.find(g)))
+	_check(names.slice(0, 3) == ["gibeah_gate", "kings_hall", "armour_bearer"], "its places are the fortress's sections, in order (%s)" % str(names))
+	_check(m.map._open_to(0) and m.map._open_to(1) and not m.map._open_to(2), "a place in it is open only once he has come to it")
+	await _frames(30)
+	var gate_at: Vector2 = m.map._spot(0)
+	var hall_at: Vector2 = m.map._spot(1)
+	_check(hall_at.y < gate_at.y and hall_at.x > gate_at.x and gate_at.x > 360.0 and gate_at.x < 1280.0 and gate_at.y > 0.0 and gate_at.y < 720.0,
+			"the hall lies north-east of the gate, and both are on the screen clear of the card (gate %s, hall %s)" % [str(gate_at.round()), str(hall_at.round())])
+	m.map.index = 1
+	m.map._toggle()
+	_check(m.map.view == "land", "from the fortress Tab goes to the wider land")
+	m.map._toggle()
+	_check(m.map.view == "hills" and m.map.ids == range(8) and m.map._here() == -1, "then to the hills, where he is not")
+	m.map._toggle()
+	_check(m.map.view == "gibeah" and m.map.index == 1, "and round to the fortress again, at the place he had chosen")
+	m.map.close()
+	m.section_idx = _index("ridge_road")
+	m.map.open(true, m.section_idx)
+	_check(m.map.view == "hills" and m.map._here() == -1 and m.map.index == 7, "from the road, which has no place on any map yet, it opens on the hills and does not put him on them")
+	m.map.close()
+	Game.save["unlocked"] = was_unlocked
+	m.section_idx = was_sec
 
 
 ## Walks him east playing on his feet, waiting for the donkey when it hangs back, until `done` or `frames` run out.
@@ -1628,6 +1673,22 @@ func placeshots(m, dir: String) -> void:
 			m.map._toggle()
 			await _frames(140)
 			await _snap(dir, "map_land_" + lg)
+			m.map.close()
+		# the fortress, as it is once he serves in it
+		Game.save["unlocked"] = _index("armour_bearer")
+		Game.save["gifts"] = ["voice", "hand", "sling", "lyre", "walksong", "steady", "favour"]
+		m.section_idx = _index("kings_hall")
+		for lg in ["en", "pt"]:
+			Game.save["lang"] = lg
+			m.map.open(true, m.section_idx)
+			await _frames(130)
+			await _snap(dir, "map_gibeah_" + lg)
+			m.map.index = 0
+			await _frames(40)
+			m.map._start_walk()
+			await _frames(30)
+			await _snap(dir, "map_gibeah_walk_" + lg)
+			m.map.walk = -1.0
 			m.map.close()
 		print("PLACESHOTS done")
 		tree.quit()

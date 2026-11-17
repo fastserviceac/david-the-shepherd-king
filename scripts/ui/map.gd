@@ -3,6 +3,11 @@ extends Control
 ## (see tools/realmap.py and data/map.json). Left and right choose a place; Enter walks him there along the way
 ## he has come. The road inks itself in as he opens it, each place shows what it has given and still holds, and
 ## the places found off the path are marked beside it (a faint question mark where one is still hidden).
+##
+## There are three views. "hills" is Chapter One's ground and "land" the whole of Judah, both real relief. "gibeah"
+## is the fortress of Chapter Two, a small model built here from boxes: scripture describes no fortress, so its plan
+## follows the remains usually identified at Tell el-Ful. A view that has places lists the sections whose place in
+## data/map.json names it ("view"; none means the hills); `index` counts along that list, `_g()` gives the section.
 
 signal travel(idx: int)
 signal closed
@@ -10,6 +15,9 @@ signal closed
 var data: Dictionary = {}
 var view := "hills"
 var index := 0
+var ids: Array = []        # the sections (as numbered in Game.sections()) that have a place in the view shown
+var kept := {}             # the place last chosen in each view
+var sun: DirectionalLight3D
 var tex := {}
 var from_play := false
 var t := 0.0
@@ -28,6 +36,14 @@ const RED := Color(0.55, 0.16, 0.1)
 const SPAN := 16.0            # the hills box is this wide in the 3D scene
 const EXAG := {"hills": 2.4, "land": 7.0}      # relief drawn this much taller than true, so wadis read
 const VP := Vector2i(1920, 1080)
+const PULL := {"hills": 1.0, "gibeah": 1.72, "land": 1.95}      # how far back the camera rests in each view
+const NEXT := {"hills": "the hills of Bethlehem", "gibeah": "the fortress at Gibeah", "land": "the wider land"}
+# the fortress model, in the scene's own units (north is -z, as on the other grounds)
+const FW := 7.4               # the walls' outer size, west to east
+const FD := 4.4               # and north to south
+const GATE_X := -1.7          # where the gate stands in the south wall
+const CISTERN := Vector2(-0.5, 0.75)
+const FORT_LOOK := Vector3(0.0, 0.0, 0.3)
 var vp: SubViewport
 var cam: Camera3D
 var heights := PackedFloat32Array()
@@ -53,19 +69,23 @@ func _ready() -> void:
 
 func open(playing: bool, at_section: int) -> void:
 	from_play = playing
-	view = "hills"
-	index = clampi(at_section, 0, Game.chapter_sections(0).size() - 1)
 	for v in ["hills", "land"]:
 		if not tex.has(v):
 			tex[v] = load("res://art/map_%s.png" % v)
+	tex["gibeah"] = tex["hills"]
 	reveal = 1.0 if Game.fast else 0.0
 	walk = -1.0
 	_build_3d()
+	kept = {}
+	ids = []
 	_show("hills")
 	if not decorated:
 		decorated = true
 		_decorate()
-	look = _world_of(index)
+	if _view_of(at_section) == "gibeah":      # he is in the fortress: that is the map he is shown
+		_show("gibeah")
+	index = ids.find(at_section) if ids.has(at_section) else clampi(at_section, 0, ids.size() - 1)
+	look = _want()
 	pull = 1.0 if Game.fast else 2.3
 	_aim()
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -87,25 +107,66 @@ func _process(delta: float) -> void:
 			walk += delta / clampf(_length(walk_pts) / 260.0, 0.5, 1.6)
 			if walk >= 1.0:
 				walk = -1.0
-				travel.emit(walk_to)
+				travel.emit(_g(walk_to))
 		if cam:      # the camera glides to whatever is chosen, and follows him when he walks
-			var want := _world_of(index) if view == "hills" else _ground(Vector2(0.0, 0.6))
+			var want := _want()
 			if walk >= 0.0:
 				want = _along3(walk_pts3, walk)
+				if view == "gibeah":
+					want = FORT_LOOK.lerp(want, 0.2)
 			var k := 1.0 - exp(-delta * 4.0)
 			look = look.lerp(want, k)
-			pull = lerpf(pull, 1.0 if view == "hills" else 1.95, 1.0 - exp(-delta * 2.2))
-			cam.h_offset = lerpf(cam.h_offset, -1.15 if view == "hills" else 0.0, k)
+			pull = lerpf(pull, PULL[view], 1.0 - exp(-delta * 2.2))
+			cam.h_offset = lerpf(cam.h_offset, 0.0 if view == "land" else -1.15, k)
 			_aim()
 		queue_redraw()
 
 
+## Where the camera rests: on the place chosen in the hills, on the whole land, or on the fortress, leaning a
+## little towards the place chosen in it (it is small enough to be seen whole).
+func _want() -> Vector3:
+	if view == "land":
+		return _ground(Vector2(0.0, 0.6))
+	if view == "gibeah":
+		return FORT_LOOK.lerp(_world_of(index), 0.2)
+	return _world_of(index)
+
+
+## The section at place i of the view shown.
+func _g(i: int) -> int:
+	return int(ids[i]) if i >= 0 and i < ids.size() else i
+
+
 func _key(idx: int) -> String:
-	return str(Game.chapter_sections(0)[idx]["script"]).get_file().get_basename()
+	return str(Game.sections()[_g(idx)]["script"]).get_file().get_basename()
+
+
+## Which view a section's place is in: "hills" unless its place says otherwise, "" if it has no place.
+func _view_of(sec: int) -> String:
+	if sec < 0 or sec >= Game.sections().size():
+		return ""
+	var pl: Dictionary = data.get("places", {}).get(str(Game.sections()[sec]["script"]).get_file().get_basename(), {})
+	return "" if pl.is_empty() else str(pl.get("view", "hills"))
+
+
+func _ids_of(name: String) -> Array:
+	var out: Array = []
+	for i in Game.sections().size():
+		if _view_of(i) == name:
+			out.append(i)
+	return out
+
+
+## Has he come to the fortress yet? Until he has, the map does not show it.
+func _fort_known() -> bool:
+	for g in _ids_of("gibeah"):
+		if g <= int(Game.save.get("unlocked", 0)) and Game.section_ready(g):
+			return true
+	return false
 
 
 func _open_to(idx: int) -> bool:
-	return idx <= int(Game.save.get("unlocked", 0))
+	return _g(idx) <= int(Game.save.get("unlocked", 0)) and Game.section_ready(_g(idx))
 
 
 ## Where a latitude and longitude fall on the screen in the current view.
@@ -118,12 +179,20 @@ func _at(lat: float, lon: float) -> Vector2:
 
 func _spot(i: int) -> Vector2:
 	var pl: Dictionary = data["places"].get(_key(i), {})
-	return _at(pl["lat"], pl["lon"]) if not pl.is_empty() else Vector2.ZERO
+	if pl.is_empty():
+		return Vector2.ZERO
+	if pl.has("x"):
+		return _screen(_world_of(i)) if cam else Vector2(640.0 + float(pl["x"]) * 60.0, 360.0 + float(pl["z"]) * 60.0)
+	return _at(pl["lat"], pl["lon"])
 
 
 func _world_of(i: int) -> Vector3:
 	var pl: Dictionary = data["places"].get(_key(i), {})
-	return _world(pl["lat"], pl["lon"]) if not pl.is_empty() else Vector3.ZERO
+	if pl.is_empty():
+		return Vector3.ZERO
+	if pl.has("x"):        # a place on a plan, not on the land: where it stands on the model
+		return Vector3(float(pl["x"]), 0.0, float(pl["z"]))
+	return _world(pl["lat"], pl["lon"])
 
 
 ## A latitude and longitude as a point on the 3D ground.
@@ -201,6 +270,8 @@ func _build_3d() -> void:
 	for name in ["hills", "land"]:
 		grounds[name] = _build_ground(name)
 		vp.add_child(grounds[name]["node"])
+	grounds["gibeah"] = _build_fort()
+	vp.add_child(grounds["gibeah"]["node"])
 	# the table the land stands on, so its edges do not end in nothing
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = Vector2(200, 200)
@@ -212,7 +283,7 @@ func _build_3d() -> void:
 	fmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	fl.material_override = fmat
 	vp.add_child(fl)
-	var sun := DirectionalLight3D.new()       # low and from the north-west, so every ridge throws its shadow
+	sun = DirectionalLight3D.new()       # low and from the north-west, so every ridge throws its shadow
 	sun.rotation_degrees = Vector3(-34.0, 128.0, 0.0)
 	sun.light_color = Color(1.0, 0.9, 0.74)
 	sun.light_energy = 0.95
@@ -262,14 +333,15 @@ func _find_at(p: Vector2, k: int) -> Vector2:
 	return p + Vector2.from_angle(deg_to_rad(35.0 + 75.0 * k)) * 27.0
 
 
+## Where he stands, as a place of the view shown: -1 if he is somewhere this view does not show.
 func _here() -> int:
-	return Game.main.section_idx if is_instance_valid(Game.main) and from_play else -1
+	return ids.find(Game.main.section_idx) if is_instance_valid(Game.main) and from_play else -1
 
 
 func _start_walk() -> void:
 	var from := _here()
 	if Game.fast or from < 0 or from == index:
-		travel.emit(index)
+		travel.emit(_g(index))
 		return
 	walk_pts3 = PackedVector3Array()
 	if index > from:
@@ -292,11 +364,11 @@ func _start_walk() -> void:
 func tap(p: Vector2) -> bool:
 	if not visible:
 		return false
-	if walk >= 0.0 or view != "hills":
+	if walk >= 0.0 or view == "land":
 		return true
 	var best := -1
 	var best_d := 46.0
-	for i in Game.chapter_sections(0).size():
+	for i in ids.size():
 		var pl: Dictionary = data["places"].get(_key(i), {})
 		if pl.is_empty():
 			continue
@@ -321,7 +393,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if walk >= 0.0:        # he is on his way
 		get_viewport().set_input_as_handled()
 		return
-	var n := Game.chapter_sections(0).size()
+	var n := ids.size()
 	if event.is_action_pressed("move_right") or event.is_action_pressed("move_down"):
 		index = posmod(index + 1, n)
 		Game.sfx("ui_move", -8.0)
@@ -335,7 +407,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle()
 		Game.sfx("ui_move", -8.0)
 	elif event.is_action_pressed("accept"):
-		if view == "hills" and _open_to(index):
+		if view != "land" and _open_to(index):
 			get_viewport().set_input_as_handled()
 			_start_walk()
 			return
@@ -376,21 +448,24 @@ func _draw() -> void:
 	var v: Dictionary = data["views"][view]
 	for lb in data["labels"]:
 		if view in lb["views"]:
-			_text(_at(lb["lat"], lb["lon"]), Game.t(lb["text"]), 17 if lb.get("small", false) else 24, Color(ink.r, ink.g, ink.b, 0.55))
+			var lp: Vector2 = _screen(Vector3(float(lb["x"]), float(lb.get("y", 0.0)), float(lb["z"]))) if lb.has("x") else _at(lb["lat"], lb["lon"])
+			_text(lp, Game.t(lb["text"]), 17 if lb.get("small", false) else 24, Color(ink.r, ink.g, ink.b, 0.8 if lb.has("x") else 0.55))
 	for tw in data["towns"]:
 		if view in tw["views"]:
 			var p := _at(tw["lat"], tw["lon"])
 			draw_rect(Rect2(p - Vector2(5, 5), Vector2(10, 10)), ink)
 			draw_rect(Rect2(p - Vector2(2.5, 2.5), Vector2(5, 5)), Color(0.93, 0.87, 0.72))
 			_text(p + Vector2(0, -12), Game.t(tw["name"]), 20, ink)
-	var secs: Array = Game.chapter_sections(0)
-	if view == "hills":
+	var secs: Array = []
+	for g in ids:
+		secs.append(Game.sections()[g])
+	if view != "land":
 		var last := int(Game.save.get("unlocked", 0))
 		# the way he has come, inked in; the way still ahead, only pricked out
 		for i in range(1, secs.size()):
 			var leg := _leg(i)
-			if i <= last:
-				var part := reveal if i == last else 1.0
+			if _open_to(i):
+				var part := reveal if _g(i) == last else 1.0
 				var n := maxi(2, int(ceil(leg.size() * part)))
 				draw_polyline(leg.slice(0, n), Color(0.1, 0.04, 0.02, 0.45), 7.0, true)
 				draw_polyline(leg.slice(0, n), Color(1.0, 0.82, 0.5), 3.0, true)
@@ -483,7 +558,7 @@ func _draw() -> void:
 		draw_polyline(box, Color(1.0, 0.82, 0.5, 0.9), 2.0, true)
 	_text(Vector2(640, 44), Game.t(v["title"]), 30, ink)
 	var km := 20.0
-	if view != "hills":      # a scale bar means nothing on ground seen at a slant
+	if view == "land":      # a scale bar means nothing on ground seen at a slant
 		var bar: float = km / float(v["km"]) * 1280.0
 		var b0 := Vector2(420.0 if view == "hills" else 60.0, 660.0)
 		draw_line(b0, b0 + Vector2(bar, 0), ink, 2.5)
@@ -496,6 +571,15 @@ func _draw() -> void:
 	var keys := Game.keys(Game.t(("Tap a place, and again to go there      Tab  the wider land      M or Esc  close" if Game.touch else "← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close") if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close"))
 	if Game.pad:
 		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
+	if _fort_known():      # three views now: the line says which one Tab leads to
+		var order := _order()
+		var nxt: String = Game.t(NEXT[order[(order.find(view) + 1) % order.size()]])
+		var gap := "      "
+		if Game.pad:
+			keys = ("" if view == "land" else Game.t("← →  choose a place") + gap) + "Back  " + nxt + gap + Game.t("Start  close")
+		else:
+			var choose: String = "" if view == "land" else (Game.t("Tap a place, and again to go there") if Game.touch else Game.t("← →  choose a place") + gap + Game.t("Enter  go there")) + gap
+			keys = Game.keys(choose + "Tab  " + nxt + gap + Game.t("M or Esc  close"))
 	var ky := 700.0
 	_text(Vector2(640, ky), keys, 17, Color(ink.r, ink.g, ink.b, 0.8))
 
@@ -548,7 +632,7 @@ func _card(secs: Array) -> void:
 	# the gift of this place
 	for id in Game.GIFT_ORDER:
 		var g: Dictionary = Game.GIFTS[id]
-		if int(g["after"]) != index:
+		if int(g["after"]) != _g(index):
 			continue
 		var got: bool = Game.has(id)
 		draw_string(f, Vector2(tx, y + 6.0), Game.t(g["name"]), HORIZONTAL_ALIGNMENT_LEFT, tw, 20, gold if got else Color(1, 1, 1, 0.75))
@@ -597,6 +681,8 @@ func _card(secs: Array) -> void:
 
 ## Brings one view's ground forward: its mesh is shown and its heights are the ones places are set on.
 func _show(name: String) -> void:
+	if view != "land" and not ids.is_empty():
+		kept[view] = index
 	view = name
 	for k in grounds:
 		grounds[k]["node"].visible = k == name
@@ -605,6 +691,12 @@ func _show(name: String) -> void:
 	gw = g["gw"]
 	gh = g["gh"]
 	depth = g["depth"]
+	if sun:
+		sun.shadow_enabled = name == "gibeah"      # walls throw shadows; the hills are shaded by their own slopes
+	if name != "land":       # the wider land has no places of its own: the last list stands
+		ids = _ids_of(name)
+		var here := _here()
+		index = clampi(int(kept.get(name, here if here >= 0 else 0)), 0, maxi(ids.size() - 1, 0))
 
 
 func _build_ground(name: String) -> Dictionary:
@@ -666,11 +758,158 @@ func _build_ground(name: String) -> Dictionary:
 	return {"heights": hs, "gw": w, "gh": h, "depth": dep, "node": node}
 
 
-## Between the hills of this chapter and the whole land.
+## The views in the order Tab goes through them: the fortress only once he has come to it.
+func _order() -> Array:
+	return ["hills", "gibeah", "land"] if _fort_known() else ["hills", "land"]
+
+
+## On to the next view: the hills, the fortress, the whole land.
 func _toggle() -> void:
-	_show("land" if view == "hills" else "hills")
-	pull = 2.6 if view == "land" else 1.6      # the camera draws back to the whole land, or comes down to the hills
-	look = _ground(Vector2(0.0, 0.6)) if view == "land" else _world_of(index)
+	var order := _order()
+	_show(order[(order.find(view) + 1) % order.size()])
+	pull = 2.6 if view == "land" else 1.6      # the camera draws back to the whole land, or comes down to a place
+	look = _want()
+
+
+func _box(parent: Node3D, at: Vector3, size: Vector3, mat: Material, turn: float = 0.0) -> MeshInstance3D:
+	var m := BoxMesh.new()
+	m.size = size
+	var n := MeshInstance3D.new()
+	n.mesh = m
+	n.material_override = mat
+	n.position = at + Vector3(0, size.y * 0.5, 0)
+	n.rotation.y = turn
+	parent.add_child(n)
+	return n
+
+
+## Trodden earth: a painting spread over the ground and tinted, so it is mottled and not one flat colour.
+func _ground_mat(pic: Texture2D, tint: Color, scale: float) -> StandardMaterial3D:
+	var m := _flat(tint)
+	m.albedo_texture = pic
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3(scale, scale, scale)
+	return m
+
+
+func _flat(col: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.roughness = 1.0
+	m.metallic_specular = 0.0
+	return m
+
+
+## The fortress at Gibeah as a model on the table: a casemate wall with a tower at each corner and one gate in the
+## south wall, and inside it the yard with its cistern, the storehouse against the east wall and the hall against
+## the north. Where things stand matches data/map.json (the places and labels of the "gibeah" view).
+func _build_fort() -> Dictionary:
+	var root := Node3D.new()
+	var stone := StandardMaterial3D.new()
+	stone.albedo_texture = load("res://art/map_gibeah_stone.png")
+	stone.uv1_triplanar = true
+	stone.uv1_world_triplanar = true
+	stone.uv1_scale = Vector3(0.85, 0.85, 0.85)
+	stone.roughness = 1.0
+	stone.metallic_specular = 0.0
+	stone.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var soil: Texture2D = load("res://art/ground_yard.png")      # the painted earth of the yard by day
+	var earth := _ground_mat(soil, Color(0.8, 0.68, 0.54), 0.3)
+	var yard := _ground_mat(soil, Color(1.0, 0.92, 0.8), 0.45)
+	var roof := _flat(Color(0.74, 0.64, 0.5))
+	var wood := _flat(Color(0.33, 0.22, 0.14))
+	var dark := _flat(Color(0.07, 0.05, 0.04))
+	# the hilltop it stands on, the trodden yard inside, and the road up to the gate
+	_box(root, Vector3(0, -0.06, 0), Vector3(SPAN, 0.06, 9.0), earth)
+	_box(root, Vector3(0, 0.0, 0), Vector3(FW, 0.012, FD), yard)
+	_box(root, Vector3(GATE_X, 0.0, FD * 0.5 + 1.1), Vector3(0.5, 0.012, 2.2), yard)
+	_box(root, Vector3(GATE_X - 0.9, 0.0, FD * 0.5 + 2.6), Vector3(0.5, 0.012, 2.6), yard, 0.75)
+	# the wall: north, west and east whole, the south in two lengths with the gate between them
+	var t := 0.46
+	var h := 0.72
+	_box(root, Vector3(0, 0, -FD * 0.5), Vector3(FW, h, t), stone)
+	_box(root, Vector3(-FW * 0.5, 0, 0), Vector3(t, h, FD), stone)
+	_box(root, Vector3(FW * 0.5, 0, 0), Vector3(t, h, FD), stone)
+	var gl := GATE_X - 0.42
+	var gr := GATE_X + 0.42
+	_box(root, Vector3((-FW * 0.5 + gl) * 0.5, 0, FD * 0.5), Vector3(gl + FW * 0.5, h, t), stone)
+	_box(root, Vector3((FW * 0.5 + gr) * 0.5, 0, FD * 0.5), Vector3(FW * 0.5 - gr, h, t), stone)
+	for gx in [gl - 0.11, gr + 0.11]:          # the gate: two jambs standing proud of the wall, a timber lintel, the leaves open inward
+		_box(root, Vector3(gx, 0, FD * 0.5), Vector3(0.24, h + 0.12, t + 0.16), stone)
+	_box(root, Vector3(GATE_X, h - 0.02, FD * 0.5), Vector3(1.1, 0.13, t + 0.04), wood)
+	_box(root, Vector3(gl + 0.06, 0, FD * 0.5 - 0.42), Vector3(0.05, h - 0.14, 0.42), wood)
+	_box(root, Vector3(gr - 0.06, 0, FD * 0.5 - 0.42), Vector3(0.05, h - 0.14, 0.42), wood)
+	for cx in [-1.0, 1.0]:                      # a tower at each corner, standing out from the wall
+		for cz in [-1.0, 1.0]:
+			_box(root, Vector3(cx * (FW * 0.5 + 0.1), 0, cz * (FD * 0.5 + 0.1)), Vector3(1.1, 1.08, 1.1), stone)
+			_box(root, Vector3(cx * (FW * 0.5 + 0.1), 1.08, cz * (FD * 0.5 + 0.1)), Vector3(0.84, 0.012, 0.84), roof)
+	# the hall against the north wall, its door to the yard lamplit; the storehouse against the east wall
+	_box(root, Vector3(1.5, 0, -FD * 0.5 + t * 0.5 + 0.72), Vector3(3.3, 0.62, 1.44), stone)
+	_box(root, Vector3(1.5, 0.62, -FD * 0.5 + t * 0.5 + 0.72), Vector3(3.14, 0.014, 1.3), roof)
+	var glow := _flat(Color(1.0, 0.62, 0.28))
+	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_box(root, Vector3(1.0, 0, -FD * 0.5 + t * 0.5 + 1.445), Vector3(0.26, 0.4, 0.02), glow)
+	_box(root, Vector3(FW * 0.5 - t * 0.5 - 0.5, 0, 1.0), Vector3(1.0, 0.48, 1.3), stone)
+	_box(root, Vector3(FW * 0.5 - t * 0.5 - 0.5, 0.48, 1.0), Vector3(0.88, 0.014, 1.18), roof)
+	_box(root, Vector3(FW * 0.5 - t * 0.5 - 1.01, 0, 1.0), Vector3(0.02, 0.32, 0.24), dark)
+	var jar := CylinderMesh.new()
+	jar.top_radius = 0.05
+	jar.bottom_radius = 0.075
+	jar.height = 0.19
+	jar.radial_segments = 10
+	for k in 3:
+		var j := MeshInstance3D.new()
+		j.mesh = jar
+		j.material_override = _flat(Color(0.62, 0.4, 0.26))
+		j.position = Vector3(FW * 0.5 - t * 0.5 - 1.2, 0.095, 0.5 + k * 0.2)
+		root.add_child(j)
+	# the cistern in the yard: a ring of stone and the dark of its mouth
+	var ring := CylinderMesh.new()
+	ring.top_radius = 0.3
+	ring.bottom_radius = 0.33
+	ring.height = 0.16
+	ring.radial_segments = 20
+	var rn := MeshInstance3D.new()
+	rn.mesh = ring
+	rn.material_override = stone
+	rn.position = Vector3(CISTERN.x, 0.08, CISTERN.y)
+	root.add_child(rn)
+	var mouth := CylinderMesh.new()
+	mouth.top_radius = 0.2
+	mouth.bottom_radius = 0.2
+	mouth.height = 0.165
+	mouth.radial_segments = 20
+	var mn := MeshInstance3D.new()
+	mn.mesh = mouth
+	mn.material_override = dark
+	mn.position = Vector3(CISTERN.x, 0.0835, CISTERN.y)
+	root.add_child(mn)
+	# the town on the slope below, and a few trees: Gibeah was a town before it was a king's seat (Judges 19:14)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	var house := _flat(Color(0.86, 0.77, 0.62))
+	for k in 13:
+		var at := Vector3(rng.randf_range(-7.2, -4.9), 0, rng.randf_range(0.6, 4.1))
+		if k > 8:
+			at = Vector3(rng.randf_range(4.9, 7.3), 0, rng.randf_range(1.6, 4.1))
+		_box(root, at, Vector3(rng.randf_range(0.42, 0.7), rng.randf_range(0.26, 0.38), rng.randf_range(0.42, 0.7)), house, rng.randf() * 0.7)
+	var tree := CylinderMesh.new()
+	tree.top_radius = 0.0
+	tree.bottom_radius = 0.16
+	tree.height = 0.42
+	tree.radial_segments = 6
+	for k in 26:
+		var tn := MeshInstance3D.new()
+		tn.mesh = tree
+		tn.material_override = _flat(Color(0.2, 0.26, 0.14))
+		var p := Vector2(rng.randf_range(-7.6, 7.6), rng.randf_range(-4.2, 4.2))
+		if absf(p.x) < FW * 0.5 + 0.9 and absf(p.y) < FD * 0.5 + 0.9:
+			continue
+		tn.position = Vector3(p.x, 0.21, p.y)
+		tn.scale = Vector3.ONE * rng.randf_range(0.7, 1.3)
+		root.add_child(tn)
+	return {"heights": PackedFloat32Array(), "gw": 0, "gh": 0, "depth": 9.0, "node": root}
 
 
 ## Is there something here he could not reach before and can now?
