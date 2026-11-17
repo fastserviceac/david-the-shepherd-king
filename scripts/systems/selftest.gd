@@ -533,14 +533,38 @@ func _fort_map(m) -> void:
 	var gate_i := _index("gibeah_gate")
 	var was_unlocked: int = int(Game.save.get("unlocked", 0))
 	var was_sec: int = m.section_idx
-	Game.save["unlocked"] = gate_i - 1
+	Game.save["unlocked"] = 5
 	m.section_idx = 3
 	m.map.open(true, 3)
-	_check(not m.map._fort_known() and m.map.view == "hills" and m.map.ids == range(8) and m.map._here() == 3, "before he has come to Gibeah the map is the hills, with Chapter One's eight places")
+	_check(not m.map._fort_known() and m.map.view == "hills" and m.map.ids == range(8) and m.map._here() == 3, "in Chapter One the map is the hills, with its eight places and no more")
 	m.map._toggle()
-	_check(m.map.view == "land", "and Tab goes to the wider land, as it did")
+	_check(m.map.view == "land" and m.map.ids.is_empty(), "and Tab goes to the wider land, as it did: looked at, with no places on it")
 	m.map._toggle()
 	_check(m.map.view == "hills" and m.map.index == 3, "and back to the hills, at the place he had chosen")
+	m.map.close()
+	# Chapter Two's first two sections: his father's house on the hills, the ridge road on the wider land
+	var sum_i := _index("summons")
+	Game.save["unlocked"] = sum_i
+	m.section_idx = sum_i
+	m.map.open(true, sum_i)
+	_check(m.map.view == "hills" and m.map.ids == range(9) and m.map._here() == 8 and m.map.index == 8, "come to the Summons, his father's house is the ninth place on the hills, and he stands there")
+	var home_at: Vector2 = m.map._spot(8)
+	var town_at: Vector2 = m.map._at(31.7054, 35.2024)
+	_check(home_at.distance_to(town_at) < 120.0 and home_at.distance_to(m.map._spot(7)) > 12.0, "it lies at the edge of Bethlehem, apart from the Anointing's mark (%d from the town)" % int(home_at.distance_to(town_at)))
+	m.map._toggle()
+	_check(m.map.view == "land" and m.map.ids.is_empty(), "the ridge road is not on the land before he has set out on it")
+	m.map.close()
+	Game.save["unlocked"] = sum_i + 1
+	m.section_idx = sum_i + 1
+	m.map.open(true, sum_i + 1)
+	_check(m.map.view == "land" and m.map.ids == [sum_i + 1] and m.map._here() == 0 and m.map._open_to(0), "on the Ridge Road the map opens on the wider land, and he stands on the road")
+	await _frames(40)
+	var road_at: Vector2 = m.map._spot(0)
+	var beth: Vector2 = m.map._at(31.7054, 35.2024)
+	var gib: Vector2 = m.map._at(31.8232, 35.231)
+	_check(road_at.y < beth.y and road_at.y > gib.y and road_at.x > 380.0 and road_at.x < 1260.0, "the road's mark lies between Bethlehem and Gibeah, clear of the card (%s)" % str(road_at.round()))
+	m.map._toggle()
+	_check(m.map.view == "hills" and m.map.ids == range(9) and m.map._here() == -1, "and Tab goes on to the hills, where his father's house now is")
 	m.map.close()
 	Game.save["unlocked"] = gate_i + 1
 	m.section_idx = gate_i
@@ -559,13 +583,9 @@ func _fort_map(m) -> void:
 	m.map._toggle()
 	_check(m.map.view == "land", "from the fortress Tab goes to the wider land")
 	m.map._toggle()
-	_check(m.map.view == "hills" and m.map.ids == range(8) and m.map._here() == -1, "then to the hills, where he is not")
+	_check(m.map.view == "hills" and m.map.ids == range(9) and m.map._here() == -1, "then to the hills, where he is not")
 	m.map._toggle()
 	_check(m.map.view == "gibeah" and m.map.index == 1, "and round to the fortress again, at the place he had chosen")
-	m.map.close()
-	m.section_idx = _index("ridge_road")
-	m.map.open(true, m.section_idx)
-	_check(m.map.view == "hills" and m.map._here() == -1 and m.map.index == 7, "from the road, which has no place on any map yet, it opens on the hills and does not put him on them")
 	m.map.close()
 	Game.save["unlocked"] = was_unlocked
 	m.section_idx = was_sec
@@ -1688,12 +1708,18 @@ func placeshots(m, dir: String) -> void:
 			m.map.open(true, m.section_idx)
 			await _frames(130)
 			await _snap(dir, "map_gibeah_" + lg)
-			m.map.index = 0
-			await _frames(40)
-			m.map._start_walk()
-			await _frames(14)          # the fortress's roads are short: a walk along one is over in half a second, and then he travels
-			await _snap(dir, "map_gibeah_walk_" + lg)
-			m.map.walk = -1.0
+			m.map.close()      # no picture of him walking here: a fortress road is walked in half a second, and saving a picture takes longer, so he would arrive and travel
+		# the wider land once the ridge road is a place on it, and the hills with his father's house
+		m.section_idx = _index("ridge_road")
+		for lg in ["en", "pt"]:
+			Game.save["lang"] = lg
+			m.map.open(true, m.section_idx)
+			await _frames(150)
+			await _snap(dir, "map_road_" + lg)
+			m.map._toggle()
+			m.map.index = 8
+			await _frames(130)
+			await _snap(dir, "map_home_" + lg)
 			m.map.close()
 		print("PLACESHOTS done")
 		tree.quit()

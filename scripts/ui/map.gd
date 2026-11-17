@@ -8,6 +8,8 @@ extends Control
 ## is the fortress of Chapter Two, a small model built here from boxes: scripture describes no fortress, so its plan
 ## follows the remains usually identified at Tell el-Ful. A view that has places lists the sections whose place in
 ## data/map.json names it ("view"; none means the hills); `index` counts along that list, `_g()` gives the section.
+## The hills and the land are older than Chapter Two: a later chapter's place on them (his father's house, the ridge
+## road) is not shown until he has come to it. The land has places only then; until then it is only looked at.
 
 signal travel(idx: int)
 signal closed
@@ -37,6 +39,8 @@ const SPAN := 16.0            # the hills box is this wide in the 3D scene
 const EXAG := {"hills": 2.4, "land": 7.0}      # relief drawn this much taller than true, so wadis read
 const VP := Vector2i(1920, 1080)
 const PULL := {"hills": 1.0, "gibeah": 1.72, "land": 1.95}      # how far back the camera rests in each view
+const LAND_PULL := 1.3         # once the land has places the camera comes down towards the one chosen: at the whole land's scale
+const LAND_ASIDE := -1.15      # the ridge from Bethlehem to Gibeah is a thumb's width, and its names lie on top of each other
 const NEXT := {"hills": "the hills of Bethlehem", "gibeah": "the fortress at Gibeah", "land": "the wider land"}
 # the fortress model, in the scene's own units (north is -z, as on the other grounds)
 const FW := 7.4               # the walls' outer size, west to east
@@ -82,9 +86,9 @@ func open(playing: bool, at_section: int) -> void:
 	if not decorated:
 		decorated = true
 		_decorate()
-	if _view_of(at_section) == "gibeah":      # he is in the fortress: that is the map he is shown
-		_show("gibeah")
-	index = ids.find(at_section) if ids.has(at_section) else clampi(at_section, 0, ids.size() - 1)
+	if _view_of(at_section) in ["gibeah", "land"]:      # he is in the fortress, or on a road of the wider land: that is the map he is shown
+		_show(_view_of(at_section))
+	index = ids.find(at_section) if ids.has(at_section) else clampi(at_section, 0, maxi(ids.size() - 1, 0))
 	look = _want()
 	pull = 1.0 if Game.fast else 2.3
 	_aim()
@@ -116,8 +120,8 @@ func _process(delta: float) -> void:
 					want = FORT_LOOK.lerp(want, 0.2)
 			var k := 1.0 - exp(-delta * 4.0)
 			look = look.lerp(want, k)
-			pull = lerpf(pull, PULL[view], 1.0 - exp(-delta * 2.2))
-			cam.h_offset = lerpf(cam.h_offset, 0.0 if view == "land" else -1.15, k)
+			pull = lerpf(pull, LAND_PULL if view == "land" and not ids.is_empty() else PULL[view], 1.0 - exp(-delta * 2.2))
+			cam.h_offset = lerpf(cam.h_offset, (0.0 if ids.is_empty() else LAND_ASIDE) if view == "land" else -1.15, k)
 			_aim()
 		queue_redraw()
 
@@ -126,7 +130,7 @@ func _process(delta: float) -> void:
 ## little towards the place chosen in it (it is small enough to be seen whole).
 func _want() -> Vector3:
 	if view == "land":
-		return _ground(Vector2(0.0, 0.6))
+		return _ground(Vector2(0.0, 0.6)) if ids.is_empty() else _world_of(index)
 	if view == "gibeah":
 		return FORT_LOOK.lerp(_world_of(index), 0.2)
 	return _world_of(index)
@@ -151,9 +155,13 @@ func _view_of(sec: int) -> String:
 
 func _ids_of(name: String) -> Array:
 	var out: Array = []
+	var reached := int(Game.save.get("unlocked", 0))
 	for i in Game.sections().size():
-		if _view_of(i) == name:
-			out.append(i)
+		if _view_of(i) != name:
+			continue
+		if name != "gibeah" and Game.chapter_of(i) > 0 and i > reached:      # a later chapter's place on the old maps: not before he has come to it
+			continue
+		out.append(i)
 	return out
 
 
@@ -364,7 +372,7 @@ func _start_walk() -> void:
 func tap(p: Vector2) -> bool:
 	if not visible:
 		return false
-	if walk >= 0.0 or view == "land":
+	if walk >= 0.0 or ids.is_empty():
 		return true
 	var best := -1
 	var best_d := 46.0
@@ -394,10 +402,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	var n := ids.size()
-	if event.is_action_pressed("move_right") or event.is_action_pressed("move_down"):
+	if n > 0 and (event.is_action_pressed("move_right") or event.is_action_pressed("move_down")):
 		index = posmod(index + 1, n)
 		Game.sfx("ui_move", -8.0)
-	elif event.is_action_pressed("move_left") or event.is_action_pressed("aim_up"):
+	elif n > 0 and (event.is_action_pressed("move_left") or event.is_action_pressed("aim_up")):
 		index = posmod(index - 1, n)
 		Game.sfx("ui_move", -8.0)
 	elif event is InputEventKey and event.pressed and event.keycode >= KEY_1 and event.keycode < KEY_1 + n:
@@ -407,7 +415,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle()
 		Game.sfx("ui_move", -8.0)
 	elif event.is_action_pressed("accept"):
-		if view != "land" and _open_to(index):
+		if not ids.is_empty() and _open_to(index):
 			get_viewport().set_input_as_handled()
 			_start_walk()
 			return
@@ -459,7 +467,7 @@ func _draw() -> void:
 	var secs: Array = []
 	for g in ids:
 		secs.append(Game.sections()[g])
-	if view != "land":
+	if not secs.is_empty():
 		var last := int(Game.save.get("unlocked", 0))
 		# the way he has come, inked in; the way still ahead, only pricked out
 		for i in range(1, secs.size()):
@@ -549,7 +557,8 @@ func _draw() -> void:
 				draw_circle(q, 2.2, road_col)
 			var gp := _at(to_t["lat"], to_t["lon"])
 			draw_arc(gp, 13.0 + fmod(t * 8.0, 12.0), 0.0, TAU, 30, Color(1.0, 0.82, 0.5, (1.0 - fmod(t * 8.0, 12.0) / 12.0) * (1.0 if done else 0.5)), 2.0, true)
-			_text(gp + Vector2(-215, 8), Game.t("Chapter Two  ·  The Lyre") if done else Game.t("The road north"), 17, road_col)
+			if ids.is_empty():      # once the road is a place of its own, its mark says this
+				_text(gp + Vector2(-215, 8), Game.t("Chapter Two  ·  The Lyre") if done else Game.t("The road north"), 17, road_col)
 	if view == "land" and lit:      # where the hills of this chapter lie in the whole land
 		var hb: Dictionary = data["views"]["hills"]
 		var box := PackedVector2Array()
@@ -558,7 +567,7 @@ func _draw() -> void:
 		draw_polyline(box, Color(1.0, 0.82, 0.5, 0.9), 2.0, true)
 	_text(Vector2(640, 44), Game.t(v["title"]), 30, ink)
 	var km := 20.0
-	if view == "land":      # a scale bar means nothing on ground seen at a slant
+	if view == "land" and ids.is_empty():      # a scale bar means nothing on ground seen at a slant, or from closer than the whole
 		var bar: float = km / float(v["km"]) * 1280.0
 		var b0 := Vector2(420.0 if view == "hills" else 60.0, 660.0)
 		draw_line(b0, b0 + Vector2(bar, 0), ink, 2.5)
@@ -571,14 +580,14 @@ func _draw() -> void:
 	var keys := Game.keys(Game.t(("Tap a place, and again to go there      Tab  the wider land      M or Esc  close" if Game.touch else "← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close") if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close"))
 	if Game.pad:
 		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
-	if _fort_known():      # three views now: the line says which one Tab leads to
+	if int(Game.save.get("unlocked", 0)) >= Game.chapter_start(1):      # Chapter Two: more views and more places, so the line is put together
 		var order := _order()
 		var nxt: String = Game.t(NEXT[order[(order.find(view) + 1) % order.size()]])
 		var gap := "      "
 		if Game.pad:
-			keys = ("" if view == "land" else Game.t("← →  choose a place") + gap) + "Back  " + nxt + gap + Game.t("Start  close")
+			keys = ("" if ids.is_empty() else Game.t("← →  choose a place") + gap) + "Back  " + nxt + gap + Game.t("Start  close")
 		else:
-			var choose: String = "" if view == "land" else (Game.t("Tap a place, and again to go there") if Game.touch else Game.t("← →  choose a place") + gap + Game.t("Enter  go there")) + gap
+			var choose: String = "" if ids.is_empty() else (Game.t("Tap a place, and again to go there") if Game.touch else Game.t("← →  choose a place") + gap + Game.t("Enter  go there")) + gap
 			keys = Game.keys(choose + "Tab  " + nxt + gap + Game.t("M or Esc  close"))
 	var ky := 700.0
 	_text(Vector2(640, ky), keys, 17, Color(ink.r, ink.g, ink.b, 0.8))
@@ -617,7 +626,11 @@ func _card(secs: Array) -> void:
 	var sec: Dictionary = secs[index]
 	var pl: Dictionary = data["places"].get(_key(index), {})
 	var y := 118.0
-	draw_string(f, Vector2(tx, y), "%d.  %s" % [index + 1, Game.t(sec["title"])], HORIZONTAL_ALIGNMENT_LEFT, tw, 29, Game.CREAM)
+	var head := "%d.  %s" % [index + 1, Game.t(sec["title"])]
+	var head_size := 29
+	while head_size > 20 and f.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, head_size).x > tw:      # a long title is set smaller, not cut off
+		head_size -= 1
+	draw_string(f, Vector2(tx, y), head, HORIZONTAL_ALIGNMENT_LEFT, tw, head_size, Game.CREAM)
 	y += 14.0
 	draw_line(Vector2(tx, y), Vector2(tx + tw, y), Color(0.78, 0.56, 0.2, 0.5), 1.0)
 	y += 26.0
@@ -681,7 +694,7 @@ func _card(secs: Array) -> void:
 
 ## Brings one view's ground forward: its mesh is shown and its heights are the ones places are set on.
 func _show(name: String) -> void:
-	if view != "land" and not ids.is_empty():
+	if not ids.is_empty():
 		kept[view] = index
 	view = name
 	for k in grounds:
@@ -693,10 +706,9 @@ func _show(name: String) -> void:
 	depth = g["depth"]
 	if sun:
 		sun.shadow_enabled = name == "gibeah"      # walls throw shadows; the hills are shaded by their own slopes
-	if name != "land":       # the wider land has no places of its own: the last list stands
-		ids = _ids_of(name)
-		var here := _here()
-		index = clampi(int(kept.get(name, here if here >= 0 else 0)), 0, maxi(ids.size() - 1, 0))
+	ids = _ids_of(name)
+	var here := _here()
+	index = clampi(int(kept.get(name, here if here >= 0 else 0)), 0, maxi(ids.size() - 1, 0))
 
 
 func _build_ground(name: String) -> Dictionary:

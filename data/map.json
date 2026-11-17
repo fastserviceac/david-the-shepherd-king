@@ -362,6 +362,17 @@
    "x": 2.5,
    "z": -0.25,
    "about": "The same hall in the deep of the night. Scripture says only that David played when the trouble came on the king (1 Samuel 16:23); the lamps and the hour are invention."
+  },
+  "summons": {
+   "lat": 31.6975,
+   "lon": 35.1925,
+   "about": "His father's house and fold, on the edge of Bethlehem. Scripture does not say where in the town Jesse lived."
+  },
+  "ridge_road": {
+   "view": "land",
+   "lat": 31.732,
+   "lon": 35.209,
+   "about": "The ridge road north from Bethlehem to Gibeah, about thirteen kilometres, passing under Jebus. A traveller in the days of the judges took the same road and would not turn in there (Judges 19:10–12)."
   }
  },
  "relief": {
