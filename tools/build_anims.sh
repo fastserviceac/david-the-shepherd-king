@@ -104,9 +104,10 @@ run $V/c2_lyre_stand_3 $D lyre_stand mode=range a=0 b=95 step=4 href=612 soft=1 
 run $V/c2_lyre_walk_3 $D lyre_walk mode=loop double=1 href=617 soft=1 steady=40 wide=1.6 step=2     # one 2-step cycle, loops
 
 # Chapter Two, the Gate of Gibeah (Higgsfield seedance_2_0 clips in tools/src/clips/c2, 122 frames each at 24 fps, black bar rows fixed as above)
-# the three people's green is the same muddy grey-green as the keeper's (80,117,76): halo=3 keys it
-run $V/steward_idle art/steward/anim idle key=green halo=3 wide=1.2 tall=1.3 size=156 erode=3 mode=range a=0 b=120 step=5     # he rubs his brow in the middle of it: kept, he is tired
-run $V/youth_idle art/youth/anim idle key=green halo=3 wide=1.2 tall=1.3 size=148 erode=3 mode=range a=0 b=120 step=5
-run $V/gatekeeper_idle art/gatekeeper/anim idle key=green halo=3 wide=1.2 tall=1.3 size=158 erode=3 mode=range a=0 b=120 step=5
+# their green is muddier still than the keeper's (81,116,76): halo=3 leaves a veil of it round them, halo=4 keys it
+run $V/steward_idle art/steward/anim idle key=green halo=4 wide=1.2 tall=1.3 size=156 erode=3 mode=range a=0 b=120 step=5     # he rubs his brow in the middle of it: kept, he is tired
+run $V/youth_idle art/youth/anim idle key=green halo=4 wide=1.2 tall=1.3 size=148 erode=3 mode=range a=0 b=120 step=5
+run $V/gatekeeper_idle art/gatekeeper/anim idle key=green halo=4 wide=1.2 tall=1.3 size=158 erode=3 mode=range a=0 b=120 step=5
+run $V/jonathan_idle art/jonathan/anim idle key=green halo=4 wide=1.2 tall=1.3 size=160 erode=3 mode=range a=0 b=120 step=5     # seen up on the wall, drawn at 0.62
 # paintings: cp tools/src/art_in/c2/c2_{gibeah_backdrop,gibeah_mid,court_backdrop}.png tools/src/art_in/ ; python3 tools/scenery.py c2_gibeah c2_court c2_gate c2_gate_open
 # (scenery.py fades c2_court's foot and feathers the two ends of the gate props so they melt into the wall band)

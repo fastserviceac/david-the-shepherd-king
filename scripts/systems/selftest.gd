@@ -478,6 +478,8 @@ func _gibeah_gate(lv) -> void:
 	await _frames(20)
 	_check(lv.inside and p.global_position.x > lv.YARD_X and absf(d.global_position.x - p.global_position.x) < 200.0 and p.cam.limit_left == int(lv.YARD_X),
 			"through the gate he is in the yard, the donkey with him (he at %d)" % int(p.global_position.x))
+	_check(is_instance_valid(lv.jonathan) and lv.jonathan.get_parent() != lv and lv.JONATHAN_X > lv.CISTERN_X and lv.JONATHAN_X < lv.STORE_X,
+			"Jonathan stands up on the wall across the yard, off the path: seen, with nothing asked of him")
 	# the steward
 	var se: Dictionary = lv.ears["store"]
 	_check(not lv.offer_task["on"] or lv._near_load(), "the gift cannot be offered with the donkey left behind")

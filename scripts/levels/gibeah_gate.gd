@@ -21,6 +21,8 @@ const OUT_END := 1900.0        # the outside ground ends here
 const YARD_X := 2200.0         # the yard begins here
 const INNER_X := 2460.0        # the same gate, from inside
 const CISTERN_X := 3000.0
+const JONATHAN_X := 3390.0     # where the king's son is seen from, up on the wall: seen, never met
+const WALL_TOP := 251.0        # the top of the wall band, in its own layer
 const STORE_X := 3750.0        # the storehouse, and the steward before it
 const HALL_X := 4500.0         # the door of the hall
 const HEAR := 330.0            # how near a man must be to be played to
@@ -41,6 +43,7 @@ var kid: Node2D
 var watch: Node2D              # the gatekeeper
 var youth: Node2D              # the young man who spoke for him
 var steward: Node2D
+var jonathan: Node2D
 var gate: Sprite2D
 var court: Sprite2D            # the yard's far view, shown once he is inside
 var gate_wall: StaticBody2D
@@ -104,6 +107,16 @@ func _populate() -> void:
 	for k in 3:
 		add_sprite("res://art/props/jar.png", on_ground(STORE_X + 80.0 + k * 40.0) + Vector2(0, 4), 0.62 - 0.05 * k, 2, tint)
 	steward = add_person("steward", STORE_X, 1.0, true)
+	# Jonathan is at Gibeah before David comes (1 Samuel 13:2, 14:49), but they do not meet until after Goliath
+	# (18:1): he stands up on the wall, small against the evening sky, where the path does not go
+	jonathan = add_person("jonathan", JONATHAN_X, 0.62, true, 0)
+	if is_instance_valid(jonathan):
+		for L in layers:
+			if is_equal_approx(float(L["s"]), 0.4):      # the wall band: he goes with it, not with the ground
+				remove_child(jonathan)
+				(L["node"] as Node2D).add_child(jonathan)
+				jonathan.position = Vector2(JONATHAN_X * 0.4, WALL_TOP)
+				jonathan.modulate = Color(0.86, 0.8, 0.86)
 	if ResourceLoader.exists("res://art/props/c2_hall_door.png"):      # the door of the hall, lamplit from inside
 		var door := add_sprite("res://art/props/c2_hall_door.png", on_ground(HALL_X + 60.0) + Vector2(0, 12), 1.0, 1, tint * GATE_TINT)
 		door.scale = Vector2.ONE * (DOOR_TALL / door.texture.get_height())
@@ -127,6 +140,7 @@ func _populate() -> void:
 	enter_task = add_task(GATE_X, "Lead the donkey in through the gate", 0.9, _enter, 90.0)
 	enter_task["on"] = false
 	add_trigger(CISTERN_X - 160.0, CISTERN_X + 160.0, func() -> void: say(["n_c2s3_cistern"]))
+	add_trigger(JONATHAN_X - 210.0, JONATHAN_X + 60.0, func() -> void: say(["n_c2s3_jonathan", "n_c2s3_unmet"]))
 	offer_task = add_task(STORE_X - 80.0, "Offer your father's gift", 0.9, _offer, 100.0)
 	give_task = add_task(STORE_X - 80.0, LOAD[0], 1.1, _hand_over, 100.0)
 	give_task["again"] = true

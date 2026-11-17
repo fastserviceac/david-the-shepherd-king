@@ -36,6 +36,9 @@ def mask(im):
     elif opt['halo'] == '2':     # a dark or unevenly lit green screen: judge by how green, not how bright
         q = g / (np.maximum(r, b) + 0.02)
         bg = np.clip((q - 1.35) / 0.35, 0, 1) * np.clip((g - 0.08) / 0.06, 0, 1)
+    elif opt['halo'] == '4':     # the same muddy screen, darker still (about 81,116,76, the Higgsfield clips): halo=3 leaves a veil of it behind
+        q = g / (np.maximum(r, b) + 0.01)
+        bg = np.clip((q - 1.1) / 0.14, 0, 1) * np.clip((g - 0.2) / 0.08, 0, 1)
     elif opt['halo'] == '3':     # a muddy grey-green screen (about 84,124,75): weakly green, so judge the ratio sharply
         q = g / (np.maximum(r, b) + 0.01)
         bg = np.clip((q - 1.2) / 0.2, 0, 1) * np.clip((g - 0.2) / 0.08, 0, 1)

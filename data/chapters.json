@@ -131,7 +131,8 @@
             "frames:kid/idle",
             "frames:gatekeeper/idle",
             "frames:youth/idle",
-            "frames:steward/idle"
+            "frames:steward/idle",
+            "frames:jonathan/idle"
           ]
         }
       ]
