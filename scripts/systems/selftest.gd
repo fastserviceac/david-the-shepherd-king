@@ -1826,11 +1826,15 @@ func flow(m, dir: String) -> void:
 		await _wait(2.0)
 		await _snap(dir, "anointing")
 	var t := 0.0
-	while t < 60.0 and m.state != "menu":
+	var painted: bool = Game.section_lacks(Game.chapter_start(1)).is_empty()      # is Chapter Two there to walk into?
+	while t < 90.0 and m.state != "menu" and not (painted and m.state == "play" and m.section_idx == Game.chapter_start(1)):
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu", "chapter ends and returns to the menu")
+	if painted:
+		_check(m.state == "play" and m.section_idx == Game.chapter_start(1), "chapter ends and goes on into Chapter Two, now that it is painted")
+	else:
+		_check(m.state == "menu", "chapter ends and returns to the menu")
 	_check(Game.save["finished"] == true, "chapter marked finished")
 	var first: int = Game.chapter_start(1)
 	_check(int(Game.save["unlocked"]) == first, "and Chapter Two's first section is unlocked (%d)" % int(Game.save["unlocked"]))

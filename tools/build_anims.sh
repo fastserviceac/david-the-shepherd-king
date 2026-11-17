@@ -95,3 +95,10 @@ run $V/donkey_calm art/donkey/anim calm key=blue wide=1.5 tall=1.4 size=125 erod
 run $V/mule_idle art/mule/anim idle key=blue wide=1.5 tall=1.4 size=165 erode=3 mode=range a=0 b=143 step=5
 run $V/kid_idle art/kid/anim idle key=blue wide=1.2 tall=1.4 size=62 erode=3 grow=2 mode=range a=0 b=143 step=6
 # paintings: cp tools/src/art_in/c2/c2_home_{backdrop,mid}.png tools/src/art_in/ ; python3 tools/scenery.py c2_home   (scenery.py defringes c2_home's mid)
+# the messenger's idle (skips the first 1.1 s, where the staff is still slanted) and the keeper counting, first 3.5 s only
+run $V/messenger_idle art/messenger/anim idle key=green halo=3 wide=1.2 tall=1.3 size=156 erode=3 mode=range a=28 b=143 step=4
+run $V/keeper_count_2 art/keeper/anim count key=green halo=3 wide=1.2 tall=1.3 size=152 erode=3 mode=range a=0 b=84 step=4
+# David plays the lyre standing and walking (ElevenLabs Veo clips from tools/src/art_in/c2/david_lyre_start_2.png; frames extracted at 24 fps into <dir>/c2_lyre_{stand,walk}_3)
+# href differs from the usual 605 because the lyre/hair make the silhouette taller: stand 612, walk 617 match his walk (288 px) and idle (295 px) heights
+run $V/c2_lyre_stand_3 $D lyre_stand mode=range a=0 b=95 step=4 href=612 soft=1 steady=999 wide=1.6     # plays to and fro
+run $V/c2_lyre_walk_3 $D lyre_walk mode=loop double=1 href=617 soft=1 steady=40 wide=1.6 step=2     # one 2-step cycle, loops
