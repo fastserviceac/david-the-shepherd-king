@@ -11,6 +11,9 @@ const WELL_X := 2300.0
 const OPEN_X := 2415.0
 const TROUGHS := [2030.0, 1890.0]
 const GATE := 3840.0
+const HAND_REACH := 25.0     # his hands on the staff, ahead of him, while he bears down
+const HAND_HIGH := 58.0
+const HAND_DROP := 8.0
 const LAMB := 8             # which of his own is the lamb: the flock is eight ewes and the lamb
 const BUCKET_X := 1720.0
 
@@ -19,6 +22,10 @@ var fulcrum: Dictionary
 var lever_task: Dictionary
 var pack := {"run": 0, "beasts": [], "warning": 1.0}
 var back_task: Dictionary
+var heave_tilt := 0.0          # how far the stone is tipped while he bears on the staff
+var heave_base := 0.0
+var stone_moving := false      # the tween has the stone: the tilt lets go
+var heave_dust := 0.0
 var draw_task: Dictionary
 var pour_tasks: Array = []
 var carrying := false
@@ -135,27 +142,22 @@ func _populate() -> void:
 	lever_task = add_task(2205.0, "lever the stone with the staff", 1.1, _lever, 44.0)
 	lever_task["on"] = false
 	var char_tint: Color = pal["char"]
-	# his staff, set under the stone: the crook end in his hands, the foot under the stone
+	# his staff, set under the stone: both hands on it, the foot under the stone's near edge, the rod resting on the block
 	add_painter(Vector2.ZERO, 6, func(ci: CanvasItem) -> void:
 		if task_now == null or float(task_now["t"]) <= 0.0 or not is_instance_valid(player):
 			return
 		if task_now != lever_task and task_now != back_task:
 			return
 		var u := clampf(float(task_now["t"]) / float(task_now["hold"]), 0.0, 1.0)
-		var hands: Vector2 = player.global_position + Vector2(player.facing * 16.0, -50.0 + 30.0 * u)   # he bears down
-		var tip: Vector2
-		if task_now == lever_task and is_instance_valid(fulcrum["body"]):
-			var block: StaticBody2D = fulcrum["body"]
-			var pivot := Vector2(block.global_position.x + 6.0, block.global_position.y - 2.0)       # the top of the block
-			tip = pivot + (pivot - hands).normalized() * 50.0                                       # the far end, under the stone
-		else:          # closing: the foot of the staff dug in under the stone's near side
-			var sx: float = stone["body"].global_position.x
-			var side := signf(player.global_position.x - sx)
-			tip = on_ground(sx + side * 24.0) + Vector2(0, -4.0 - 10.0 * u)
-		_staff(ci, hands, tip, char_tint), true)
+		var tip_hands := _lever_geometry(u)
+		_staff(ci, tip_hands[0], tip_hands[1], char_tint)
+		ci.draw_circle(tip_hands[0], 3.2, Color(0.5, 0.33, 0.22) * char_tint)       # his fist closed round the wood
+		ci.draw_circle(tip_hands[0] + Vector2(player.facing * 1.5, -0.8), 1.6, Color(0.66, 0.46, 0.32) * char_tint), true)
 	# he levers it home from the far side, so the stone rolls away from him and never onto him
 	back_task = add_task(OPEN_X + 82.0, "lever the stone back over the well", 1.1, _close_well, 36.0)
 	back_task["on"] = false
+	lever_task["anim"] = "push"          # braced low, leaning his weight into the staff
+	back_task["anim"] = "push"
 
 	add_trigger(1700.0, 1860.0, func() -> void: say(["n_well_custom"]))
 	add_trigger(1900.0, 1960.0, _run_ahead)
@@ -206,12 +208,12 @@ func _populate() -> void:
 		if not has_bucket or watered or not is_instance_valid(player) or Game.backdrop:
 			return
 		var busy: bool = task_now != null and float(task_now["t"]) > 0.0
-		if busy and task_now.has("anim"):      # drawing and tipping: the bucket is in his hands, in his own frames
+		if busy and task_now.has("anim") and task_now != lever_task and task_now != back_task:      # drawing and tipping: the bucket is in his hands, in his own frames
 			return
 		var w := 25.0
 		var h := w * bucket.get_height() / bucket.get_width()
 		if busy and (task_now == lever_task or task_now == back_task):      # both hands on the staff: the bucket stands at his heel
-			var at := on_ground(player.global_position.x - player.facing * 30.0)
+			var at := on_ground(player.global_position.x - player.facing * 64.0)
 			ci.draw_texture_rect(bucket, Rect2(at.x - w * 0.5, at.y - h + 2.0, w, h), false, char_tint)
 			_coil(ci, at + Vector2(-player.facing * 13.0, -4.0), Vector2(1.0, 0.45), char_tint)
 			return
@@ -283,6 +285,26 @@ func _well_prop(at: Vector2) -> void:
 		ci.draw_polyline(PackedVector2Array([Vector2(-20, -h - 2), Vector2(-34, -h + 6), Vector2(-40, -h + 30), Vector2(-52, -6)]), Color(0.5, 0.4, 0.26) * tint, 3.0, true))
 
 
+## Where his hands and the foot of the staff are while he heaves (u: 0 to 1 across the hold). Returns [hands, tip].
+## Levering up: the rod lies over the block, its foot under the stone's near edge, and as his hands go down the foot rises.
+## Closing: the foot is dug in at the stone's near foot and he leans on it.
+func _lever_geometry(u: float) -> Array:
+	var f: float = player.facing
+	var gy: float = on_ground(player.global_position.x).y
+	var hands := Vector2(player.global_position.x + f * HAND_REACH, gy - HAND_HIGH + HAND_DROP * u)
+	var tip: Vector2
+	if task_now == lever_task and is_instance_valid(fulcrum["body"]):
+		var block: StaticBody2D = fulcrum["body"]
+		var top := Vector2(block.global_position.x + 8.0, block.global_position.y - 17.0)       # the stone's side of the block's top
+		tip = top + (top - hands).normalized() * 34.0
+		tip.y = minf(tip.y, gy - 4.0)
+	else:
+		var sx: float = stone["body"].global_position.x
+		var side := signf(player.global_position.x - sx)
+		tip = Vector2(sx + side * 36.0, gy - 5.0 - 9.0 * u)
+	return [hands, tip]
+
+
 ## His staff as a lever: a long, round, slightly crooked rod of olive wood, the crook curling over his hands.
 ## Drawn to match the staff in his own hand (player.gd _draw_staff): the same wood, a lit edge, a dark under-side.
 func _staff(ci: CanvasItem, hands: Vector2, tip: Vector2, tint: Color) -> void:
@@ -290,7 +312,7 @@ func _staff(ci: CanvasItem, hands: Vector2, tip: Vector2, tint: Color) -> void:
 	var n := Vector2(-d.y, d.x)
 	if n.y > 0.0:
 		n = -n       # n points up, to the light
-	var butt := hands - d * 20.0
+	var butt := hands - d * 9.0
 	var length := butt.distance_to(tip)
 	var pts := PackedVector2Array()
 	for i in 13:          # a gentle bow along its length, and a kink where a branch was cut
@@ -363,6 +385,43 @@ func _run_ahead() -> void:
 	Game.sfx("sheep", -6.0, 0.2)
 
 
+## The stone answers the staff: while he bears down it tips about its far edge, a shudder in it, dust under the foot of the staff.
+func _heave(delta: float) -> void:
+	if stone_moving:
+		return
+	var heaving: bool = task_now != null and (task_now == lever_task or task_now == back_task) and float(task_now["t"]) > 0.0
+	var sp: Sprite2D = stone["sp"] if stone.has("sp") and is_instance_valid(stone["sp"]) else null
+	if sp == null:
+		return
+	var u := 0.0
+	if heaving:
+		u = clampf(float(task_now["t"]) / float(task_now["hold"]), 0.0, 1.0)
+	var want := 0.0
+	if u > 0.0:
+		want = smoothstep(0.0, 0.85, u) * 0.13 + sin(Time.get_ticks_msec() * 0.03) * 0.006 * smoothstep(0.3, 0.8, u)
+	if absf(want) < 0.0001 and absf(heave_tilt) < 0.0001:
+		return
+	if heave_tilt == 0.0:
+		heave_base = sp.rotation          # the roll it already has, which the tilt rides on
+	heave_tilt = move_toward(heave_tilt, want, delta * 0.6)
+	var side := 1.0           # it tips about the edge away from him
+	if is_instance_valid(player) and player.global_position.x > stone["body"].global_position.x:
+		side = -1.0
+	var a: float = heave_tilt * side
+	var pv := Vector2(side * 42.0, 46.0)           # the far foot of the stone, in its own frame
+	sp.rotation = heave_base + a
+	sp.position = pv - pv.rotated(a)
+	if heaving and u > 0.15:
+		heave_dust -= delta
+		if heave_dust <= 0.0:
+			heave_dust = 0.28
+			var at: Vector2 = _lever_geometry(u)[1]
+			Game.burst(self, Vector2(at.x + side * 6.0, on_ground(at.x).y - 2.0), Color(0.78, 0.7, 0.56, 0.5), 3, 38.0)
+	if not heaving and absf(heave_tilt) < 0.0002:
+		heave_tilt = 0.0
+		sp.position = Vector2.ZERO
+
+
 func _fulcrum_moved(x: float) -> void:
 	if not opened and x >= 2226.0:
 		fulcrum["on"] = false
@@ -372,15 +431,19 @@ func _fulcrum_moved(x: float) -> void:
 
 
 func _lever() -> void:
+	stone_moving = true
+	heave_tilt = 0.0
 	stone["on"] = false
 	Game.sfx("bridge", -6.0)
 	player.shake = maxf(player.shake, 3.0)
 	var body: StaticBody2D = stone["body"]
 	if Game.fast:
 		body.position.x = OPEN_X
+		stone["sp"].position = Vector2.ZERO
 	else:
 		var tw := create_tween().set_parallel(true)
 		tw.tween_property(body, "position:x", OPEN_X, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(stone["sp"], "position", Vector2.ZERO, 0.6)
 		tw.tween_property(stone["sp"], "rotation", (OPEN_X - WELL_X) / 46.0, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		await tw.finished
 	# the block has done its work: it tips aside into the dust, and the well-head is clear to stand at
@@ -469,6 +532,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not is_instance_valid(player) or Game.backdrop:
 		return
+	_heave(delta)
 	if not has_bucket and is_instance_valid(bucket_prop) and not take_task.is_empty():      # as he bends to it, it comes up into his hand
 		var u := smoothstep(0.35, 1.0, float(take_task["t"]) / float(take_task["hold"])) if task_now == take_task else 0.0
 		var held: Vector2 = player.global_position + Vector2(player.facing * 7.0, -6.0)      # where the bottom of the carried bucket hangs
@@ -490,7 +554,8 @@ func _process(delta: float) -> void:
 		if lvl == 0 and wt.modulate.a <= 0.0:
 			water_shown[i] = 0
 	var lamb = own[LAMB]["s"]
-	if own[LAMB]["state"] == "gone" and lamb.visible and lamb.global_position.x > 3700.0:
+	if own[LAMB]["state"] == "gone" and lamb.visible and lamb.global_position.x > 3700.0 \
+			and absf(lamb.global_position.x - player.global_position.x) > 800.0:
 		lamb.visible = false          # gone, with nobody watching
 	if counting:
 		if is_instance_valid(player):      # he stands at the gate with his hand out: nothing reaches him until the count is told
@@ -614,7 +679,7 @@ func _all_watered() -> void:
 		tk["on"] = false
 	back_task["on"] = true
 	_hint(OPEN_X + 82.0, 250.0, "Put the stone back over the well")
-	await say(["ps23_2", "n_well_back"])
+	await say(["n_well_back"])      # the verse itself comes just after, as his own line
 	await line_here("p23_waters")
 
 
@@ -624,8 +689,10 @@ func _set_bucket_down() -> void:
 		return
 	bucket_down = add_sprite("res://art/props/bucket.png", on_ground(WELL_X - 110.0) + Vector2(0, 4), 1.0, 2, pal.get("char", Color(1, 1, 1)))
 	bucket_down.scale = Vector2.ONE * (34.0 / bucket_down.texture.get_width())
+	bucket_down.modulate.a = 0.0          # it is set down, not switched on
+	create_tween().tween_property(bucket_down, "modulate:a", 1.0, 0.5)
 	add_painter(Vector2.ZERO, 2, func(ci: CanvasItem) -> void:
-		_coil(ci, on_ground(WELL_X - 86.0) + Vector2(0, -3), Vector2(1.0, 0.45), pal["char"]))
+		_coil(ci, on_ground(WELL_X - 86.0) + Vector2(0, -3), Vector2(1.0, 0.45), pal["char"] * Color(1, 1, 1, bucket_down.modulate.a)))
 
 
 ## For screenshots (selftest placeshots, POSE=...): set the well up for one moment of the work.
@@ -668,6 +735,8 @@ func pose(p: String) -> int:
 
 
 func _close_well() -> void:
+	stone_moving = true
+	heave_tilt = 0.0
 	closed = true
 	Game.sfx("bridge", -4.0)
 	var body: StaticBody2D = stone["body"]
@@ -677,8 +746,11 @@ func _close_well() -> void:
 		player.velocity = Vector2.ZERO
 	if Game.fast:
 		body.position.x = WELL_X
+		stone["sp"].position = Vector2.ZERO
+		stone["sp"].rotation = 0.0
 	else:
 		var tw := create_tween().set_parallel(true)
+		tw.tween_property(stone["sp"], "position", Vector2.ZERO, 0.6)
 		tw.tween_property(body, "position:x", WELL_X, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		tw.tween_property(stone["sp"], "rotation", 0.0, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	for o in own:
@@ -719,11 +791,18 @@ func _begin_count() -> void:
 	while mi < mine.size():
 		queue.append(mine[mi])
 		mi += 1
+	# the queue forms where they are: nothing in view is lifted and set down. Anything far off, or that is
+	# to be called back out of the fold, comes in from beyond the edge of the screen and walks to its place
+	var half_view := get_viewport_rect().size.x * 0.5 / maxf(0.1, player.cam.zoom.x) + 80.0
 	for i in queue.size():
 		var s = queue[i]["s"]
 		s.max_speed = 92.0
-		s.global_position = on_ground(GATE - 250.0 - i * 40.0)
-		s.stay = s.global_position.x
+		var place := GATE - 250.0 - i * 40.0
+		var seen: bool = absf(s.global_position.x - player.global_position.x) < half_view
+		if not seen:
+			var from := minf(place, player.global_position.x - half_view - 20.0)
+			s.global_position = on_ground(from)
+		s.stay = place
 	passing = null
 	_hint(GATE - 60.0, 290.0, "J  turn back the marked ones")
 	if count_tries == 1:

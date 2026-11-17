@@ -5,6 +5,8 @@ var lunge_cd := 0.0
 var retreat := 0.0
 var worrying := 0.0      # seconds since it was last at a sheep's side
 var home_y := INF        # the height of the ground it was set down on
+var alert := 0.0         # seconds it will keep hunting after it has lost sight of him
+var last_seen := 0.0     # where it last had him
 const DROP := 64.0       # it will go down a step this deep after him, and spring up one as high
 
 
@@ -84,6 +86,8 @@ func _hunt(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, dir * 150.0, 900.0 * delta)
 	elif _worry(delta, dx, dy):
 		pass
+	elif _track(delta, dx, dy):
+		pass
 	elif absf(dx) < 330.0 and dy < 130.0:
 		face_player()
 		if is_on_floor():
@@ -95,6 +99,34 @@ func _hunt(delta: float) -> void:
 				velocity.x = move_toward(velocity.x, dir * 190.0, 900.0 * delta)
 	else:
 		patrol(delta, speed)
+
+
+## In the dark a jackal hunts by sound and scent, not sight: it notices him from much farther off, and when he
+## slips out of reach it goes to where it last had him, and then casts about, for a few seconds, before it gives up
+## and goes home. (In daylight it keeps the old, short reach.) The closer fight is left to _hunt.
+func _track(delta: float, dx: float, dy: float) -> bool:
+	var dark: float = float(level.get("dark_amount")) if is_instance_valid(level) and level.get("dark_amount") != null else 0.0
+	if dark < 0.5:
+		alert = 0.0
+		return false
+	if absf(dx) < 640.0 and dy < 200.0:
+		alert = 4.0
+		last_seen = player.global_position.x
+		if absf(dx) < 330.0 and dy < 130.0:
+			return false      # close: the ordinary fight takes over
+	elif alert > 0.0:
+		alert -= delta
+	else:
+		return false
+	var to_x := last_seen - global_position.x
+	if absf(to_x) < 40.0:      # at the spot: it noses about, then gives up in a moment
+		velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
+		alert -= delta * 1.5
+		return true
+	dir = 1 if to_x > 0.0 else -1
+	if is_on_floor():
+		velocity.x = move_toward(velocity.x, dir * 175.0, 900.0 * delta)
+	return true
 
 
 ## A jackal would sooner have a sheep than a fight. If a sheep is on its ground and the shepherd is in sight of

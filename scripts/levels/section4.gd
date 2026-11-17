@@ -282,6 +282,8 @@ func _anointing() -> void:
 	Game.find_line("p23_oil")
 	if not Game.fast:
 		await get_tree().create_timer(7.2).timeout
+		if Game.voice_left() > 0.0:        # the whole psalm is not begun over the last line
+			await get_tree().create_timer(minf(Game.voice_left(), 8.0) + 0.5).timeout
 	Game.psalm_whole()
 	if not Game.fast and is_instance_valid(Game.main) and is_instance_valid(Game.main.hud):
 		var whole := maxf(11.0, Game.voice_line("p23_whole") + 2.0)      # the whole psalm, written and heard once

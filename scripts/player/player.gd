@@ -48,6 +48,7 @@ var hurt_t := 0.0
 var act := ""             # story pose: "kneel", "kneel_up", "carry"
 var move_t := 0.0         # how long he has kept moving: he sets off at a walk and breaks into a run
 var carry_free := false   # while he carries the lamb, the player still chooses where he walks
+var carry_tip_cd := 0.0   # so the reminder that his hands are full is not shown on every press
 var calm := false         # a level can ask him to walk, not run (the road home, a house of mourning)
 var roll_t := 0.0         # time left in a dodge roll
 var roll_cd := 0.0
@@ -445,8 +446,16 @@ func _physics_process(delta: float) -> void:
 		air_t += delta
 
 	shadow_drop = 0.0 if is_on_floor() else FA.ground_drop(self)
-	_update_attack(delta, can_act and not shield)      # the staff and the sling are not in his hands while he bears the king's arms
-	_update_sling(delta, can_act and not shield)
+	# the staff and the sling are not in his hands while he bears the king's arms, nor while the lamb is on his shoulders
+	# (there is no clip of him fighting with it, and the story says he lays it down first)
+	var hands_full: bool = shield or act == "carry"
+	if act == "carry" and can_act and carry_tip_cd <= 0.0 and level != null \
+			and (Input.is_action_just_pressed("attack") or Input.is_action_just_pressed("sling")):
+		carry_tip_cd = 3.0
+		level.show_tip("His hands are full: he cannot fight with the lamb on his shoulders", 3.0)
+	carry_tip_cd = maxf(0.0, carry_tip_cd - delta)
+	_update_attack(delta, can_act and not hands_full)
+	_update_sling(delta, can_act and not hands_full)
 
 	invuln = maxf(0.0, invuln - delta)
 	stun = maxf(0.0, stun - delta)

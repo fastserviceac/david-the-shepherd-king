@@ -18,6 +18,7 @@ const KID_X := 790.0
 const NIGHT_FOLD_X := 1350.0
 const BAR_X := 1150.0
 const MULES := [2600.0, 3700.0]      # where the messengers have tethered their two mules, along the lane
+const MULE_SCALE := 0.7
 const MULE_REACH := 230.0      # how near a sheep or the donkey may come before the mule matters
 const MULE_SHAKE := 300.0      # how near he may play before the stamping gets into his playing
 const FLOOR_X := 4100.0        # the threshing floor and the storehouse: the donkey stands loaded there
@@ -97,15 +98,17 @@ func _populate() -> void:
 			s.gatherable = false
 	# the lane, and the two mules tethered along it
 	for mx in MULES:
-		mules.append(add_person("mule", mx, 1.0, true))
+		mules.append(add_person("mule", mx, MULE_SCALE, true))      # painted far larger than the donkey at 1.0: a riding mule stands a hand above it, not twice its height
 	# east of the lane: the threshing floor where the donkey was loaded before light, the well, and the day fold
-	add_sprite("res://art/props/threshing.png", on_ground(FLOOR_X) + Vector2(0, 16), 1.0, 1, tint)
+	# sized in game units as in the well level (art/props are painted at many times these sizes): a 1.0 scale made
+	# the floor, its fork and jars, the well and the trough giants beside David and the donkey
+	_prop_wide("res://art/props/threshing.png", on_ground(FLOOR_X) + Vector2(0, 16), 400.0, 1, tint)
 	donkey = Donkey.new()
 	donkey.level = self
 	donkey.position = on_ground(FLOOR_X + 20.0)
 	add_child(donkey)
-	add_sprite("res://art/props/well.png", on_ground(WELL_X) + Vector2(0, 8), 1.0, 1, tint)
-	add_sprite("res://art/props/trough.png", on_ground(WELL_X + 150.0) + Vector2(0, 8), 1.0, 2, tint)
+	_prop_wide("res://art/props/well.png", on_ground(WELL_X) + Vector2(0, 8), 170.0, 1, tint)
+	_prop_wide("res://art/props/trough.png", on_ground(WELL_X + 150.0) + Vector2(0, 10), 128.0, 2, tint)
 	keeper = add_person("keeper", KEEPER_X, 1.0, true)
 	add_sprite("res://art/props/fold.png", on_ground(FOLD_X) + Vector2(0, 14), 1.5, 1)
 	if Game.backdrop:
@@ -128,6 +131,13 @@ func _populate() -> void:
 	kid_task["on"] = false
 	leave_task = add_task(GATE_X, "Set out for Gibeah", 0.9, _leave, 70.0)
 	leave_task["on"] = false
+
+
+## A painted prop drawn `w` game units wide (its height follows the painting).
+func _prop_wide(path: String, at: Vector2, w: float, z: int, tint: Color) -> Sprite2D:
+	var sp := add_sprite(path, at, 1.0, z, tint)
+	sp.scale = Vector2.ONE * (w / sp.texture.get_width())
+	return sp
 
 
 func begin() -> void:

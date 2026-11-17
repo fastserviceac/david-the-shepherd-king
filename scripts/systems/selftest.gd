@@ -1311,6 +1311,7 @@ func _den(lv) -> void:
 	_check(lv.boss == null, "bear driven off")
 	await _goto(4700.0)
 	await _goto(5130.0)
+	lv.torch_t = maxf(lv.torch_t, 20.0)      # with his torch alight (out, the goal is to light it again)
 	_check(lv._goal_now() == "Search the bear's larder", "he has still to look in the bear's larder")
 	await _goto(7290.0)
 	await _frames(10)
@@ -1651,6 +1652,10 @@ func placeshots(m, dir: String) -> void:
 			Game.cinematic = false
 			m.level.player.global_position = m.level.on_ground(sx - 120.0)
 			m.level.player.velocity = Vector2.ZERO
+			for cv in m.level.caves:      # a spot inside a side cave: be in it, so its dark, camera and torch are on
+				if sx > float(cv["x0"]) and sx < float(cv["x1"]):
+					m.level._cave_state(cv)
+					m.level.player.global_position = m.level.on_ground(sx - 120.0)
 			m.level.player.cam.reset_smoothing()
 			var wet = m.level.pool_at(m.level.player.global_position)
 			if wet != null:      # standing in a pool: show the rings a step makes

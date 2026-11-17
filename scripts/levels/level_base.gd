@@ -414,6 +414,48 @@ func _skin_ground(poly: PackedVector2Array, top: PackedVector2Array, parent: Nod
 
 	if not barren:
 		_grass_edge(top, parent)
+	else:
+		_rock_edge(top, parent, z)
+
+
+## Bare rock does not end in a ruler line: the lip of the floor is broken up with chipped, uneven stone, a few
+## loose chips lie along it, and the light catches it only here and there.
+func _rock_edge(top: PackedVector2Array, parent: Node, z: int) -> void:
+	var r := RandomNumberGenerator.new()      # its own dice: dressing the lip must not shift the level's own
+	r.seed = int(top[0].x * 7.0) + 11
+	var base: Color = pal.get("ground", Color(0.4, 0.4, 0.45))
+	var dark := Color(base.r * 0.55, base.g * 0.55, base.b * 0.62, 1.0)
+	var lit := Color(minf(base.r * 1.5, 1.0), minf(base.g * 1.5, 1.0), minf(base.b * 1.5, 1.0), 0.22)
+	var chips: Array = []
+	var x: float = top[0].x
+	var xe: float = top[top.size() - 1].x
+	var k := 1
+	while x < xe:
+		var w := r.randf_range(10.0, 30.0)
+		var h := r.randf_range(2.0, 12.0) * (1.0 if r.randf() < 0.7 else 1.8)
+		var y0 := _top_y(top, x)
+		var y1 := _top_y(top, minf(x + w, xe))
+		var apex := Vector2(x + w * r.randf_range(0.25, 0.75), minf(y0, y1) - h)
+		chips.append([PackedVector2Array([Vector2(x, y0 + 3.0), Vector2(x, y0), apex, Vector2(x + w, y1), Vector2(x + w, y1 + 3.0)]),
+				dark.lerp(base, r.randf_range(0.0, 0.5)), r.randf() < 0.4, apex])
+		x += w * r.randf_range(0.6, 1.1)
+		k += 1
+	var g := Painter.new()
+	g.z_index = z
+	g.paint = func(ci: CanvasItem) -> void:
+		for c in chips:
+			ci.draw_colored_polygon(c[0], c[1])
+			if c[2]:      # a lit facet on some of them, never the whole lip
+				var pts: PackedVector2Array = c[0]
+				ci.draw_line(pts[1], pts[2], lit, 1.5, true)
+	parent.add_child(g)
+
+
+func _top_y(top: PackedVector2Array, x: float) -> float:
+	for i in range(1, top.size()):
+		if x <= top[i].x:
+			return lerpf(top[i - 1].y, top[i].y, (x - top[i - 1].x) / maxf(top[i].x - top[i - 1].x, 0.001))
+	return top[top.size() - 1].y
 
 
 func _grass_edge(top: PackedVector2Array, parent: Node) -> void:
@@ -1196,6 +1238,17 @@ func give_here(id: String) -> void:
 
 
 ## A line of the psalm comes to him where he stands: the same light, the same knee, and the line written.
+## A line of the psalm found where he stands, and a wait until it has been spoken, so that what comes next
+## (the narrator, the next line) does not talk over it.
+func find_line_wait(id: String) -> void:
+	Game.find_line(id)
+	if Game.fast or Game.backdrop or not is_inside_tree():
+		return
+	var left := minf(Game.voice_left(), 12.0)      # never held longer than a line can run
+	if left > 0.0:
+		await get_tree().create_timer(left + 0.5).timeout
+
+
 func line_here(id: String) -> void:
 	if Game.backdrop or Game.has_line(id):
 		return
@@ -1293,6 +1346,28 @@ func add_cave(door_x: float, floors: Array, mouth_tint: Color = Color(0.6, 0.55,
 		sp.modulate = Color(0.8, 0.8, 0.92)
 		sp.z_index = -20
 		add_child(sp)
+		# the painting's own edges are ruler-straight: let the dark rock creep in over them, so the picture
+		# dissolves into stone instead of ending on a line
+		var edge := Color(0.035, 0.035, 0.06)
+		var clear := Color(edge.r, edge.g, edge.b, 0.0)
+		var px0 := sp.position.x
+		var px1 := px0 + tex.get_width() * msc
+		var py0 := sp.position.y
+		var bands := [[Rect2(px0 - 60.0, py0 - 60.0, px1 - px0 + 120.0, 380.0), true], [Rect2(px0 - 60.0, py0, 420.0, 1400.0), false], [Rect2(px1 - 360.0, py0, 420.0, 1400.0), false]]
+		for bi in bands.size():
+			var rc: Rect2 = bands[bi][0]
+			var band := Polygon2D.new()
+			var cols := PackedColorArray()
+			if bands[bi][1]:      # along the top: dark, thinning softly downward
+				band.polygon = PackedVector2Array([rc.position, Vector2(rc.end.x, rc.position.y), rc.end, Vector2(rc.position.x, rc.end.y)])
+				cols = PackedColorArray([edge, edge, clear, clear])
+			else:
+				var left: bool = bi == 1
+				band.polygon = PackedVector2Array([rc.position, Vector2(rc.end.x, rc.position.y), rc.end, Vector2(rc.position.x, rc.end.y)])
+				cols = PackedColorArray([edge if left else clear, clear if left else edge, clear if left else edge, edge if left else clear])
+			band.vertex_colors = cols
+			band.z_index = -19
+			add_child(band)
 	if ResourceLoader.exists("res://art/den_mid.png"):      # and the same standing formations as the bear's den, along the foot of the wall
 		var mtex: Texture2D = load("res://art/den_mid.png")
 		var k := 0.75 * 1280.0 / mtex.get_width()
@@ -2000,10 +2075,11 @@ func _update_push(delta: float) -> void:
 
 
 ## A perched boulder. A sling stone brings it down onto `rest`, where its top becomes ground.
-func add_boulder(at: Vector2, rest: Rect2):
+func add_boulder(at: Vector2, rest: Rect2, hang_y: float = INF):
 	var b = Boulder.new()
 	b.level = self
 	b.rest = rest
+	b.hang_y = hang_y
 	b.position = at
 	add_child(b)
 	return b
@@ -2112,7 +2188,9 @@ func _update_dark(delta: float) -> void:
 			torch_t = maxf(0.0, torch_t - delta * draught)
 			if torch_t <= 0.0:
 				Game.sfx("gust", -6.0)
-		player_light = 78.0 + 215.0 * clampf(torch_t / (torch_max * 0.3), 0.0, 1.0)
+				show_tip("The torch burns down.  Embers will light another")
+		var burn := clampf(torch_t / (torch_max * 0.3), 0.0, 1.0)
+		player_light = (78.0 + 215.0 * burn) * (1.0 + (1.0 - burn) * 0.07 * sin(Time.get_ticks_msec() * 0.021) * sin(Time.get_ticks_msec() * 0.0093))      # a dying flame leans and gutters
 		if torch_t > 0.0:        # the lesser beasts keep to the edge of the light
 			for n in get_tree().get_nodes_in_group("enemies"):
 				if "retreat" in n and n.global_position.distance_to(player.global_position) < player_light * 0.72 and n.retreat < 0.2:

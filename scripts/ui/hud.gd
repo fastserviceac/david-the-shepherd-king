@@ -216,6 +216,25 @@ func _draw() -> void:
 			draw_texture_rect(tex, Rect2(26.0, 62.0, tex.get_width() * k, 46.0), false, Color(1, 1, 1, 0.92))
 		draw_string(Game.serif, Vector2(112.0, 96.0), "%d / %d" % [level.sheep_count, level.sheep_total], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(Game.CREAM.r, Game.CREAM.g, Game.CREAM.b, 0.9))
 
+	# the torch, while it is dark enough to need one: a small flame and a bar that burns down; empty and dim when out
+	if level.torch_max > 0.0 and level.dark_amount > 0.5:
+		var tf := clampf(level.torch_t / level.torch_max, 0.0, 1.0)
+		var tp := Vector2(34.0, 138.0)
+		var flick := 0.8 + 0.2 * sin(beat * 13.0) * sin(beat * 5.3)
+		var low := tf > 0.0 and tf < 0.3
+		var alpha := 0.9 if tf > 0.0 else 0.38
+		if low:
+			alpha *= 0.6 + 0.4 * absf(sin(beat * 6.0))      # it gutters when nearly gone
+		var fl := Color(1.0, 0.72, 0.28, alpha) if tf > 0.0 else Color(Game.CREAM.r, Game.CREAM.g, Game.CREAM.b, alpha)
+		var h := 15.0 * (0.55 + 0.45 * tf) * (flick if tf > 0.0 else 1.0)
+		draw_colored_polygon(PackedVector2Array([tp + Vector2(0, -h), tp + Vector2(6, -h * 0.3), tp + Vector2(4.5, 4), tp + Vector2(-4.5, 4), tp + Vector2(-6, -h * 0.3)]), fl)
+		draw_line(tp + Vector2(0, 5), tp + Vector2(0, 15), Color(0.5, 0.36, 0.22, alpha), 3.0, true)
+		var bar := Rect2(tp.x + 16.0, tp.y - 2.0, 96.0, 8.0)
+		draw_rect(bar, Color(0.04, 0.03, 0.06, 0.5))
+		if tf > 0.0:
+			draw_rect(Rect2(bar.position, Vector2(bar.size.x * tf, bar.size.y)), Color(1.0, 0.72, 0.28, alpha) if not low else Color(1.0, 0.4, 0.2, alpha))
+		draw_rect(bar, Color(Game.CREAM.r, Game.CREAM.g, Game.CREAM.b, 0.4 * alpha), false, 1.2)
+
 	if Game.save.get("has_sling", false):
 		var s := Vector2(1232.0, 40.0)
 		draw_arc(s + Vector2(0, -6), 12.0, 0.3, PI - 0.3, 12, Game.CREAM, 2.5, true)

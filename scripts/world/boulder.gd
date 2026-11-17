@@ -27,6 +27,9 @@ var vy := 0.0
 var spin := 0.0
 var rock := 0.0
 var drop_secs := 0.3
+var hang_y := INF           # in a cave: the height of the roof it hangs from (drawn, so it is never loose in mid-air)
+var sock: Node2D
+var dust_t := 0.0
 
 # Light from the sky: the top of the stone catches it and the underside is in shadow, whichever way up it is
 # as it turns. Without this it is a flat picture; with it, it has a top and a belly.
@@ -58,6 +61,12 @@ func _ready() -> void:
 	glow = Game.glow(Color(1.0, 0.85, 0.55, 0.4), 150.0)
 	glow.position = Vector2(0, -rest.size.y * 0.5)
 	add_child(glow)
+	if hang_y < INF:      # the rock it hangs from: a root of stone down from the roof to the top of the boulder
+		sock = Node2D.new()
+		sock.position = position
+		sock.z_index = 1
+		sock.draw.connect(_draw_socket)
+		get_parent().add_child.call_deferred(sock)
 
 
 func hit(_dmg: int, from_dir: int, kind: String) -> void:
@@ -96,8 +105,10 @@ func fall(from_dir: int = 1) -> void:
 	shade.draw.connect(_draw_shade)
 	get_parent().add_child(shade)
 	from = position
-	phase = "tip"
+	phase = "tell" if hang_y < INF else "tip"
 	pt = 0.0
+	if hang_y < INF:
+		Game.sfx("hit", -10.0, 0.3)
 
 
 ## It leaves its perch slowly, the way a great weight does, then drops; a slab comes down on one end and slams
@@ -105,6 +116,27 @@ func fall(from_dir: int = 1) -> void:
 func _fall_step(delta: float) -> void:
 	pt += delta
 	match phase:
+		"tell":      # the roof gives warning: it shudders, grit and dust sift down, and a crack runs, before it lets go
+			var u := clampf(pt / 0.9, 0.0, 1.0)
+			position.x = from.x + sin(pt * 70.0) * 2.5 * u
+			position.y = from.y + sin(pt * 53.0) * 1.2 * u
+			rotation = sin(pt * 41.0) * 0.035 * u
+			dust_t -= delta
+			if dust_t <= 0.0 and is_instance_valid(level):
+				dust_t = 0.1
+				Game.burst(level, Vector2(from.x + randf_range(-30.0, 30.0), hang_y + randf_range(10.0, 60.0)), Color(0.7, 0.66, 0.6, 0.6), 3, 40.0)
+				if is_instance_valid(level.player):
+					level.player.shake = maxf(level.player.shake, 2.5 * u)
+			if sock != null and is_instance_valid(sock):
+				sock.queue_redraw()
+			if u >= 1.0:
+				position = from
+				rotation = 0.0
+				phase = "tip"
+				pt = 0.0
+				Game.burst(level, Vector2(from.x, hang_y + 30.0), Color(0.75, 0.7, 0.62, 0.7), 18, 150.0)      # it parts from the roof
+				if sock != null and is_instance_valid(sock):
+					sock.queue_redraw()
 		"tip":
 			var u := clampf(pt / 0.34, 0.0, 1.0)
 			position.x = from.x + way * 16.0 * u * u
@@ -165,6 +197,43 @@ func _fall_step(delta: float) -> void:
 	queue_redraw()
 
 
+## The stone it hangs from: a tapering root of the roof, with cracks, ending around the top of the boulder. Once it
+## has fallen only a broken stub is left.
+func _draw_socket() -> void:
+	var top := hang_y - sock.position.y      # the roof, seen from the boulder's own spot
+	var w := rest.size.x + 18.0
+	var by := -(rest.size.y + 14.0) + 16.0      # where the boulder's top is
+	var rock := Color(0.09, 0.1, 0.16)      # cave stone: dark and cool, like the walls it grows from
+	var stub := fallen and phase != "tell"
+	var end_y := lerpf(top, by + 34.0, 0.35 if stub else 1.0)      # it runs down into the top of the boulder
+	var neck := w * (0.3 if not stub else 0.2)
+	# a jagged cone: wide against the roof, narrowing to the stone
+	var pts := PackedVector2Array([Vector2(-w * 0.95, top - 40.0), Vector2(w * 0.95, top - 40.0), Vector2(w * 0.8, top + 8.0)])
+	var n := 6
+	for i in n:
+		var f := float(i + 1) / n
+		pts.append(Vector2(lerpf(w * 0.62, neck, f) + (14.0 if i % 2 == 0 else -9.0), lerpf(top + 8.0, end_y, f)))
+	pts.append(Vector2(-neck if not stub else -neck * 0.4, end_y))
+	for i in range(n - 1, -1, -1):
+		var f := float(i + 1) / n
+		pts.append(Vector2(-lerpf(w * 0.62, neck, f) + (-12.0 if i % 2 == 0 else 8.0), lerpf(top + 8.0, end_y, f)))
+	pts.append(Vector2(-w * 0.8, top + 8.0))
+	sock.draw_colored_polygon(pts, rock)
+	# the lit side and the shadowed side of the cone, and ledges of rock across it, so it reads as stone and not a flat shape
+	var half := PackedVector2Array([Vector2(0.0, top - 40.0), Vector2(w * 0.95, top - 40.0), Vector2(w * 0.8, top + 8.0)])
+	for i in n:
+		var f := float(i + 1) / n
+		half.append(Vector2(lerpf(w * 0.62, neck, f) + (14.0 if i % 2 == 0 else -9.0), lerpf(top + 8.0, end_y, f)))
+	half.append(Vector2(0.0, end_y))
+	sock.draw_colored_polygon(half, Color(0.0, 0.0, 0.03, 0.55))
+	for i in 5:
+		var fy := lerpf(top + 30.0, end_y - 10.0, float(i) / 4.0)
+		var fw := lerpf(w * 0.55, neck, float(i) / 4.0) * (0.8 if i % 2 == 0 else 0.55)
+		sock.draw_line(Vector2(-fw, fy + (i % 3) * 4.0), Vector2(fw * 0.7, fy - (i % 2) * 5.0), Color(0.03, 0.03, 0.06, 0.55), 2.2, true)
+	sock.draw_polyline(PackedVector2Array([Vector2(-w * 0.1, top + 8.0), Vector2(-w * 0.04, lerpf(top, by, 0.3)), Vector2(w * 0.05, lerpf(top, by, 0.5)), Vector2(-w * 0.02, lerpf(top, by, 0.75))]), Color(0.02, 0.02, 0.04, 0.8), 1.6, true)
+	sock.draw_polyline(PackedVector2Array([Vector2(-neck * 1.4, top + 20.0), Vector2(-neck * 1.0, lerpf(top, end_y, 0.7))]), Color(0.35, 0.4, 0.6, 0.35), 2.0, true)
+
+
 ## How near the ground it is: 0 on its perch, 1 lying where it fell.
 func _nearness() -> float:
 	return clampf(1.0 - (to.y - position.y) / 260.0, 0.0, 1.0)
@@ -217,6 +286,9 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	elif phase != "":
 		_fall_step(delta)
+	elif sock != null and is_instance_valid(sock) and sock.get_meta("seen", false) == false:
+		sock.set_meta("seen", true)
+		sock.queue_redraw()
 	mat.set_shader_parameter("rot", rotation)
 
 

@@ -5,7 +5,7 @@ extends "res://scripts/levels/level_base.gd"
 
 const Bear = preload("res://scripts/enemies/bear.gd")
 const BASE := 590.0
-const EMBERS := [430.0, 1850.0, 3080.0]
+const EMBERS := [430.0, 1850.0, 3080.0, 4760.0, 5560.0, 6700.0]      # the last three are behind the bear: the torch burns there too
 
 var bear
 var bear_started := false
@@ -139,7 +139,7 @@ func _start_bear() -> void:
 			w.queue_free()
 		walls.clear()
 		await give_here("heart")
-		Game.find_line("p23_valley")
+		await find_line_wait("p23_valley")
 		say(["n_den_out"]))
 
 
@@ -165,6 +165,8 @@ func _process(delta: float) -> void:
 	if is_instance_valid(player):
 		var px: float = player.global_position.x
 		draught = 3.0 if px > 2250.0 and px < 2990.0 else 1.0
+		if not walls.is_empty() and is_instance_valid(bear) and not bear.fleeing:
+			draught = 0.0      # the torch does not burn down while the bear is on him: there is no fire in the arena to relight it
 
 
 ## Behind the bear's floor the cave goes on. Its larder, where he must look for what he dreads to find; a break
@@ -240,7 +242,7 @@ func _goal_now() -> String:
 		return _goal_after()
 	if _far > 4540.0:
 		return _goal_after()
-	if not lit_once:
+	if not lit_once or torch_t <= 0.0:
 		return "Light a torch at the embers"
 	return "Follow the cave east, keep your torch lit"
 
@@ -248,6 +250,8 @@ func _goal_now() -> String:
 ## The back passages, once the bear is gone.
 func _goal_after() -> String:
 	var at: Vector2 = player.global_position
+	if torch_t <= 0.0 and lit_once and not (not ambush.is_empty() and not ambush["walls"].is_empty()):
+		return "Light a torch at the embers"
 	if not ambush.is_empty() and not ambush["walls"].is_empty():
 		return "Drive the scavengers off"
 	if not searched and _far > 4900.0 and at.x < 5400.0:

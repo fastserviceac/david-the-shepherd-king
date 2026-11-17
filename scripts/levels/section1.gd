@@ -90,9 +90,8 @@ func _populate() -> void:
 	add_gift("voice", 2180.0, func() -> bool: return sheep_count >= 4, "Bring in all four behind you.  The nervous ones will not stand for running")
 	add_hint(1560.0, 150.0, "Shift  walk softly")
 	_build_fold(fold_x)
-	add_trigger(2500.0, 2700.0, func() -> void:
-		Game.find_line("p23_shepherd")
-		say(["ps23_1"]))
+	# the line comes to him once, as his own; the narrator does not read the same verse over it
+	add_trigger(2500.0, 2700.0, func() -> void: Game.find_line("p23_shepherd"))
 	add_trigger(fold_x - 80.0, fold_x + 100.0, _at_fold, false)
 	_beyond_the_meadow()
 

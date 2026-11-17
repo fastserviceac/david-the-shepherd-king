@@ -75,7 +75,6 @@ func _populate() -> void:
 
 	# how to fight, as a reminder on the way up
 	add_hint(820.0, 150.0, "L  dodge")
-	add_hint(1150.0, 150.0, "↓  duck")
 	add_hint(1420.0, 150.0, "E  seize a spent beast")
 	# the ridge's own scavengers, drawn by the lion's kill
 	add_jackal(1800.0, 1400.0, 2400.0)
@@ -84,6 +83,8 @@ func _populate() -> void:
 	# with the jackals in the way. There is no time to fight them; they have to be got past
 	add_gift("feet", 2330.0, func() -> bool: return run_ok, "The light fades.  Reach it from the watchfire at a run")
 	add_block(Rect2(2575.0, on_ground(2500.0).y - 110.0, 90.0, 80.0))
+	# the lion's long leap goes over a man crouched low: told at the foot of its ground, not back at the watchfire
+	add_hint(2840.0, 150.0, "↓  duck the leap")
 	add_trigger(2950.0, 3100.0, _start_lion, false)
 
 	# the lamb, waiting beyond the lion
@@ -214,7 +215,7 @@ func _on_sheep(s) -> void:
 			w.queue_free()
 	arena_walls.clear()
 	add_hint(4150.0, 150.0, "Carry it down off the ridge")
-	Game.find_line("p23_rod")
+	await find_line_wait("p23_rod")
 	say(["n_s3_end"])
 
 
@@ -286,7 +287,7 @@ func _last_words() -> void:
 	if spoken:
 		return
 	spoken = true
-	Game.find_line("p23_soul")
+	await find_line_wait("p23_soul")
 	await say(["n_s3_remember", "1sam17_37"])
 	told = true
 	if is_instance_valid(player) and carrying and player.global_position.x > end_x - 60.0:
