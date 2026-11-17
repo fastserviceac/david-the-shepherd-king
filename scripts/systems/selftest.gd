@@ -1659,7 +1659,7 @@ func placeshots(m, dir: String) -> void:
 		Game.save["gifts"] = ["voice", "hand", "sling"]
 		Game.save["places"] = ["foldcave", "cistern"]
 		Game.save["stones"] = ["s1_start", "s1_step", "s1_leap", "s1_cave", "well_start", "s2_brake", "wadi_start"]
-		for lg in ["en", "pt"]:
+		for lg in ([] if OS.get_environment("MAP_ONLY") == "gibeah" else ["en", "pt"]):      # MAP_ONLY=gibeah: the fortress alone
 			Game.save["lang"] = lg
 			m.map.open(true, 3)
 			await _frames(110)
@@ -1687,7 +1687,7 @@ func placeshots(m, dir: String) -> void:
 			m.map.index = 0
 			await _frames(40)
 			m.map._start_walk()
-			await _frames(30)
+			await _frames(14)          # the fortress's roads are short: a walk along one is over in half a second, and then he travels
 			await _snap(dir, "map_gibeah_walk_" + lg)
 			m.map.walk = -1.0
 			m.map.close()

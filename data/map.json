@@ -188,8 +188,8 @@
   {
    "text": "The storehouse",
    "x": 2.95,
-   "y": 0.8,
-   "z": 1.0,
+   "y": 0.0,
+   "z": 2.0,
    "views": [
     "gibeah"
    ],
@@ -359,8 +359,8 @@
   },
   "night_fit": {
    "view": "gibeah",
-   "x": 2.4,
-   "z": 0.05,
+   "x": 2.5,
+   "z": -0.25,
    "about": "The same hall in the deep of the night. Scripture says only that David played when the trouble came on the king (1 Samuel 16:23); the lamps and the hour are invention."
   }
  },
