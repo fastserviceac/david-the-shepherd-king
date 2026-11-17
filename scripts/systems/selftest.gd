@@ -74,6 +74,7 @@ func smoke(m) -> void:
 			"watch": await _watch(lv)
 			"section4": await _s4(lv)
 			"summons": await _summons(lv)
+			"ridge_road": await _ridge_road(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -347,6 +348,120 @@ func _summons(lv) -> void:
 	lv.do_task(lv.leave_task)
 	await _frames(30)
 	Game.save["gifts"] = had
+
+
+## 2.2: the donkey will not pass the ford, the slide or the wolves unplayed; the stones must be rolled off before
+## any song takes it over them; and bringing it through the wolves earns the Steady Hand.
+func _ridge_road(lv) -> void:
+	var p = lv.player
+	var d = lv.donkey
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	var gifts: Array = had.duplicate()
+	gifts.erase("steady")
+	Game.save["gifts"] = gifts
+	for g in ["lyre", "voice", "walksong"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling"]:
+		Input.action_release(a)
+	_check(d.led and lv.sheep_total == 0, "he sets out leading the donkey, and the flock stays with the keeper (%d sheep here)" % lv.sheep_total)
+	_check(lv.donkey_fear(lv.FORD_X) > 0.0 and lv.donkey_fear(lv.SLIDE_X) > 0.0 and lv.donkey_fear(lv.FORD_X + 900.0) == 0.0, "the ford and the slide frighten it; the open road does not")
+	# the ford
+	await _goto(lv.FORD_X - 520.0)
+	d.global_position = lv.on_ground(p.global_position.x - 92.0)
+	Input.action_press("move_right")
+	Input.action_press("walk")
+	await _frames(420)
+	Input.action_release("move_right")
+	Input.action_release("walk")
+	_check(d.balks >= 1 and d.balking and d.global_position.x < lv.FORD_X, "led up to the ford unplayed, it plants its feet")
+	await _goto(d.global_position.x + 92.0)
+	var feet: bool = await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.FORD_X + lv.FORD_REACH + 30.0, 3000)
+	_check(feet and d.global_position.x > lv.FORD_X + lv.FORD_REACH, "played to as he walks, it crosses (x=%d)" % int(d.global_position.x))
+	# the slide: no song takes it over the stones; rolled off, it is played past
+	await _goto(lv.SLIDE_X - 520.0)
+	d.global_position = lv.on_ground(p.global_position.x - 92.0)
+	_check(lv.song_noise(Vector2(lv.SLIDE_X - 100.0, 0)) > 0.0, "the slipping stones unsettle his playing")
+	await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.SLIDE_X + lv.SLIDE_REACH, 900)
+	_check(d.global_position.x < lv.SLIDE_X and not lv.cleared, "the road blocked, playing does not bring it over the stones (x=%d)" % int(d.global_position.x))
+	lv.do_task(lv.slide_task)
+	await _frames(5)
+	_check(lv.cleared and lv.song_noise(Vector2(lv.SLIDE_X - 100.0, 0)) == 0.0 and not lv.slide_task["on"], "the stones rolled off, the road is open and quiet")
+	await _goto(d.global_position.x + 92.0)
+	await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.SLIDE_X + lv.SLIDE_REACH + 30.0, 3000)
+	_check(d.global_position.x > lv.SLIDE_X + lv.SLIDE_REACH, "and it is played past the place (x=%d)" % int(d.global_position.x))
+	# the wolves at dusk
+	_check(lv.wolves.is_empty() and not lv.wolves_out, "no wolf is on the road before dusk")
+	await _goto(lv.DUSK_X + 60.0)
+	d.global_position = lv.on_ground(p.global_position.x - 92.0)
+	await _frames(20)
+	_check(lv.wolves_out and lv.wolves.size() == 2, "where the road drops between the rocks, two wolves come down (%d)" % lv.wolves.size())
+	var w0 = lv.wolves[0]
+	_check(lv.donkey_fear(w0.global_position.x + 100.0) > 0.0, "and the donkey will not go near them")
+	_check(not Game.has("steady") and not lv._through(), "the Steady Hand is not his before he has brought it through")
+	for w in lv.wolves:
+		for k in 3:
+			if is_instance_valid(w):
+				w.hit(1, -1, "staff")
+				await _frames(12)
+	await _frames(120)
+	var left := 0
+	for w in lv.wolves:
+		if is_instance_valid(w) and absf(w.global_position.x - p.global_position.x) < 900.0:
+			left += 1
+	print("  wolves still near after three blows each: %d" % left)
+	for w in lv.wolves:          # whatever the blows left, the rest of the road is walked with them gone
+		if is_instance_valid(w):
+			w.queue_free()
+	await _frames(5)
+	await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.PASS_X + 40.0, 4000)
+	_check(lv._through(), "the wolves driven off, it comes through the rocks with him (x=%d, he at %d, balking %s, fear %.0f, act %s, cinematic %s, quiet %.1f)" % [int(d.global_position.x), int(p.global_position.x), d.balking, lv.donkey_fear(d.global_position.x), p.act, Game.cinematic, d.quiet])
+	await _goto(lv.GIFT_X)
+	await _until(func() -> bool: return Game.has("steady"), 900)
+	_check(Game.has("steady"), "and the Steady Hand is given")
+	await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.GATE_X - 250.0, 3000)
+	await _goto(lv.GATE_X)
+	await _frames(10)
+	_check(lv.gate_task["on"], "with the load whole at the foot of Gibeah, he can go up")
+	lv.do_task(lv.gate_task)
+	await _frames(30)
+	Game.save["gifts"] = had
+
+
+## Walks him east playing on his feet, waiting for the donkey when it hangs back, until `done` or `frames` run out.
+## Returns whether he was playing on his feet at any time.
+func _lead_playing(p, d, done: Callable, frames: int) -> bool:
+	var feet := false
+	var holding := false
+	Input.action_press("move_right")
+	Input.action_press("walk")
+	await _frames(25)
+	for i in frames:
+		if done.call():
+			break
+		if p.global_position.x > d.global_position.x + 170.0:
+			Input.action_release("move_right")
+		else:
+			Input.action_press("move_right")
+		if p.act != "play":
+			if absf(p.velocity.x) >= 40.0:
+				Input.action_release("lyre")
+				await tree.physics_frame
+				Input.action_press("lyre")
+				holding = true
+			else:
+				Input.action_press("move_right")
+		elif holding and p.breath_v >= 0.93:
+			Input.action_release("lyre")
+			holding = false
+		elif not holding:
+			Input.action_press("lyre")
+			holding = true
+		feet = feet or p.lyre_feet
+		await tree.physics_frame
+	for a in ["move_right", "walk", "lyre"]:
+		Input.action_release(a)
+	await _frames(30)
+	return feet
 
 
 ## Walks him onto every one of the flock that is not with him.
@@ -1867,11 +1982,18 @@ func flow(m, dir: String) -> void:
 	m.level.kid_tied = true
 	m.level._leave()
 	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 1 and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first + 1, "the Summons done, the Ridge Road follows it")
+	m.level._arrive()
+	t = 0.0
 	while t < 60.0 and m.state != "menu":
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 1, "the Summons done, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 2, "the Ridge Road done, what is built of Chapter Two ends and returns to the menu")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

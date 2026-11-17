@@ -216,7 +216,7 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			breath = 0.0
 		lyre_idle = 0.0
 		breath = fmod(breath + delta / BREATH, 1.0)
-		var jump := breath_noise * 0.2 * sin(lyre_t * 23.0) * sin(lyre_t * 7.3)
+		var jump := breath_noise * (0.09 if Game.has("steady") else 0.2) * sin(lyre_t * 23.0) * sin(lyre_t * 7.3)      # the Steady Hand: a fright shakes it less
 		breath_v = clampf(0.5 - 0.5 * cos(breath * TAU) + jump, 0.0, 1.0)
 	elif lyre_held:           # let go
 		lyre_held = false

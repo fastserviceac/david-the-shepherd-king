@@ -35,6 +35,31 @@
   },
   "n_c2s1_leave": {
    "text": "Ele tomou o cabresto e subiu pela estrada da serra rumo a Gibeá, um pastor enviado para servir a um rei."
+  },
+  "n_c2s2_intro": {
+   "text": "De Belém, o caminho para Gibeá segue para o norte pela crista dos montes: meio dia, com um jumento carregado."
+  },
+  "n_c2s2_load": {
+   "text": "Pão, um odre de vinho e um cabrito: o que Jessé mandava era a palavra de sua casa ao rei. Tinha de chegar inteiro."
+  },
+  "n_c2s2_jebus": {
+   "text": "À beira do caminho, Jebus erguia-se em seu monte, atrás de seus muros: uma cidade forte, e que não era de Israel. Um viajante deste caminho dissera dela, certa vez:"
+  },
+  "judg19_12": {
+   "text": "O seu senhor lhe respondeu: “Não entraremos na cidade de estrangeiros, que não são dos filhos de Israel; mas passaremos até Gibeá.”",
+   "ref": "Juízes 19:12"
+  },
+  "n_c2s2_on": {
+   "text": "Ele não entrou. Seguiu para Gibeá."
+  },
+  "n_c2s2_dusk": {
+   "text": "Ao cair da tarde, onde o caminho desce entre as rochas, os lobos desceram até ele."
+  },
+  "n_c2s2_gibeah": {
+   "text": "E, ao findar a luz, Gibeá de Saul erguia-se acima dele, em seu alto."
+  },
+  "n_c2s2_whole": {
+   "text": "O pão, o vinho e o cabrito tinham chegado inteiros."
   }
  }
 }

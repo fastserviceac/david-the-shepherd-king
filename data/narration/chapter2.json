@@ -35,6 +35,31 @@
   },
   "n_c2s1_leave": {
    "text": "He took the halter and went up the ridge road toward Gibeah, a shepherd sent to serve a king."
+  },
+  "n_c2s2_intro": {
+   "text": "From Bethlehem the road to Gibeah runs north along the ridge: half a day, with a loaded donkey."
+  },
+  "n_c2s2_load": {
+   "text": "Bread, a bottle of wine and a young goat: what Jesse sent was his house's word to the king. It had to arrive whole."
+  },
+  "n_c2s2_jebus": {
+   "text": "Beside the road Jebus stood on its hill behind its walls: a strong city, and not Israel's. A traveller on this road had once said of it:"
+  },
+  "judg19_12": {
+   "text": "His master said to him, “We won’t enter into the city of a foreigner that is not of the children of Israel; but we will pass over to Gibeah.”",
+   "ref": "Judges 19:12"
+  },
+  "n_c2s2_on": {
+   "text": "He did not turn in. He went on toward Gibeah."
+  },
+  "n_c2s2_dusk": {
+   "text": "Toward evening, where the road drops between the rocks, the wolves came down to it."
+  },
+  "n_c2s2_gibeah": {
+   "text": "And as the light went, Gibeah of Saul stood above him on its height."
+  },
+  "n_c2s2_whole": {
+   "text": "The bread, the wine and the young goat had come whole."
   }
  }
 }

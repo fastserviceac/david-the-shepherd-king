@@ -490,8 +490,9 @@ const GIFTS := {
 	"feet": {"name": "The Swift Feet", "line": "The running leap: jump at a full run to go higher and farther.", "key": "Run, then Space", "craft": "feet", "why": "A lamb in a lion's mouth is lost in the time it takes to walk.", "how": "On the Ridge: reach the light at a run.", "after": 5},
 	"lyre": {"name": "The Lyre", "line": "Hold, and let each phrase go at the top of the breath. Three phrases settle the sheep that hear them.", "key": "R  hold, release at the top", "craft": "voice", "why": "A frightened flock cannot be driven quiet. It can be played quiet.", "how": "From his father's house.", "after": -1},
 	"walksong": {"name": "The Walking Song", "line": "He plays on his feet. Begin while walking and he keeps walking; what follows him keeps following, quieted, for as long as the phrases land.", "key": "R  while walking", "craft": "voice", "why": "A flock can be left standing while it is played quiet. A beast on a road cannot: it has to be brought along.", "how": "At his father's house: bring the nine past the king's mules to the keeper.", "after": 8, "chapter": 1, "emblem": "lyre"},
+	"steady": {"name": "The Steady Hand", "line": "His playing holds through a fright: what shakes the breath shakes it less.", "key": "", "craft": "voice", "why": "A hand that only plays in quiet is no use to a frightened beast, or to a troubled man.", "how": "On the Ridge Road: bring the loaded donkey through the wolves.", "after": 9, "chapter": 1, "emblem": "lyre"},
 }
-const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [

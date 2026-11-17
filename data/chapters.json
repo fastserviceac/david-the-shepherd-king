@@ -92,6 +92,23 @@
             "frames:donkey/balk",
             "frames:donkey/calm"
           ]
+        },
+        {
+          "title": "The Ridge Road",
+          "script": "res://scripts/levels/ridge_road.gd",
+          "aim": "Lead the loaded donkey north along the ridge to Gibeah.",
+          "why": "What his father sent is the family's word to the king. It has to arrive whole.",
+          "needs": [
+            "res://art/c2_road_backdrop.png",
+            "res://art/c2_road_mid.png",
+            "frames:david/lyre_walk",
+            "frames:donkey/idle",
+            "frames:donkey/walk",
+            "frames:donkey/balk",
+            "frames:donkey/calm",
+            "frames:kid/idle",
+            "frames:wolf/walk"
+          ]
         }
       ]
     },

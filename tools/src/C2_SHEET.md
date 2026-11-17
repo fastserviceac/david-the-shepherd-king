@@ -209,3 +209,15 @@ Two things the section needs are **not on this sheet yet**:
 Not needed by Section 1 after all: `c2_load` (the donkey's own picture carries the load) and `c2_lead` (he plays with both hands; the donkey follows the song).
 
 Sounds still to make: a mule's bray (a hoof stamp stands in for it, heard only in this locked section), and the lyre's own notes (the three rising tones are still the stand-in from Chapter One).
+
+---
+
+## Part 8: what Section 2, The Ridge Road, waits for (added 17 November)
+
+Built from what is already in the game: the donkey, the kid and the lyre on foot from the Summons, the wolves from the Night Watch, and the collected `c2_road_backdrop` (its busy lower third is faded to dark by `tools/scenery.py`). It waits for **one picture**:
+
+| Name | Kind | Prompt | The game looks for |
+|---|---|---|---|
+| c2_road_mid | image, as the midgrounds in Part 5 (magenta), 16:9 | Dry-stone terrace and field walls with a gap in them, two or three gnarled grey-green olive trees, thorn scrub, tufts of dry grass and low limestone boulders beside a ridge road, lit by a low warm sun from the left, honey and amber stone with soft cool-brown shadows, a little dimmer and warmer than morning. Keep it low and sparse. | `art/c2_road_mid.png` (save the picture as `tools/src/art_in/c2_road_mid.png`, then `python3 tools/scenery.py c2_road`) |
+
+Not needed after all: `c2_lead`, `c2_coax` (the donkey follows the song), the ford and rockfall props (the pool and loose stones of Chapter One serve), and `c2_jebus_backdrop` (Jebus is on the hill in `c2_road_backdrop`).

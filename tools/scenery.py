@@ -48,11 +48,24 @@ def defringe(im, band=7):
     return Image.fromarray((np.clip(np.dstack([r2, g, b2, al2]), 0, 1) * 255).astype(np.uint8), 'RGBA')
 DEFRINGE = {'c2_home'}
 
+
+def fade_foot(im, start=0.6, floor=(26, 19, 17)):
+    """Darken the foot of a backdrop: a painting whose lower third is a busy foreground would fight the figures
+    walking in front of it, so from `start` of its height down it sinks to near-black, as the other backdrops do."""
+    a = np.asarray(im).astype(np.float32)
+    h = a.shape[0]
+    t = np.clip((np.arange(h) / h - start) / (0.86 - start), 0, 1)
+    t = (t * t * (3 - 2 * t))[:, None, None]
+    return Image.fromarray((a * (1 - t) + np.array(floor, np.float32) * t).astype(np.uint8))
+
+
+FADE = {'c2_road'}
+
 names = sys.argv[1:] or sorted({os.path.basename(f).rsplit('_', 1)[0] for f in glob.glob(SRC + '/*_backdrop.png') + glob.glob(SRC + '/*_mid.png')})
 for n in names:
     p = '%s/%s_backdrop.png' % (SRC, n)
     if os.path.exists(p):
-        fit(Image.open(p).convert('RGB'), 5120, 2880).save('art/%s_backdrop.png' % n); print('backdrop', n)
+        (lambda m: fade_foot(m) if n in FADE else m)(fit(Image.open(p).convert('RGB'), 5120, 2880)).save('art/%s_backdrop.png' % n); print('backdrop', n)
     p = '%s/%s_mid.png' % (SRC, n)
     if os.path.exists(p):
         (lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440))).save('art/%s_mid.png' % n); print('mid', n)
