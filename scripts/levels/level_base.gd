@@ -920,7 +920,9 @@ func add_sprite(path: String, at: Vector2, sc: float, z: int = 3, tint: Color = 
 
 
 ## A living painted figure standing on the ground, gently moving. `at` is at its feet.
-func add_actor(who: String, at: Vector2, sc: float, z: int = 3, tint: Color = Color(1, 1, 1), flip: bool = false) -> Node2D:
+## `tall` above zero: the frames were cut with tools/anim.py (the figure standing in a wider canvas), so they are
+## drawn as David's are, with `sc` 1.0 meaning the size they were cut for.
+func add_actor(who: String, at: Vector2, sc: float, z: int = 3, tint: Color = Color(1, 1, 1), flip: bool = false, tall: float = 0.0) -> Node2D:
 	var frames: Array = FA.frames(who, "idle")
 	# Each figure drifts between moments of its footage and rests in between,
 	# at its own irregular pace, so nobody visibly loops.
@@ -941,11 +943,18 @@ func add_actor(who: String, at: Vector2, sc: float, z: int = 3, tint: Color = Co
 		if st.has("act"):        # a staged action replaces the idle drift and holds on its last frame
 			var act: Array = st["act"]
 			st["act_t"] += dt
+			if st.get("act_back", false) and st["act_t"] * st["act_fps"] >= act.size() + 4.0:
+				st.erase("act")          # done: back to standing as before
+				return
 			var shot: Texture2D = act[mini(int(st["act_t"] * st["act_fps"]), act.size() - 1)]
 			FA.shadow(ci, 46.0, 0.9)
 			FA.draw(ci, shot, st["act_face"], st["act_sc"], tint, st["act_tall"])
 			return
 		var tex: Texture2D = frames[clampi(int(st["pos"]), 0, frames.size() - 1)]
+		if tall > 0.0:
+			FA.shadow(ci, 46.0 * sc, 0.9)
+			FA.draw(ci, tex, -1.0 if flip else 1.0, sc, tint, tall)
+			return
 		FA.shadow(ci, tex.get_width() * sc * 0.8, 0.9)
 		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(-sc if flip else sc, sc))
 		ci.draw_texture(tex, Vector2(-tex.get_width() * 0.5, -tex.get_height()), tint)
@@ -955,7 +964,8 @@ func add_actor(who: String, at: Vector2, sc: float, z: int = 3, tint: Color = Co
 
 
 ## Has a figure placed with add_actor perform a frame set once (cut with tools/anim.py), then hold its last frame.
-func actor_play(actor: Node2D, who: String, set_name: String, fps: float, facing: float = 1.0, sc: float = 1.0, tall: float = 1.4) -> void:
+## `back`: when it is done the figure goes back to standing as before.
+func actor_play(actor: Node2D, who: String, set_name: String, fps: float, facing: float = 1.0, sc: float = 1.0, tall: float = 1.4, back: bool = false) -> void:
 	var act: Array = FA.frames(who, set_name)
 	if act.is_empty():
 		return
@@ -966,16 +976,17 @@ func actor_play(actor: Node2D, who: String, set_name: String, fps: float, facing
 	st["act_face"] = facing
 	st["act_sc"] = sc
 	st["act_tall"] = tall
+	st["act_back"] = back
 
 
 ## A person or a standing animal of the story at x, moving as add_actor's figures do, from its own "idle" frames
 ## (art/<who>/anim/idle_NN.png). Like add_beast: unless those are painted nothing is drawn. The automated tests
 ## get a bare point to stand for it, so what happens round it can still be checked; a player gets nothing, and
 ## a section that cannot do without the figure names it in its "needs" and stays shut until it exists.
-func add_person(who: String, x: float, sc: float = 0.31, flip: bool = false, z: int = 3) -> Node2D:
+func add_person(who: String, x: float, sc: float = 1.0, flip: bool = false, z: int = 3) -> Node2D:
 	var at := on_ground(x) + Vector2(0, 4)
 	if not FA._paths(who, "idle").is_empty():
-		return add_actor(who, at, sc, z, Color(1, 1, 1), flip)
+		return add_actor(who, at, sc, z, Color(1, 1, 1), flip, 1.4)
 	if not (Game.fast or Game.force_ready):
 		return null
 	var mark := Node2D.new()

@@ -85,8 +85,8 @@ func _populate() -> void:
 	# his father's house: Jesse at the yard gate, and the king's man who brought the word
 	if ResourceLoader.exists("res://art/jesse/anim/idle_00.png"):
 		jesse = add_actor("jesse", on_ground(JESSE_X) + Vector2(0, 4), 0.31)
-	messenger = add_person("messenger", MESSENGER_X, 0.31, true)
-	kid = add_person("kid", KID_X, 0.3)
+	messenger = add_person("messenger", MESSENGER_X, 1.0, true)
+	kid = add_person("kid", KID_X)
 	# the night fold beside the house, the nine still shut in it
 	add_sprite("res://art/props/fold.png", on_ground(NIGHT_FOLD_X) + Vector2(0, 14), 1.5, 1)
 	add_sheep(NIGHT_FOLD_X - 150.0, null, true)
@@ -97,7 +97,7 @@ func _populate() -> void:
 			s.gatherable = false
 	# the lane, and the two mules tethered along it
 	for mx in MULES:
-		mules.append(add_person("mule", mx, 0.5, true))
+		mules.append(add_person("mule", mx, 1.0, true))
 	# east of the lane: the threshing floor where the donkey was loaded before light, the well, and the day fold
 	add_sprite("res://art/props/threshing.png", on_ground(FLOOR_X) + Vector2(0, 16), 1.0, 1, tint)
 	donkey = Donkey.new()
@@ -106,7 +106,7 @@ func _populate() -> void:
 	add_child(donkey)
 	add_sprite("res://art/props/well.png", on_ground(WELL_X) + Vector2(0, 8), 1.0, 1, tint)
 	add_sprite("res://art/props/trough.png", on_ground(WELL_X + 150.0) + Vector2(0, 8), 1.0, 2, tint)
-	keeper = add_person("keeper", KEEPER_X, 0.31, true)
+	keeper = add_person("keeper", KEEPER_X, 1.0, true)
 	add_sprite("res://art/props/fold.png", on_ground(FOLD_X) + Vector2(0, 14), 1.5, 1)
 	if Game.backdrop:
 		return
@@ -196,7 +196,7 @@ func _bray(mx: float) -> void:
 	Game.sfx("land", -4.0, 0.1, 0.7)      # a stamp of the hoof: the bray itself is a sound still to be made
 	var k := MULES.find(mx)
 	if k >= 0 and is_instance_valid(mules[k]):
-		actor_play(mules[k], "mule", "bray", 10.0, -1.0, 0.5)
+		actor_play(mules[k], "mule", "bray", 10.0, -1.0, 1.0, 1.4, true)
 	scatter_sheep(mx, MULE_REACH + 130.0)
 	if brays == 2:          # told only once it has happened twice
 		show_tip("They bolt from the mules.  Quiet them with the lyre first, then call them on, and go at a walk", 8.0)
@@ -274,7 +274,7 @@ func _pick() -> void:
 func _count() -> void:
 	counted = true
 	if is_instance_valid(keeper):
-		actor_play(keeper, "keeper", "count", 10.0, -1.0, 0.31)
+		actor_play(keeper, "keeper", "count", 10.0, -1.0, 1.0, 1.4, true)
 	well_task["on"] = true
 	await say(["n_c2s1_count"])
 

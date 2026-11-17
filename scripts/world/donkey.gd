@@ -90,4 +90,4 @@ func _draw() -> void:
 	else:
 		tex = FA.pingpong(arr, t, 7.0)
 	FA.shadow(self, 74.0, 0.9)
-	FA.draw(self, tex, face, 0.5, Color(1, 1, 1), 1.4)
+	FA.draw(self, tex, face, 1.0, Color(1, 1, 1), 1.4)

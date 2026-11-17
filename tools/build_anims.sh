@@ -82,3 +82,16 @@ run $V/h_jackal_worry art/jackal/anim worry key=blue mode=range a=24 b=108 step=
 run $V/h_jackal_flee art/jackal/anim run key=blue mode=range a=52 b=116 step=2 hframe=60 wide=1.8 tall=1.4 size=110 erode=3
 # the sheep's run, from a green-screen clip started on the game's own sheep (tools/src/sheep_start_green.png)
 run $V/g_sheep_run_green art/sheep/anim run key=green halo=2 mode=loop double=0 wide=1.5 tall=1.4 size=110 erode=3
+
+# Chapter Two, the Summons (clips in tools/src/clips/c2; frames extracted with tools/frames.swift at 24 fps, then the
+# black bar rows (top/bottom 6 px, sides 2 px) of every frame overwritten with their neighbouring row/column before keying)
+# the keeper's green screen is a muddy grey-green (84,124,75): halo=3 keys it
+run $V/keeper_idle art/keeper/anim idle key=green halo=3 wide=1.2 tall=1.3 size=152 erode=3 mode=range a=0 b=143 step=5
+# all four donkey sets share href=575 so the donkey is the same size and stands on the same spot
+run $V/donkey_walk art/donkey/anim walk key=blue wide=1.5 tall=1.4 size=125 erode=3 href=575 mode=loop step=2
+run $V/donkey_idle art/donkey/anim idle key=blue wide=1.5 tall=1.4 size=125 erode=3 href=575 mode=range a=0 b=143 step=6
+run $V/donkey_balk art/donkey/anim balk key=blue wide=1.5 tall=1.4 size=125 erode=3 href=575 mode=range a=31 b=78 step=2 steady=999
+run $V/donkey_calm art/donkey/anim calm key=blue wide=1.5 tall=1.4 size=125 erode=3 href=575 mode=range a=60 b=108 step=3 steady=999
+run $V/mule_idle art/mule/anim idle key=blue wide=1.5 tall=1.4 size=165 erode=3 mode=range a=0 b=143 step=5
+run $V/kid_idle art/kid/anim idle key=blue wide=1.2 tall=1.4 size=62 erode=3 grow=2 mode=range a=0 b=143 step=6
+# paintings: cp tools/src/art_in/c2/c2_home_{backdrop,mid}.png tools/src/art_in/ ; python3 tools/scenery.py c2_home   (scenery.py defringes c2_home's mid)

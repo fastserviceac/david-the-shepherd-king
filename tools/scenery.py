@@ -33,6 +33,21 @@ def key_magenta(im):
     out = np.dstack([r2, g, b2, al])
     return Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8), 'RGBA')
 
+def defringe(im, band=7):
+    """Paintings whose leaves blend into the magenta keep a pink rim 2-3 px wide. Within a few pixels of the cut,
+    blue may not rise towards green and red may not run far above it (the leaf's own cast), and the cut is drawn in a pixel."""
+    a = np.asarray(im).astype(np.float32) / 255
+    r, g, b, al = a[..., 0], a[..., 1], a[..., 2], a[..., 3]
+    hole = Image.fromarray(((al < 0.5) * 255).astype(np.uint8))
+    near = np.asarray(hole.filter(ImageFilter.MaxFilter(2 * band + 1))) > 0
+    pink = (np.minimum(r, b) > g - 0.02)          # magenta that soaked into thin leaves further in: the same fix anywhere
+    fix = near | pink
+    b2 = np.where(fix, np.minimum(b, g - 0.05), b)
+    r2 = np.where(fix, np.minimum(r, g + 0.09), r)
+    al2 = np.asarray(Image.fromarray((al * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3))).astype(np.float32) / 255
+    return Image.fromarray((np.clip(np.dstack([r2, g, b2, al2]), 0, 1) * 255).astype(np.uint8), 'RGBA')
+DEFRINGE = {'c2_home'}
+
 names = sys.argv[1:] or sorted({os.path.basename(f).rsplit('_', 1)[0] for f in glob.glob(SRC + '/*_backdrop.png') + glob.glob(SRC + '/*_mid.png')})
 for n in names:
     p = '%s/%s_backdrop.png' % (SRC, n)
@@ -40,7 +55,7 @@ for n in names:
         fit(Image.open(p).convert('RGB'), 5120, 2880).save('art/%s_backdrop.png' % n); print('backdrop', n)
     p = '%s/%s_mid.png' % (SRC, n)
     if os.path.exists(p):
-        key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440)).save('art/%s_mid.png' % n); print('mid', n)
+        (lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440))).save('art/%s_mid.png' % n); print('mid', n)
 
 # props: tools/src/art_in/props/<name>.png on magenta -> art/props/<name>.png, cut out and trimmed to the object
 for p in sorted(glob.glob(SRC + '/props/*.png')):
