@@ -22,6 +22,7 @@ var fire_task: Dictionary
 var rest_task: Dictionary
 var fed := false
 var rested := false
+var night_beasts: Array = []       # what prowls the fold beyond the jackals: made again if he is sent back to the fire
 
 
 func _setup() -> void:
@@ -158,6 +159,8 @@ func _keep_watch() -> void:
 		hour = 3
 	if hour == 3:
 		Game.music("battle", 1.0)
+		# the evening wolf: it circles beyond his staff and waits for one of the flock to stray from him
+		_night_beast("wolf", X1 - 140.0)
 		await send_wave(X0, X1, 3, true, true, holder)
 		if run != holder["run"]: return
 		hour = 4
@@ -175,6 +178,9 @@ func _keep_watch() -> void:
 		hour = 5
 	if hour == 5:
 		Game.music("battle", 1.0)
+		# the last watch: a pair of wolves, one from each side of the fold, for the flock is all that is left to them
+		_night_beast("wolf", X0 + 140.0, {"edge_x": 0.0})
+		_night_beast("wolf", X1 - 140.0)
 		await send_wave(X0, X1, 4, true, true, holder)
 		if run != holder["run"]: return
 		await send_wave(X0, X1, 3, true, true, holder)
@@ -194,6 +200,8 @@ func _stir() -> void:
 	out = [flock[0], flock[7]]
 	flock[0].stay = 800.0
 	flock[7].stay = 2260.0
+	# a hyena has smelt the broken flock, and comes for the one farthest from him while he is not looking
+	_night_beast("hyena", X1 - 60.0)
 	for s in out:
 		s.hop = 1.0
 	Game.sfx("sheep", -5.0, 0.2)
@@ -203,6 +211,13 @@ func _stir() -> void:
 		await get_tree().physics_frame
 		if run != holder["run"] or not is_inside_tree():
 			return
+
+
+## A beast of the night, kept so that it can be sent away again when he is sent back to the fire.
+func _night_beast(kind: String, x: float, opts: Dictionary = {}) -> void:
+	var b := add_beast(kind, x, opts)
+	if b != null:
+		night_beasts.append(b)
 
 
 func bring_back(s) -> void:
@@ -251,6 +266,10 @@ func _rest() -> void:
 
 func _on_respawn() -> void:
 	clear_wave(holder)
+	for b in night_beasts:
+		if is_instance_valid(b):
+			b.queue_free()
+	night_beasts = []
 	for s in out.duplicate():
 		bring_back(s)
 	add_trigger(FOLD - 150.0, FOLD + 150.0, _keep_watch)

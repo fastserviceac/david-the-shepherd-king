@@ -19,6 +19,7 @@ var speed := 100.0
 var dir := 1
 var min_x := 0.0
 var max_x := 100000.0
+var roams := false           # leaves its own ground to follow him; only the land itself stops it
 var touch_dmg := 1
 var touch_r := 28.0
 var touch_on := true
@@ -106,7 +107,7 @@ func _physics_process(delta: float) -> void:
 			_ai(delta)
 			_touch()
 	move_and_slide()
-	if not fleeing:
+	if not fleeing and not roams:
 		global_position.x = clampf(global_position.x, min_x, max_x)
 	walk += absf(velocity.x) * delta * 0.07
 	air_t = 0.0 if is_on_floor() else air_t + delta

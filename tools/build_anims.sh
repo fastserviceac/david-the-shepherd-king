@@ -12,6 +12,7 @@ run $V/n_attack1 $D attack mode=range a=90 b=108 step=1 hframe=60 soft=1 wide=2.
 run $V/n_attack3 $D attack2 mode=range a=14 b=30 step=1 hframe=0 soft=1 wide=2.6 steady=999   # low sweep
 run $V/n_attack3 $D attack3 mode=range a=22 b=40 step=1 hframe=0 soft=1 wide=2.6 tall=2.1 steady=999   # rising blow
 run $V/n_attack2 $D attack4 mode=range a=18 b=36 step=1 hframe=0 soft=1 wide=2.6 tall=2.1 steady=999   # overhead smash, the end of a chain
+run $V/spin $D spin mode=range a=76 b=107 step=1 hframe=2 soft=1 wide=3.0 steady=999   # the round blow: one full turn, staff level (Runway kling-4 clip, tools/src/clips/spin.mp4); then anchor.py spin 0
 run $V/n_sling $D sling mode=range a=48 b=95 step=2 hframe=0 soft=1 steady=999     # the whirl, looped while he winds up
 run $V/n_sling $D throw mode=range a=100 b=132 step=2 hframe=0 soft=1 steady=999    # the release and follow-through, from the same clip
 david $V/hurt $D hurt mode=range a=20 b=56 step=2 hframe=160

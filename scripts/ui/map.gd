@@ -288,6 +288,33 @@ func _start_walk() -> void:
 	Game.sfx("ui_select", -6.0)
 
 
+## A finger on the map at p: a tap on a place picks it out, a second tap on it sets him walking there.
+func tap(p: Vector2) -> bool:
+	if not visible:
+		return false
+	if walk >= 0.0 or view != "hills":
+		return true
+	var best := -1
+	var best_d := 46.0
+	for i in Game.sections().size():
+		var pl: Dictionary = data["places"].get(_key(i), {})
+		if pl.is_empty():
+			continue
+		var d := p.distance_to(_spot(i))
+		if d < best_d:
+			best = i
+			best_d = d
+	if best < 0:
+		return true
+	if best == index and _open_to(best):
+		_start_walk()
+		return true
+	index = best
+	Game.sfx("ui_move", -8.0)
+	queue_redraw()
+	return true
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
@@ -466,7 +493,7 @@ func _draw() -> void:
 	_text(Vector2(1218, 84), "N", 22, ink)
 	draw_line(Vector2(1218, 150), Vector2(1218, 96), ink, 2.5)
 	draw_colored_polygon(PackedVector2Array([Vector2(1218, 90), Vector2(1212, 104), Vector2(1224, 104)]), ink)
-	var keys := Game.t("← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close" if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close")
+	var keys := Game.keys(Game.t(("Tap a place, and again to go there      Tab  the wider land      M or Esc  close" if Game.touch else "← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close") if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close"))
 	if Game.pad:
 		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
 	var ky := 700.0

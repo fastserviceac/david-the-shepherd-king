@@ -4,6 +4,8 @@ extends "res://scripts/enemies/enemy.gd"
 var lunge_cd := 0.0
 var retreat := 0.0
 var worrying := 0.0      # seconds since it was last at a sheep's side
+var home_y := INF        # the height of the ground it was set down on
+const DROP := 64.0       # it will go down a step this deep after him, and spring up one as high
 
 
 func _init_enemy() -> void:
@@ -17,6 +19,7 @@ func _init_enemy() -> void:
 	body_r = 13.0
 	touch_r = 30.0
 	touch_kind = "low"      # it snaps at the legs: ducking does not help, a skip back does
+	roams = true            # min_x and max_x are the ground it patrols and comes home to, not a fence
 
 
 func can_clinch() -> bool:
@@ -33,7 +36,44 @@ func _on_touch() -> void:
 	retreat = 0.7
 
 
+## Is there ground to stand on that far ahead? A step down counts, a pit does not.
+func _ground_ahead(d: int, far: float = 26.0) -> bool:
+	var from := global_position + Vector2(d * far, -DROP - 12.0)
+	var q := PhysicsRayQueryParameters2D.create(from, from + Vector2(0, DROP * 2.0 + 14.0), 1)
+	q.hit_from_inside = true
+	return not get_world_2d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## Nothing over the step in front of it: it can spring up.
+func _clear_above(d: int) -> bool:
+	var from := global_position + Vector2(0, -DROP - 14.0)
+	var q := PhysicsRayQueryParameters2D.create(from, from + Vector2(d * 46.0, 0), 1)
+	q.hit_from_inside = true
+	return get_world_2d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## The land decides where it can go: it stops at the lip of a pit and springs up a low step.
+func _footing() -> void:
+	if not is_on_floor() or absf(velocity.x) < 1.0 or velocity.y < 0.0:
+		return
+	var d := 1 if velocity.x > 0.0 else -1
+	if not _ground_ahead(d):
+		velocity.x = 0.0
+	elif is_on_wall() and get_wall_normal().x * d < 0.0 and _clear_above(d):
+		velocity.y = -470.0
+
+
 func _ai(delta: float) -> void:
+	if is_on_floor() and home_y == INF:
+		home_y = global_position.y
+	if global_position.y > home_y + 600.0:      # knocked into a pit: that is the end of its hunting
+		drive_off()
+		return
+	_hunt(delta)
+	_footing()
+
+
+func _hunt(delta: float) -> void:
 	lunge_cd -= delta
 	worrying -= delta
 	var dx := to_player()
@@ -47,7 +87,7 @@ func _ai(delta: float) -> void:
 	elif absf(dx) < 330.0 and dy < 130.0:
 		face_player()
 		if is_on_floor():
-			if absf(dx) < 110.0 and lunge_cd <= 0.0:
+			if absf(dx) < 110.0 and lunge_cd <= 0.0 and _ground_ahead(dir, 70.0) and _ground_ahead(dir, 120.0):
 				lunge_cd = 1.5
 				Game.sfx("jackal_snarl", -5.0)
 				velocity = Vector2(dir * 310.0, -250.0)

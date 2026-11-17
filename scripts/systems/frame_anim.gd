@@ -8,20 +8,70 @@ const RES := 2.0      # frame images hold this many pixels per game unit
 static var _cache := {}
 
 
-static func frames(who: String, anim: String) -> Array:
-	var id := who + "/" + anim
-	if _cache.has(id):
-		return _cache[id]
-	var arr: Array = []
+static var _pending: Array = []      # sets being read in the background: [id, [paths]]
+
+
+static func _paths(who: String, anim: String) -> Array:
+	var out: Array = []
 	var i := 0
 	while true:
 		var path := "res://art/%s/anim/%s_%02d.png" % [who, anim, i]
 		if not ResourceLoader.exists(path):
 			break
-		arr.append(load(path))
+		out.append(path)
 		i += 1
+	return out
+
+
+static func frames(who: String, anim: String) -> Array:
+	var id := who + "/" + anim
+	if _cache.has(id):
+		return _cache[id]
+	var arr: Array = []
+	for path in _paths(who, anim):
+		arr.append(load(path))
 	_cache[id] = arr
 	return arr
+
+
+## Reads sets in from disk on a background thread, so the first step, leap or blow of a session does not stall
+## while forty pictures are read. Asked for early; `pump` hands each set over when it is ready.
+static func warm(who: String, sets: Array) -> void:
+	for anim in sets:
+		var id: String = who + "/" + str(anim)
+		if _cache.has(id):
+			continue
+		var paths := _paths(who, str(anim))
+		for path in paths:
+			ResourceLoader.load_threaded_request(path)
+		_pending.append([id, paths])
+
+
+## Call every frame: takes over the sets the background thread has finished. Returns true while any are left.
+static func pump() -> bool:
+	while not _pending.is_empty():
+		var e: Array = _pending[0]
+		for path in e[1]:
+			if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				return true
+		var arr: Array = []
+		for path in e[1]:
+			if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+				arr.append(ResourceLoader.load_threaded_get(path))
+			else:
+				arr.append(load(path))
+		if not _cache.has(e[0]):
+			_cache[e[0]] = arr
+		_pending.pop_front()
+	return false
+
+
+## Lets go of every set except those of the figures named, so the pictures of a place left behind (the bear,
+## the lion, the prophet) do not stay in memory for the rest of the session. Sets still being read are left alone.
+static func keep_only(whos: Array) -> void:
+	for id in _cache.keys():
+		if not str(id).get_slice("/", 0) in whos:
+			_cache.erase(id)
 
 
 ## Draws a frame with its ground point (centre of the feet) at the origin.

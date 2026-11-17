@@ -148,6 +148,8 @@ func _at_cave() -> void:
 func _upper_wadi() -> void:
 	if Game.backdrop:
 		return
+	# where the trail runs under the ledges a leopard lies above it: a flock being brought up the wadi is the prey it waits for
+	add_beast("leopard", 5240.0, {"perches": [[5240.0, 130.0, 150.0], [5460.0, 150.0, 150.0]]})
 	# the last break: a slab the floods left on a perch comes down across it
 	b5 = add_boulder(Vector2(5650.0, 232.0), Rect2(5716.0, 388.0, 200.0, 60.0))
 	add_hint(5560.0, 230.0, "The bed is broken ahead.  Look up")

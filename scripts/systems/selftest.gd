@@ -75,6 +75,7 @@ func smoke(m) -> void:
 			"section4": await _s4(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
+	await _beasts(m)
 	var missing := 0
 	for i in Game.sections().size():
 		if not m.map.data.get("places", {}).has(m.map._key(i)):
@@ -103,6 +104,161 @@ func smoke(m) -> void:
 	Game.save["lang"] = "en"
 	print("SMOKE %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)
+
+
+## The wolf, the leopard, the viper and the hyena, each on the flat ground of the watch with a sheep or two. In the
+## tests they wear the jackal's pictures (Game.fast); it is what they do that is judged.
+func _beasts(m) -> void:
+	Game.backdrop = false
+	Game.cinematic = false
+	await m.load_level(_index("watch"), 0)
+	var lv = m.level
+	await _frames(5)
+	lv.player.hp = 99
+	await _wolf(lv)
+	await _leopard(lv)
+	await _viper(lv)
+	await _hyena(lv)
+
+
+## Waits until cond is true, for at most `frames` frames.
+func _until(cond: Callable, frames: int) -> bool:
+	for i in frames:
+		if cond.call():
+			return true
+		await tree.physics_frame
+	return cond.call()
+
+
+## Sends away what the level had of its own, so a beast has only what the test gives it.
+func _bare(lv, at: float) -> void:
+	for n in tree.get_nodes_in_group("sheep") + tree.get_nodes_in_group("enemies"):
+		n.queue_free()
+	lv.followers.clear()
+	await _frames(2)
+	lv.player.invuln = 0.0
+	lv.player.facing = 1
+	await _goto(at)
+
+
+func _wolf(lv) -> void:
+	var p = lv.player
+	await _bare(lv, 400.0)
+	var w = lv.add_beast("wolf", 1000.0, {"edge_x": lv.width})
+	# with its own pictures cut he is drawn from them; until then the tests borrow the jackal's
+	_check(w != null and w.stand_in == Game.FA._paths("wolf", "walk").is_empty(), "a wolf is made for the tests, in its own pictures when they exist")
+	w.cool = 99.0
+	await _frames(90)
+	_check(absf(w.to_player()) > 190.0 and not w.touch_on and w.state == "circle", "the wolf keeps outside his reach")
+	w.hit(1, 1, "stone")
+	_check(w.state == "flee" and not w.fleeing, "a stone while it circles sends it off for a while")
+	w.state = "circle"
+	w.hp = 3
+	var near = lv.add_sheep(440.0)
+	near.gathered = true
+	lv.followers.append(near)
+	lv.sheep_count += 1
+	var far = lv.add_sheep(1100.0)
+	w.cool = 0.0
+	_check(await _until(func() -> bool: return w.carry != null, 300), "the wolf dashes in and snatches the sheep that is far from him")
+	_check(not near.gathered and near.bolt > 0.0 or near.global_position.x < 440.0, "its dash scatters the flock")
+	await _frames(40)
+	_check(w.carry == far and far.carried and w.state == "drag", "it drags the sheep off, slowly")
+	w.hit(1, -1, "staff")
+	_check(w.carry == null and not far.carried and w.state == "flee", "a blow makes it drop the sheep and run")
+	await _frames(4)
+	w.state = "circle"
+	w.hp = 3
+	w.cool = 0.0
+	w.global_position = lv.on_ground(1000.0)
+	w.velocity = Vector2.ZERO
+	w.modulate.a = 1.0
+	var lost0: int = lv.sheep_lost
+	await _until(func() -> bool: return lv.sheep_lost > lost0, 1100)
+	_check(lv.sheep_lost == lost0 + 1, "carried far enough, the sheep is lost (sheep_taken)")
+	w.hp = 1
+	w.hit(1, 1, "staff")
+	_check(w.fleeing, "driven off for good at no strength left")
+	p.hp = 99
+
+
+func _leopard(lv) -> void:
+	var p = lv.player
+	await _bare(lv, 900.0)
+	var l = lv.add_beast("leopard", 1000.0, {"perches": [[1000.0, 130.0, 160.0], [1500.0, 130.0, 160.0]]})
+	_check(l != null and l.state == "lurk" and l.global_position.y < 470.0, "the leopard lies on its rock")
+	l.st = 0.0
+	_check(await _until(func() -> bool: return l.state == "spring", 90), "it springs at a man passing beneath")
+	await _until(func() -> bool: return l.state == "land", 90)
+	_check(p.hp == 97, "a spring that is not dodged costs two hearts")
+	_check(await _until(func() -> bool: return l.state == "lurk" and not l.arcing and l.global_position.distance_to(l.perch) < 20.0, 600), "after the spring it bounds back to a perch and lurks again")
+	await _goto(2400.0)
+	p.invuln = 0.0
+	l.hp = 6
+	l.hit(1, 1, "stone")
+	_check(await _until(func() -> bool: return l.state == "dazed" and not l.arcing, 60), "a stone while it lurks flushes it down, dazed")
+	var h0: int = l.hp
+	l.hit(1, -1, "staff")
+	_check(l.hp < h0, "in the open the staff lands")
+	p.hp = 99
+
+
+func _viper(lv) -> void:
+	var p = lv.player
+	await _bare(lv, 1200.0)
+	var v = lv.add_beast("viper", 1290.0)
+	_check(v != null and v.state == "coil", "the viper lies coiled")
+	_check(await _until(func() -> bool: return v.state == "rear", 60), "it rears when he comes near")
+	_check(await _until(func() -> bool: return v.state == "strike", 90), "and then strikes")
+	await _until(func() -> bool: return v.state == "spent", 30)
+	_check(p.hp == 98 and v.touch_kind == "low", "the strike is low, and costs a heart")
+	await _until(func() -> bool: return v.state == "coil", 120)
+	v.hit(1, 1, "staff")
+	_check(not v.fleeing, "the staff does not find it unless it is spent")
+	p.position = lv.on_ground(1200.0)
+	p.velocity = Vector2.ZERO
+	p.invuln = 0.0
+	await _until(func() -> bool: return v.state == "rear", 60)
+	await _until(func() -> bool: return v.state == "strike", 90)
+	p.hop_t = p.HOP_TIME
+	await _until(func() -> bool: return v.state == "spent", 30)
+	_check(p.hp == 98 and p.opening_t > 0.0, "a skip back avoids the strike")
+	v.hit(1, 1, "staff")
+	_check(v.fleeing, "one blow of the staff ends it while it is spent")
+	var v2 = lv.add_beast("viper", 1700.0)
+	v2.hit(1, 1, "stone")
+	_check(v2.fleeing, "a stone from afar ends it")
+	p.hp = 99
+
+
+func _hyena(lv) -> void:
+	var p = lv.player
+	await _bare(lv, 500.0)
+	lv.add_sheep(100.0)
+	var h = lv.add_beast("hyena", 830.0)
+	_check(h != null and h.state == "slink", "a hyena comes out of the dark")
+	p.facing = 1
+	var x0: float = h.global_position.x
+	await _frames(60)
+	_check(absf(h.global_position.x - x0) < 10.0, "faced from a distance, it holds still")
+	p.facing = -1
+	await _frames(60)
+	_check(h.global_position.x < x0 - 40.0, "with his back turned it creeps toward the farthest sheep")
+	p.facing = 1
+	h.global_position = lv.on_ground(p.global_position.x + 200.0)
+	x0 = h.global_position.x
+	await _frames(40)
+	_check(h.global_position.x > x0 + 20.0, "faced within reach, it cringes and backs away")
+	for k in 3:
+		await _until(func() -> bool: return h.state == "slink" or h.fleeing, 900)
+		h.hit(1, 1, "staff")
+	_check(h.sends == 3 and h.fleeing, "sent off three times, it gives up for good")
+	lv.add_beast("hyena", 150.0)
+	p.facing = 1      # his back to it, and the sheep beyond it
+	var lost0: int = lv.sheep_lost
+	await _until(func() -> bool: return lv.sheep_lost > lost0, 600)
+	_check(lv.sheep_lost == lost0 + 1, "left at a sheep, it takes it")
+	p.hp = 99
 
 
 func _s1(lv) -> void:
@@ -146,13 +302,16 @@ func _s1(lv) -> void:
 	Game.pad = false
 	_check(Game.keys("J  staff") == "J  staff", "and with the keyboard they name keys")
 	Game.touch = true
+	var was_lang := Game.lang()
+	Game.save["lang"] = "en"
 	var tk := [Game.keys("J  staff"), Game.keys("Enter:  go there"), Game.keys("Sling:  hold K, then let go"),
 			Game.keys("Two have broken from the fold.  Call them (Q), or go to them"), Game.keys("A D  move"),
 			Game.keys("A nervous ewe bolts if he runs at her.  Walk up (Shift), or call her (Q)")]
-	_check(tk == ["Staff  staff", "Jump:  go there", "Sling:  hold Sling, then let go",
+	_check(tk == ["Staff  staff", "Tap:  go there", "Sling:  hold Sling, then let go",
 			"Two have broken from the fold.  Call them (Call), or go to them", "Stick  move",
 			"A nervous ewe bolts if he runs at her.  Walk up (a gentle push of the stick), or call her (Call)"],
 			"on a touchscreen the prompts name the buttons on screen %s" % [tk])
+	Game.save["lang"] = was_lang
 	# a thumb on the on-screen buttons and stick works the same actions as the keys
 	var lv_paused := tree.paused
 	var tap := func(i: int, at: Vector2, down: bool) -> void:
@@ -160,18 +319,18 @@ func _s1(lv) -> void:
 		e.index = i
 		e.position = at
 		e.pressed = down
-		Input.parse_input_event(e)
-	tap.call(0, Vector2(1172, 616), true)
+		main.get_viewport().push_input(e, true)
+	tap.call(0, Vector2(1206, 648), true)
 	await _frames(2)
 	var jump_held := Input.is_action_pressed("jump")
 	tap.call(1, Vector2(200, 600), true)
 	var dr := InputEventScreenDrag.new()
 	dr.index = 1
 	dr.position = Vector2(280, 600)
-	Input.parse_input_event(dr)
+	main.get_viewport().push_input(dr, true)
 	await _frames(2)
 	var runs := Input.is_action_pressed("move_right") and not Input.is_action_pressed("walk")
-	tap.call(0, Vector2(1172, 616), false)
+	tap.call(0, Vector2(1206, 648), false)
 	tap.call(1, Vector2(280, 600), false)
 	await _frames(2)
 	_check(jump_held and runs and not Input.is_action_pressed("jump") and not Input.is_action_pressed("move_right") and lv_paused == tree.paused,
@@ -216,8 +375,64 @@ func _s1(lv) -> void:
 	for k in 150:
 		await tree.physics_frame
 	_check(bait.threat > 0.15, "a jackal goes for a sheep in his sight and the ring begins to close (%.2f)" % bait.threat)
-	jk.queue_free()
 	bait.queue_free()
+	# its patrol ground is where it lives, not a fence: it follows him off it
+	await _frames(2)
+	await _goto(690.0)
+	lv.player.invuln = 30.0
+	var far := 0.0
+	for k in 200:
+		await tree.physics_frame
+		far = maxf(far, jk.global_position.x)
+	_check(far > 660.0, "a jackal follows him off its own ground (to %.0f, its ground ends at 560)" % far)
+	await _goto(3000.0)
+	for k in 420:
+		await tree.physics_frame
+	_check(jk.global_position.x < 575.0, "and goes home when he is gone (%.0f)" % jk.global_position.x)
+	jk.queue_free()
+	# the round blow strikes on both sides at once; held and let go, the staff goes right round him
+	var gifts_then: Array = Game.save.get("gifts", []).duplicate()
+	if not Game.has("hand"):
+		Game.save["gifts"] = gifts_then + ["hand"]
+	await _goto(1500.0)
+	var px: float = lv.player.global_position.x
+	var ja = lv.add_jackal(px - 70.0, px - 200.0, px + 200.0)
+	var jb = lv.add_jackal(px + 70.0, px - 200.0, px + 200.0)
+	ja.hp = 50
+	jb.hp = 50
+	ja.held = 5.0
+	jb.held = 5.0
+	await _frames(20)
+	Input.action_press("attack")
+	await _frames(45)
+	Input.action_release("attack")
+	await _frames(3)
+	_check(lv.player.spin_t > 0.0, "the staff held back and let go goes right round him")
+	await _frames(40)
+	_check(ja.hp < 50 and jb.hp < 49, "the round blow strikes the one behind as well as the one in front (%d, %d)" % [ja.hp, jb.hp])
+	# struck from a leap, he comes down on them
+	ja.hp = 50
+	jb.hp = 50
+	ja.global_position.x = px - 60.0
+	jb.global_position.x = px + 60.0
+	ja.held = 5.0
+	jb.held = 5.0
+	lv.player.global_position.x = px
+	await _frames(30)
+	Input.action_press("jump")
+	await _frames(2)
+	Input.action_release("jump")
+	await _frames(16)
+	Input.action_press("attack")
+	await _frames(2)
+	Input.action_release("attack")
+	_check(lv.player.plunge == 1, "a blow struck from a leap brings him down staff first")
+	await _frames(60)
+	_check(lv.player.plunge == 0 and ja.hp < 50 and jb.hp < 50, "and it lands on both sides of him (%d, %d)" % [ja.hp, jb.hp])
+	ja.queue_free()
+	jb.queue_free()
+	Game.save["gifts"] = gifts_then
+	lv.player.invuln = 0.0
 	await _frames(4)
 	await _goto(main.level.fold_x)
 	_check(not lv.done, "fold stays shut while sheep are missing")
@@ -791,6 +1006,11 @@ func placeshots(m, dir: String) -> void:
 		for spot in OS.get_environment("SPOTS").split(","):
 			var nm := spot.get_slice(":", 0)
 			var sx := float(spot.get_slice(":", 1))
+			if nm == "menu":      # SPOTS=menu:0 : the main menu as it opens
+				m.show_menu()
+				await _frames(60)
+				await _snap(dir, "menu")
+				continue
 			await m.load_level(_index(nm), 0)
 			Game.cinematic = false
 			m.level.player.global_position = m.level.on_ground(sx - 120.0)
@@ -802,15 +1022,34 @@ func placeshots(m, dir: String) -> void:
 				m.level.ripple(wet, m.level.player.global_position.x + 8.0)
 				await _frames(12)
 				m.level.ripple(wet, m.level.player.global_position.x - 30.0)
+			if OS.has_environment("BEASTS"):      # BEASTS=wolf:160,hyena:-260 : those beasts stand that far from him (+ is ahead)
+				for bs in OS.get_environment("BEASTS").split(","):
+					var bb = m.level.add_beast(bs.get_slice(":", 0), m.level.player.global_position.x + float(bs.get_slice(":", 1)))
+					if bb != null and OS.has_environment("BEASTSTATE"):      # BEASTSTATE=lunge : set a state for the picture
+						bb.state = OS.get_environment("BEASTSTATE")
+			if OS.has_environment("FALL"):      # FALL=40 : bring the boulders down and take the picture that many frames in
+				for b in m.level.get_children():
+					if b.has_method("fall") and absf(b.position.x - sx) < 500.0:
+						b.fall(1)
+				await _frames(int(OS.get_environment("FALL")))
 			if OS.get_environment("POSE") == "shove":      # carrying the lamb with his weight against something heavy
 				m.level.player.act = "carry"
 				m.level.player.facing = 1
 				for k in 60:
 					m.level.push_t = 0.18
 					await _frames(1)
+			elif OS.get_environment("POSE") != "" and m.level.has_method("pose"):      # POSE=lever etc: the level sets up a moment of work
+				var hold: int = m.level.pose(OS.get_environment("POSE"))
+				await _frames(30)
+				if hold > 0:
+					Input.action_press("grab")
+					for k in hold:      # a line of narration may start here: the picture is of the work, not the talk
+						Game.cinematic = false
+						await _frames(1)
 			else:
 				await _frames(50 if wet == null else 22)
-			await _snap(dir, "spot_%s_%d" % [nm, int(sx)])
+			await _snap(dir, "spot_%s_%d%s" % [nm, int(sx), ("_" + OS.get_environment("POSE")) if OS.get_environment("POSE") != "" else ""])
+			Input.action_release("grab")
 		print("PLACESHOTS done")
 		tree.quit()
 		return

@@ -49,7 +49,7 @@ func _ready() -> void:
 	under = _label(26, Rect2(0, 392, 1280, 36), Color(1.0, 0.82, 0.55))
 	hint = _label(17, Rect2(0, 20, 1256, 24), Color(1, 1, 1, 0.7))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hint.text = "Enter: skip"
+	hint.text = Game.keys("Enter: skip")
 	title.text = "DAVID"
 	under.text = "The Shepherd King"
 

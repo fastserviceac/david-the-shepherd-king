@@ -32,6 +32,8 @@ func _ready() -> void:
 
 	bar_top = _rect(Rect2(0, -60, 1280, 60), Color(0.02, 0.02, 0.04))
 	bar_bot = _rect(Rect2(0, 720, 1280, 190), Color(0.02, 0.02, 0.04))
+	bar_top.visible = false      # no longer used, and on a screen taller than 16:9 they would show as black bands
+	bar_bot.visible = false
 
 	# Subtitles the way games show them: a small block low on the screen with a soft backing fitted to the words,
 	# so they inform without covering the picture. The verse reference sits apart, in the bottom right corner.
@@ -73,12 +75,14 @@ func _ready() -> void:
 	card_sub = _card(22, 372, Color(1.0, 0.95, 0.85, 0.8))
 
 	fade = _rect(Rect2(0, 0, 1280, 720), Color(0.02, 0.02, 0.04, 0.0))
+	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)      # the whole screen, whatever its shape
 
 	voice = AudioStreamPlayer.new()
 	add_child(voice)
 
 	# close-up shots sit under the letterbox bars and the text
 	dim = _rect(Rect2(0, 0, 1280, 720), Color(0.02, 0.01, 0.05, 0.0))
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shot = TextureRect.new()
 	shot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shot.modulate.a = 0.0

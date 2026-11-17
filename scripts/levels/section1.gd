@@ -125,6 +125,7 @@ func _beyond_the_meadow() -> void:
 		Game.sfx("sheep", -5.0, 0.1)
 		show_tip("She is out.  Count her in with the rest"))
 	add_hint(4700.0, 170.0, "A ewe is caught in the thorns ahead")
+	add_beast("viper", 5460.0)      # an adder in the path past the thorn: the warm stones of a wall are where it lies
 	# the terraces: one has climbed for the last of the green, and a smooth stone lies on the top step
 	add_sheep(0.0, Vector2(5725.0, platforms[8].position.y))
 	add_stone("s1_terrace", Vector2(5950.0, platforms[9].position.y))

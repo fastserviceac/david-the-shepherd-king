@@ -24,6 +24,9 @@ var pour_tasks: Array = []
 var carrying := false
 var has_bucket := false     # the bucket and rope are kept by the terraces, out of the dust of the well-head
 var bucket_prop: Sprite2D
+var bucket_home: Vector2            # where the bucket stood before he took it up
+var take_task: Dictionary
+var bucket_down: Sprite2D           # set down at the well-head once all have drunk
 var drinks: Array = [0, 0]          # mouthfuls left in each trough
 var waters: Array = []              # the water sprite lying in each trough
 var water_shown: Array = [0, 0]
@@ -131,16 +134,25 @@ func _populate() -> void:
 	fulcrum["moved"] = _fulcrum_moved
 	lever_task = add_task(2205.0, "lever the stone with the staff", 1.1, _lever, 44.0)
 	lever_task["on"] = false
-	add_painter(Vector2.ZERO, 5, func(ci: CanvasItem) -> void:
-		if task_now != lever_task or float(lever_task["t"]) <= 0.0 or not is_instance_valid(player):
+	var char_tint: Color = pal["char"]
+	# his staff, set under the stone: the crook end in his hands, the foot under the stone
+	add_painter(Vector2.ZERO, 6, func(ci: CanvasItem) -> void:
+		if task_now == null or float(task_now["t"]) <= 0.0 or not is_instance_valid(player):
 			return
-		var u := clampf(float(lever_task["t"]) / float(lever_task["hold"]), 0.0, 1.0)
-		var block: StaticBody2D = fulcrum["body"]
-		var pivot := Vector2(block.global_position.x + 6.0, block.global_position.y - 2.0)       # the top of the block
-		var hands: Vector2 = player.global_position + Vector2(player.facing * 16.0, -46.0 + 30.0 * u)   # he bears down
-		var tip: Vector2 = pivot + (pivot - hands).normalized() * 46.0                                  # the far end, under the stone
-		ci.draw_line(hands + Vector2(0, 2), tip + Vector2(0, 2), Color(0.05, 0.03, 0.02, 0.5), 7.0, true)
-		ci.draw_line(hands, tip, Color(0.42, 0.28, 0.16), 5.0, true), true)
+		if task_now != lever_task and task_now != back_task:
+			return
+		var u := clampf(float(task_now["t"]) / float(task_now["hold"]), 0.0, 1.0)
+		var hands: Vector2 = player.global_position + Vector2(player.facing * 16.0, -50.0 + 30.0 * u)   # he bears down
+		var tip: Vector2
+		if task_now == lever_task and is_instance_valid(fulcrum["body"]):
+			var block: StaticBody2D = fulcrum["body"]
+			var pivot := Vector2(block.global_position.x + 6.0, block.global_position.y - 2.0)       # the top of the block
+			tip = pivot + (pivot - hands).normalized() * 50.0                                       # the far end, under the stone
+		else:          # closing: the foot of the staff dug in under the stone's near side
+			var sx: float = stone["body"].global_position.x
+			var side := signf(player.global_position.x - sx)
+			tip = on_ground(sx + side * 24.0) + Vector2(0, -4.0 - 10.0 * u)
+		_staff(ci, hands, tip, char_tint), true)
 	# he levers it home from the far side, so the stone rolls away from him and never onto him
 	back_task = add_task(OPEN_X + 82.0, "lever the stone back over the well", 1.1, _close_well, 36.0)
 	back_task["on"] = false
@@ -161,7 +173,8 @@ func _populate() -> void:
 		bucket_prop.scale = Vector2.ONE * (46.0 / bucket_prop.texture.get_width())
 		add_glow(on_ground(BUCKET_X) + Vector2(0, -14), Color(1.0, 0.85, 0.6, 0.6), 150.0)
 		add_hint(BUCKET_X, 150.0, "The bucket and rope.  He will need them at the well")
-		add_task(BUCKET_X, "take the bucket and rope", 0.5, func() -> void:
+		bucket_home = bucket_prop.position
+		take_task = add_task(BUCKET_X, "take the bucket and rope", 0.5, func() -> void:
 			has_bucket = true
 			bucket_prop.visible = false
 			Game.sfx("gather", -8.0, 0.0)
@@ -179,24 +192,35 @@ func _populate() -> void:
 		tk["hold"] = 0.9
 		pour_tasks.append(tk)
 
-	var char_tint: Color = pal["char"]
 	var bucket: Texture2D = load("res://art/props/bucket.png")      # the leather bucket from the well painting
-	# the bucket: carried low at his side by its strap, in the far hand, so his body passes in front of it
+	# the bucket: carried low at his side by its strap, in the far hand, so his body passes in front of it,
+	# with the rope coiled over the same wrist. Empty from the watchfire to the well, full from the well to the troughs.
 	add_painter(Vector2.ZERO, 4, func(ci: CanvasItem) -> void:
-		if not carrying or (task_now != null and float(task_now["t"]) > 0.0):      # while he tips it, the bucket is in his hands, in his own frames
+		if not has_bucket or watered or not is_instance_valid(player) or Game.backdrop:
+			return
+		var busy: bool = task_now != null and float(task_now["t"]) > 0.0
+		if busy and task_now.has("anim"):      # drawing and tipping: the bucket is in his hands, in his own frames
+			return
+		var w := 25.0
+		var h := w * bucket.get_height() / bucket.get_width()
+		if busy and (task_now == lever_task or task_now == back_task):      # both hands on the staff: the bucket stands at his heel
+			var at := on_ground(player.global_position.x - player.facing * 30.0)
+			ci.draw_texture_rect(bucket, Rect2(at.x - w * 0.5, at.y - h + 2.0, w, h), false, char_tint)
+			_coil(ci, at + Vector2(-player.facing * 13.0, -4.0), Vector2(1.0, 0.45), char_tint)
 			return
 		var walking := clampf(absf(player.velocity.x) / 120.0, 0.0, 1.0)
 		var swing := sin(Time.get_ticks_msec() * 0.009) * (0.12 + 0.9 * walking)
 		var hand: Vector2 = player.global_position + Vector2(player.facing * (7.0 + swing * 3.0), -47.0)
-		var w := 25.0
-		var h := w * bucket.get_height() / bucket.get_width()
 		var top := hand + Vector2(swing * 2.5, 9.0)
+		_coil(ci, hand + Vector2(-player.facing * 3.0, 9.0), Vector2(0.62, 1.0), char_tint)      # behind the bucket
 		ci.draw_line(hand, top + Vector2(-5, 3), Color(0.3, 0.22, 0.15) * char_tint, 1.8, true)
 		ci.draw_line(hand, top + Vector2(5, 3), Color(0.3, 0.22, 0.15) * char_tint, 1.8, true)
 		ci.draw_set_transform(top, swing * 0.12, Vector2.ONE)
 		ci.draw_texture_rect(bucket, Rect2(-w * 0.5, 0.0, w, h), false, char_tint)
+		if carrying:      # the water standing in it
+			ci.draw_line(Vector2(-w * 0.36, 3.5), Vector2(w * 0.36, 3.5), Color(0.55, 0.72, 0.92, 0.9) * char_tint.lerp(Color(1, 1, 1), 0.5), 2.8, true)
 		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		if walking > 0.5 and int(Time.get_ticks_msec() / 260) % 5 == 0:      # it slops a little when he hurries
+		if carrying and walking > 0.5 and int(Time.get_ticks_msec() / 260) % 5 == 0:      # it slops a little when he hurries
 			ci.draw_circle(top + Vector2(player.facing * 6.0, 2.0), 1.5, Color(0.75, 0.86, 1.0, 0.6)), true)
 	# a mark over each of his own that has not yet drunk
 	add_painter(Vector2.ZERO, 6, func(ci: CanvasItem) -> void:
@@ -250,6 +274,61 @@ func _well_prop(at: Vector2) -> void:
 		ci.draw_texture_rect(wall, Rect2(-w * 0.5, -h, w, h + 4.0), false, tint)
 		# the rope over the rim
 		ci.draw_polyline(PackedVector2Array([Vector2(-20, -h - 2), Vector2(-34, -h + 6), Vector2(-40, -h + 30), Vector2(-52, -6)]), Color(0.5, 0.4, 0.26) * tint, 3.0, true))
+
+
+## His staff as a lever: a long, round, slightly crooked rod of olive wood, the crook curling over his hands.
+## Drawn to match the staff in his own hand (player.gd _draw_staff): the same wood, a lit edge, a dark under-side.
+func _staff(ci: CanvasItem, hands: Vector2, tip: Vector2, tint: Color) -> void:
+	var d := (tip - hands).normalized()
+	var n := Vector2(-d.y, d.x)
+	if n.y > 0.0:
+		n = -n       # n points up, to the light
+	var butt := hands - d * 20.0
+	var length := butt.distance_to(tip)
+	var pts := PackedVector2Array()
+	for i in 13:          # a gentle bow along its length, and a kink where a branch was cut
+		var f := i / 12.0
+		var bow := sin(f * PI) * 2.6 + (1.2 if f > 0.55 and f < 0.7 else 0.0)
+		pts.append(butt + d * length * f + n * bow)
+	var wood := Color(0.34, 0.21, 0.11) * tint
+	var dark := Color(0.15, 0.09, 0.05) * tint
+	var lit := Color(0.55, 0.38, 0.22) * tint
+	var shade := PackedVector2Array()
+	for p in pts:
+		shade.append(p - n * 1.2 + Vector2(0, 1.5))
+	ci.draw_polyline(shade, Color(0.04, 0.03, 0.02, 0.45), 7.5, true)
+	ci.draw_polyline(pts, dark, 6.6, true)
+	ci.draw_polyline(pts, wood, 4.6, true)
+	var hi := PackedVector2Array()
+	for k in range(1, 12):
+		hi.append(pts[k] + n * 1.4)
+	ci.draw_polyline(hi, lit, 1.4, true)
+	# round ends: a worn foot under the stone, the crook at the top end
+	ci.draw_circle(tip, 3.2, dark)
+	ci.draw_circle(tip, 2.2, wood)
+	var a0 := atan2(-n.y, -n.x)
+	var c := butt + n * 5.5
+	var crook := PackedVector2Array()
+	for k in 11:      # the hook curls up and back over his hands
+		var a := a0 - (PI * 1.15) * (k / 10.0) * signf(d.cross(n))
+		crook.append(c + Vector2(cos(a), sin(a)) * 5.5)
+	ci.draw_polyline(crook, dark, 6.2, true)
+	ci.draw_polyline(crook, wood, 4.2, true)
+	ci.draw_circle(crook[crook.size() - 1], 2.0, wood)
+	for f in [0.33, 0.62]:      # knots in the wood
+		var kp: Vector2 = butt + d * length * f + n * sin(f * PI) * 2.6
+		ci.draw_circle(kp, 1.3, dark)
+
+
+## A coil of rope, hung from a wrist or lying in the dust.
+func _coil(ci: CanvasItem, at: Vector2, squash: Vector2, tint: Color) -> void:
+	var rope := Color(0.6, 0.48, 0.3) * tint
+	var dark := Color(0.32, 0.24, 0.15) * tint
+	for k in 3:
+		ci.draw_set_transform(at + Vector2(k * 1.2 - 1.2, k * 1.0), 0.15 * (k - 1), squash)
+		ci.draw_arc(Vector2.ZERO, 8.0 - k * 0.6, 0.0, TAU, 20, dark, 2.6, true)
+		ci.draw_arc(Vector2.ZERO, 8.0 - k * 0.6, 0.0, TAU, 20, rope, 1.6, true)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _hint(x: float, up: float, text: String) -> void:
@@ -381,6 +460,11 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not is_instance_valid(player) or Game.backdrop:
 		return
+	if not has_bucket and is_instance_valid(bucket_prop) and not take_task.is_empty():      # as he bends to it, it comes up into his hand
+		var u := smoothstep(0.35, 1.0, float(take_task["t"]) / float(take_task["hold"])) if task_now == take_task else 0.0
+		var held: Vector2 = player.global_position + Vector2(player.facing * 7.0, -6.0)      # where the bottom of the carried bucket hangs
+		bucket_prop.position = bucket_home.lerp(held, u)
+		bucket_prop.scale = Vector2.ONE * lerpf(46.0, 25.0, u) / bucket_prop.texture.get_width()
 	if not has_bucket and absf(player.global_position.x - BUCKET_X) < 44.0:      # he takes it up as he passes: no key to find
 		has_bucket = true
 		if is_instance_valid(bucket_prop):
@@ -400,6 +484,8 @@ func _process(delta: float) -> void:
 	if own[LAMB]["state"] == "gone" and lamb.visible and lamb.global_position.x > 3700.0:
 		lamb.visible = false          # gone, with nobody watching
 	if counting:
+		if is_instance_valid(player):      # he stands at the gate with his hand out: nothing reaches him until the count is told
+			player.invuln = maxf(player.invuln, 0.3)
 		_count_step()
 		return
 	if not opened or watered or Game.cinematic:
@@ -512,6 +598,7 @@ func _jackal_comes() -> void:
 func _all_watered() -> void:
 	watered = true
 	carrying = false
+	_set_bucket_down()
 	player.calm = false
 	draw_task["on"] = false
 	for tk in pour_tasks:
@@ -519,6 +606,55 @@ func _all_watered() -> void:
 	back_task["on"] = true
 	_hint(OPEN_X + 82.0, 250.0, "Put the stone back over the well")
 	await say(["ps23_2", "n_well_back"])
+
+
+## His work at the troughs done, he sets the bucket and rope down at the well-head for the next man.
+func _set_bucket_down() -> void:
+	if is_instance_valid(bucket_down):
+		return
+	bucket_down = add_sprite("res://art/props/bucket.png", on_ground(WELL_X - 110.0) + Vector2(0, 4), 1.0, 2, pal.get("char", Color(1, 1, 1)))
+	bucket_down.scale = Vector2.ONE * (34.0 / bucket_down.texture.get_width())
+	add_painter(Vector2.ZERO, 2, func(ci: CanvasItem) -> void:
+		_coil(ci, on_ground(WELL_X - 86.0) + Vector2(0, -3), Vector2(1.0, 0.45), pal["char"]))
+
+
+## For screenshots (selftest placeshots, POSE=...): set the well up for one moment of the work.
+## Returns how many frames the work key is to be held before the picture is taken.
+func pose(p: String) -> int:
+	if p == "take":
+		return 22
+	has_bucket = true
+	if is_instance_valid(bucket_prop):
+		bucket_prop.visible = false
+	match p:
+		"carry":
+			return 0
+		"full":
+			carrying = true
+			return 0
+		"lever":
+			player.facing = 1
+			fulcrum["body"].position.x += 80.0
+			_fulcrum_moved(2230.0)
+			return 40
+	# the rest are at the open well
+	opened = true
+	stone["on"] = false
+	lever_task["on"] = false
+	stone["body"].position.x = OPEN_X
+	stone["sp"].rotation = (OPEN_X - WELL_X) / 46.0
+	match p:
+		"draw":
+			player.facing = 1
+			draw_task["on"] = true
+			return 45
+		"close":
+			player.facing = -1
+			watered = true
+			_set_bucket_down()
+			back_task["on"] = true
+			return 40
+	return 0
 
 
 func _close_well() -> void:

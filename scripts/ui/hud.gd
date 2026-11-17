@@ -311,6 +311,7 @@ func _journal(a: float) -> void:
 	draw_rect(Rect2(50, 46, 1180, 628), Color(0.03, 0.03, 0.07, 0.9 * a))
 	draw_rect(Rect2(50, 46, 1180, 628), Color(1.0, 0.85, 0.5, 0.25 * a), false, 1.5)
 	draw_string(f, Vector2(86, 94), Game.t("The shepherd's journal"), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, gold)
+	draw_string(f, Vector2(794, 94), Game.t("Deeds  %d of %d") % [Game.deeds_done(), Game.DEEDS.size()], HORIZONTAL_ALIGNMENT_RIGHT, 400, 18, gold)
 	draw_line(Vector2(86, 108), Vector2(1194, 108), Color(1.0, 0.85, 0.5, 0.3 * a), 1.0)
 
 	# --- where he is, what he is doing there, and why

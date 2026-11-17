@@ -183,6 +183,7 @@ func _back_passages() -> void:
 		searched = true
 		show_tip("Old bones, and wool gone grey.  Nothing new.  The lamb was not brought here", 6.5))
 	add_hint(5000.0, 150.0, "Its larder.  He has to look")
+	add_beast("viper", 5700.0)      # a snake in the cold dark of the passage, where the bear's larder spills its bones
 	# the pocket under the roof
 	add_stone("den_roof", Vector2(6130.0, platforms[4].position.y))
 	# the scavengers

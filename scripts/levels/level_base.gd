@@ -9,6 +9,11 @@ const Sheep = preload("res://scripts/world/sheep.gd")
 const Bush = preload("res://scripts/world/bush.gd")
 const Target = preload("res://scripts/world/target.gd")
 const Jackal = preload("res://scripts/enemies/jackal.gd")
+const BEASTS := {
+	"wolf": preload("res://scripts/enemies/wolf.gd"), "leopard": preload("res://scripts/enemies/leopard.gd"),
+	"viper": preload("res://scripts/enemies/viper.gd"), "hyena": preload("res://scripts/enemies/hyena.gd"),
+}
+const BEAST_FIRST := {"wolf": "walk", "leopard": "lurk", "viper": "coil", "hyena": "slink"}
 const SkyShader = preload("res://shaders/sky.gdshader")
 const FA = preload("res://scripts/systems/frame_anim.gd")
 const Birds = preload("res://scripts/world/birds.gd")
@@ -47,6 +52,7 @@ var boss = null
 var boss_name := ""
 var sheep_total := 0
 var sheep_count := 0
+var sheep_lost := 0        # how many times a beast has carried one off
 var followers: Array = []
 var cp_index := 0
 var cp_fires: Array = []
@@ -807,6 +813,31 @@ func add_jackal(x: float, x0: float, x1: float):
 	return j
 
 
+## A wolf, leopard, viper or hyena at x. Nothing is made unless that animal's own pictures are painted: the
+## automated tests alone get the jackal's pictures in its place, so no stand-in is ever seen by a player.
+## opts are set on the beast as they stand (the wolf's `edge_x`); `perches` is a list of [x, up, width] for the
+## rock tops a leopard lies on, built here and only now, so no empty ledge is left standing without it.
+func add_beast(kind: String, x: float, opts: Dictionary = {}) -> Node:
+	var real := not FA._paths(kind, BEAST_FIRST[kind]).is_empty()
+	if not real and not Game.fast:
+		return null
+	var b = BEASTS[kind].new()
+	b.level = self
+	b.player = player
+	b.stand_in = not real
+	b.position = on_ground(x)
+	for key in opts:
+		if key == "perches":
+			b.perches = []
+			for p in opts[key]:
+				b.perches.append(add_perch(p[0], p[1], p[2]))
+			b.position = b.perches[0]
+		else:
+			b.set(key, opts[key])
+	add_child(b)
+	return b
+
+
 ## Something worth telling the player at this spot. It is shown small, by David's head, only while he is
 ## near, and only until it has been read: after a few seconds on screen it is never shown again.
 ## Write it as "KEY  what it does" (two spaces) to have the key drawn as a key-cap, or as a few plain words.
@@ -1485,6 +1516,7 @@ func say(ids: Array) -> void:
 
 ## A beast has carried off a sheep: the flock is his to answer for, so it is back to the last watchfire.
 func sheep_taken(_s) -> void:
+	sheep_lost += 1
 	for n in get_tree().get_nodes_in_group("sheep"):
 		n.threat = 0.0
 		n.worried = 0.0
@@ -1493,6 +1525,32 @@ func sheep_taken(_s) -> void:
 	Game.sfx("jackal_snarl", -3.0)
 	show_tip("A sheep was taken.  A shepherd answers for every one of them", 6.0)
 	respawn()
+
+
+## A beast's rush through the flock: those that were following him break and run from it, and are his to gather again.
+func scatter_sheep(from_x: float, reach: float, except = null) -> void:
+	for s in get_tree().get_nodes_in_group("sheep"):
+		if s == except or not is_instance_valid(s) or s.safe or s.carried or absf(s.global_position.x - from_x) > reach:
+			continue
+		s.hop = 1.0
+		if s.gathered and is_nan(s.stay) and s.leap < 0.0:
+			lose_follow(s)
+			s.bolt = 0.9
+			s.bolt_dir = 1.0 if s.global_position.x >= from_x else -1.0
+			Game.sfx("sheep", -6.0, 0.25)
+
+
+## A sheep that was following him follows no longer: it is to be gathered in again.
+func lose_follow(s) -> void:
+	if not s.gathered or not is_nan(s.stay):
+		return
+	s.gathered = false
+	s.gatherable = true
+	s.called = 0.0
+	followers.erase(s)
+	sheep_count = maxi(0, sheep_count - 1)
+	for i in followers.size():
+		followers[i].follow_index = i
 
 
 var _danger_told := false
@@ -1997,7 +2055,7 @@ func _update_prompt(delta: float) -> void:
 	if not Game.cinematic and not respawning:
 		if task_now != null:
 			show = true
-			prompt_key = "Y" if Game.pad else "E"
+			prompt_key = Game.cap("E")
 			prompt_words = Game.t(str(task_now["text"]))
 			prompt_bar = clampf(task_now["t"] / task_now["hold"], 0.0, 1.0)
 		elif tip_t > 0.0:
@@ -2006,7 +2064,7 @@ func _update_prompt(delta: float) -> void:
 			prompt_key = ""
 			prompt_words = Game.keys(Game.t(tip))
 			var tcut := prompt_words.find("  ")
-			if tcut > 0 and tcut <= 6 and not "." in prompt_words.substr(0, tcut):      # a tip that names a key leads with its cap
+			if tcut > 0 and tcut <= (10 if Game.touch else 6) and not "." in prompt_words.substr(0, tcut):      # a tip that names a key leads with its cap
 				prompt_key = prompt_words.substr(0, tcut)
 				prompt_words = prompt_words.substr(tcut).strip_edges()
 		else:
@@ -2020,7 +2078,7 @@ func _update_prompt(delta: float) -> void:
 				show = true
 				var txt := Game.keys(Game.t(str(best["text"])))
 				var cut := txt.find("  ")
-				if cut > 0 and cut <= 6:
+				if cut > 0 and cut <= (10 if Game.touch else 6):      # the buttons on screen have longer names than keys
 					prompt_key = txt.substr(0, cut)
 					prompt_words = txt.substr(cut).strip_edges()
 				else:

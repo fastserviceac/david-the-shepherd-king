@@ -37,6 +37,7 @@ var worried := 0.0       # seconds since a beast was last at it (counts down)
 var bleat := 0.0
 var safe := false         # no beast goes for it (the lamb once it has slipped away)
 var prey := false         # a beast will go for it even though it is not yet his to gather (a strayed ewe)
+var carried := false      # a beast has it in its jaws: it goes where the beast goes, and does not walk or answer a hand
 const TAKE := 4.0         # seconds with a beast at its side before it is carried off
 
 
@@ -66,6 +67,9 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
 	moving = false
+	if carried:
+		queue_redraw()
+		return
 	if not gathered and gatherable and not Game.backdrop and not Game.cinematic:
 		var to: float = player.global_position.x - global_position.x
 		if bolt > 0.0:            # running off a little way

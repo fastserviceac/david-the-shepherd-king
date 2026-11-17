@@ -72,6 +72,13 @@ var act_t := 0.0
 var call_cd := 0.0
 var ring_t := 0.0         # the call going out, drawn as a widening ring
 var strike_set := "attack"   # which staff animation is playing
+var wind := 0.0           # how long Staff has been held down: long enough, and letting go turns him right round
+var spin_t := 0.0         # the round blow: the staff goes right round him and strikes on both sides
+var plunge := 0           # struck from a leap: 1 coming down with the staff raised, 2 the blow landing
+var plunge_t := 0.0
+const WIND_TIME := 0.42
+const SPIN_TIME := 0.54
+const PLUNGE_LAND := 0.3
 var leap_t := 0.0         # a running leap: a streak of dust behind him
 
 
@@ -301,7 +308,10 @@ func _physics_process(delta: float) -> void:
 	anim_t += delta * (4.0 + absf(velocity.x) * 0.045)
 
 	shake = move_toward(shake, 0.0, delta * 30.0)
-	cam.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake))
+	# with a strip for the controls under the picture the camera looks lower by half of it, and may go that much
+	# further down, so the picture above the strip is framed as it would be on a 16:9 screen
+	cam.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake) + Game.deck * 0.5)
+	cam.limit_bottom = 720 + int(Game.deck)
 	cam.position.x = lerpf(cam.position.x, facing * 70.0, delta * 2.0)
 	var before := ph
 	_update_pose(delta)
@@ -325,7 +335,74 @@ func _update_attack(delta: float, can_act: bool) -> void:
 	hurt_t = maxf(0.0, hurt_t - delta)
 	throw_t = maxf(0.0, throw_t - delta)
 	act_t += delta
+	var skilled := Game.has("hand")      # the round blow and the blow from a leap come with the strong hand
+	if not can_act:
+		if plunge == 1 or spin_t > 0.0:
+			attack_t = 0.0
+		plunge = 0
+		spin_t = 0.0
+		wind = 0.0
+	if spin_t > 0.0:
+		spin_t -= delta
+		attack_t = maxf(spin_t, 0.0)
+		queued = false
+		if not hit_done and spin_t < SPIN_TIME * 0.62:
+			hit_done = true
+			_round_hit(100.0 + (14.0 if Game.rank("hand") >= 1 else 0.0), 1 + (1 if Game.rank("hand") >= 2 else 0), 330.0)
+		return
+	if plunge == 1:
+		queued = false
+		attack_t = 9.0
+		velocity.x = move_toward(velocity.x, 0.0, 900.0 * delta)
+		if is_on_floor():
+			plunge = 2
+			plunge_t = PLUNGE_LAND
+			attack_t = PLUNGE_LAND
+			squash = 1.0
+			Game.sfx("land", -2.0, 0.05)
+			Game.burst(get_parent(), global_position + Vector2(0, -2), Color(0.85, 0.78, 0.62, 0.45), 18, 150.0)
+			_round_hit(88.0, 2 + (1 if Game.rank("hand") >= 2 else 0), 280.0)
+			shake = maxf(shake, 6.0)
+		return
+	if plunge == 2:
+		queued = false
+		plunge_t -= delta
+		attack_t = maxf(plunge_t, 0.0)
+		if plunge_t <= 0.0:
+			plunge = 0
+			attack_cd = 0.12
+		return
+	# held down, the staff is drawn back; let go, and it goes right round him
+	var holding: bool = skilled and can_act and is_on_floor() and not charging and roll_t <= 0.0 and hop_t <= 0.0 \
+			and clinch_t <= 0.0 and act == ""
+	if holding and Input.is_action_pressed("attack"):
+		var was := wind
+		wind += delta
+		if was < WIND_TIME and wind >= WIND_TIME:
+			Game.sfx("swing", -12.0, 0.0)      # the staff comes to rest behind him: ready
+	else:
+		if holding and wind >= WIND_TIME and attack_t <= 0.0:
+			spin_t = SPIN_TIME
+			attack_t = SPIN_TIME
+			attack_cd = SPIN_TIME + 0.12
+			hit_done = false
+			combo = 0
+			combo_window = 0.0
+			queued = false
+			wind = 0.0
+			Game.sfx("swing_heavy", -2.0)
+			return
+		wind = 0.0
 	if can_act and not charging and Input.is_action_just_pressed("attack"):
+		if skilled and not is_on_floor() and air_t > 0.1 and attack_t <= 0.0:      # from a leap he comes down on them, staff first
+			plunge = 1
+			attack_t = 9.0
+			hit_done = true
+			strike_set = "attack4"
+			velocity.y = maxf(velocity.y, 560.0)
+			velocity.x *= 0.45
+			Game.sfx("swing_heavy", -4.0)
+			return
 		queued = true
 	if queued and can_act and not charging and attack_cd <= 0.0:
 		queued = false
@@ -387,6 +464,37 @@ func _staff_hit() -> void:
 			Game.hitstop(0.08)
 
 
+## A blow that goes out on both sides of him at once: everything within reach is struck and thrown outward.
+func _round_hit(reach: float, dmg: int, push: float) -> void:
+	var landed := false
+	for n in get_tree().get_nodes_in_group("hittable"):
+		var dx: float = n.global_position.x - global_position.x
+		var dy: float = absf((n.global_position.y - n.hit_h * 0.5) - (global_position.y - 30.0))
+		if absf(dx) < reach + n.hit_r and dy < 60.0 + n.hit_h * 0.5:
+			var side := 1 if dx >= 0.0 else -1
+			var d := dmg
+			if n.get("lesser") == true:
+				d = Game.blow("staff") + dmg - 1
+			n.hit(d * (2 if opening_t > 0.0 else 1), side, "staff")
+			if n.get("kb") != null:
+				n.kb = maxf(n.kb, 0.38)
+				n.velocity.x = side * push
+			Game.grow("hand", 1.0)
+			landed = true
+	if level != null and level.has_method("strike"):
+		for side in [-1, 1]:
+			if level.strike(global_position + Vector2(side * 48.0, 0.0), side):
+				shake = maxf(shake, 1.5)
+	for side in [-1.0, 1.0]:      # the staff's end raises the dust on both sides
+		Game.burst(get_parent(), global_position + Vector2(side * reach * 0.7, -4.0), Color(0.85, 0.78, 0.62, 0.3), 6, 70.0)
+	if landed:
+		shake = maxf(shake, 6.0)
+		if opening_t > 0.0:
+			opening_t = 0.0
+			shake = maxf(shake, 9.0)
+			Game.hitstop(0.08)
+
+
 func _update_sling(delta: float, can_act: bool) -> void:
 	if not Game.save.get("has_sling", false):
 		return
@@ -443,6 +551,7 @@ func hurt(amount: int, from_x: float, kind: String = "body") -> bool:
 	invuln = 1.3
 	stun = 0.25
 	hurt_t = 0.5
+	Game.buzz(45)
 	Game.sfx("hurt", -1.0)
 	if Game.main and Game.main.hud:
 		Game.main.hud.hurt_flash = 1.0
@@ -735,6 +844,19 @@ func _current_frame() -> Texture2D:
 		if not FA.frames("david", "sway").is_empty() and FA.frames("david", "flinch").is_empty():
 			return _one_shot("sway", h)
 		return _one_shot("flinch", h * 2.0 if h < 0.5 else (1.0 - h) * 2.0)
+	if spin_t > 0.0:                      # the round blow
+		var su := 1.0 - spin_t / SPIN_TIME
+		var sp: Array = FA.frames("david", "spin")
+		if not sp.is_empty():
+			return _one_shot("spin", su)
+		# until he has a clip of his own for it: the sweep out in front, and the same sweep carried on behind him
+		return _one_shot("attack2", su * 1.3 if su < 0.5 else 0.3 + (su - 0.5) * 1.4)
+	if plunge == 1:                       # coming down with the staff raised over his head
+		return _one_shot("attack4", 0.34)
+	if plunge == 2:                       # and the blow itself as his feet meet the ground
+		return _one_shot("attack4", lerpf(0.42, 1.0, 1.0 - plunge_t / PLUNGE_LAND))
+	if wind > 0.16 and attack_t <= 0.0 and is_on_floor():      # the staff drawn back, held
+		return _one_shot("attack2", 0.1 * smoothstep(0.16, WIND_TIME, wind))
 	if attack_t > 0.0:                    # strike, sweep, rising finisher
 		return _one_shot(strike_set, 1.0 - attack_t / attack_dur)
 	if throw_t > 0.0:                     # the sling let fly
@@ -799,7 +921,26 @@ func _draw() -> void:
 	var tall := 2.1 if tex.get_height() > 600 else 1.65      # sets with the staff raised high are cut on a taller canvas
 	var shoving: bool = act == "carry" and level != null and level.get("push_t") != null and level.push_t > 0.0
 	shove = move_toward(shove, 1.0 if shoving else 0.0, get_process_delta_time() * 5.0)
-	FA.draw(self, tex, float(facing), SPRITE_SCALE, col, tall, shove * 0.27, Vector2.ZERO, Vector2.ONE)      # the footage already crouches and stretches; scaling it as well read as a size glitch
+	var face := float(facing)
+	if spin_t > 0.0:
+		var su := 1.0 - spin_t / SPIN_TIME
+		if su >= 0.5 and FA.frames("david", "spin").is_empty():
+			face = -face      # he has turned: the second half of the round is struck behind where he stood
+		# the path of the staff's end, low and right round him
+		var a0 := (PI if facing > 0 else 0.0) + facing * su * TAU * 1.05
+		draw_set_transform(Vector2(0, -52.0), 0.0, Vector2(1.0, 0.3))
+		for k in 3:
+			draw_arc(Vector2.ZERO, 104.0 - k * 9.0, a0 - facing * (1.9 - k * 0.4), a0, 28,
+				Color(1.0, 0.94, 0.78, (0.34 - k * 0.09) * sin(su * PI)), 5.0 - k * 1.2, true)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	elif wind >= WIND_TIME and is_on_floor():      # ready: a glint, so the thumb knows it can let go
+		col = col.lerp(Color(1.5, 1.4, 1.15), 0.35 + 0.2 * sin(anim_t * 18.0))
+	if plunge == 2:      # the ground answers the blow: a ring going out along it
+		var pu := 1.0 - plunge_t / PLUNGE_LAND
+		draw_set_transform(Vector2(0, -3.0), 0.0, Vector2(1.0, 0.22))
+		draw_arc(Vector2.ZERO, 24.0 + pu * 96.0, 0.0, TAU, 40, Color(1.0, 0.93, 0.76, (1.0 - pu) * 0.5), 3.5, true)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	FA.draw(self, tex, face, SPRITE_SCALE, col, tall, shove * 0.27, Vector2.ZERO, Vector2.ONE)      # the footage already crouches and stretches; scaling it as well read as a size glitch
 	if charging:
 		_draw_aim()
 	if ring_t > 0.0:      # the call going out across the hillside

@@ -54,6 +54,11 @@ func _ready() -> void:
 	ui.add_child(map)
 	ui.move_child(map, menu.get_index() + 1)
 	map.closed.connect(_map_closed)
+
+	var touch_layer := CanvasLayer.new()      # the on-screen controls sit above everything else
+	touch_layer.layer = 40
+	add_child(touch_layer)
+	touch_layer.add_child(preload("res://scripts/ui/touch.gd").new())
 	map.travel.connect(func(idx: int) -> void:
 		map.close()
 		Game.gifts_for(idx)
@@ -109,6 +114,7 @@ func load_level(idx: int, checkpoint: int = 0) -> void:
 		level.queue_free()
 		level = null
 		await get_tree().process_frame
+	Game.FA.keep_only(["david", "sheep", "jackal"])      # the last place's beasts and people are let go
 	section_idx = idx
 	var sec: Dictionary = Game.sections()[idx]
 	level = load(sec["script"]).new()
@@ -134,7 +140,7 @@ func show_menu() -> void:
 	await overlay.fade_to(0.0, 0.8)
 
 
-func start_section(idx: int, checkpoint: int = 0) -> void:
+func start_section(idx: int, checkpoint: int = 0, seen_film: bool = false) -> void:
 	state = "transition"
 	menu.close()
 	await overlay.fade_to(1.0, 0.5)
@@ -148,7 +154,7 @@ func start_section(idx: int, checkpoint: int = 0) -> void:
 	Game.save_game()
 	# a story film leads into the section, when one has been made for it
 	var film: String = Game.sections()[idx].get("film", "")
-	if checkpoint == 0 and intro.has_story(film) and not Game.fast and tester == null:
+	if checkpoint == 0 and not seen_film and intro.has_story(film) and not Game.fast and tester == null:
 		Game.cinematic = true
 		hud.visible = false
 		intro.play_story(film)
@@ -206,7 +212,7 @@ func complete_section() -> void:
 func _on_menu(id: String) -> void:
 	match id:
 		"continue":
-			start_section(int(Game.save["section"]), 0)      # a place is rebuilt whole when the game is reopened, so he begins it whole: its sheep, stones and tasks are not kept half done
+			start_section(int(Game.save["section"]), 0, true)      # he has seen the film that leads in; it is not shown again      # a place is rebuilt whole when the game is reopened, so he begins it whole: its sheep, stones and tasks are not kept half done
 		"new":
 			menu.open("difficulty")
 		"sections":
@@ -218,9 +224,31 @@ func _on_menu(id: String) -> void:
 		"lang":
 			Game.save["lang"] = "pt" if Game.lang() == "en" else "en"
 			Game.save_game()
-			menu.open("main")
+			menu.open(menu.mode, menu.index)
+		"settings":
+			menu.back_to = menu.mode
+			menu.open("settings")
+		"set_diff":
+			Game.save["difficulty"] = (int(Game.save.get("difficulty", 1)) + 1) % Game.DIFFICULTY.size()
+			Game.save_game()
+			menu.open("settings", menu.index)
+		"set_vol":
+			var v := Game.volume() - 0.25
+			Game.save["volume"] = 1.0 if v < -0.01 else v
+			Game.apply_settings()
+			Game.save_game()
+			menu.open("settings", menu.index)
+		"set_subs":
+			Game.save["film_subs"] = not Game.save.get("film_subs", false)
+			Game.save_game()
+			menu.open("settings", menu.index)
+		"set_haptic":
+			Game.save["haptics"] = not Game.save.get("haptics", true)
+			Game.save_game()
+			Game.buzz(30)
+			menu.open("settings", menu.index)
 		"back":
-			menu.open("main")
+			menu.open(menu.back_to if menu.mode == "settings" else "main")
 		"prologue":
 			await _prologue()
 			show_menu()

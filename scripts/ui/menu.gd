@@ -8,6 +8,7 @@ var items: Array = []    # [id, label, enabled]
 var index := 0
 var heading := ""
 var sub := ""
+var back_to := "main"      # where Back leads from the settings: the title or the pause
 
 
 func _ready() -> void:
@@ -17,7 +18,7 @@ func _ready() -> void:
 	visible = false
 
 
-func open(new_mode: String) -> void:
+func open(new_mode: String, at: int = -1) -> void:
 	mode = new_mode
 	items = []
 	match mode:
@@ -32,7 +33,20 @@ func open(new_mode: String) -> void:
 			if ResourceLoader.exists("res://video/intro.ogv"):
 				items.append(["prologue", "Prologue", true])
 			items.append(["lang", "Language: English", true])      # shown in the language it is set to
-			items.append(["quit", "Quit", true])
+			items.append(["settings", "Settings", true])
+			if not OS.has_feature("mobile"):      # a phone's games are left by the home gesture, not closed from inside
+				items.append(["quit", "Quit", true])
+		"settings":
+			heading = "Settings"
+			sub = ""
+			var on_off := func(on: bool) -> String: return Game.t("On") if on else Game.t("Off")
+			items.append(["set_diff", "%s: %s" % [Game.t("Difficulty"), Game.t(Game.diff()["name"])], true])
+			items.append(["set_vol", "%s: %d%%" % [Game.t("Volume"), int(round(Game.volume() * 100.0))], true])
+			items.append(["set_subs", "%s: %s" % [Game.t("Film subtitles"), on_off.call(Game.save.get("film_subs", false))], true])
+			if Game.touch:
+				items.append(["set_haptic", "%s: %s" % [Game.t("Vibration"), on_off.call(Game.save.get("haptics", true))], true])
+			items.append(["lang", "Language: English", true])      # shown in the language it is set to
+			items.append(["back", "Back", true])
 		"sections":
 			heading = "Chapter One"
 			sub = "The Shepherd"
@@ -52,8 +66,11 @@ func open(new_mode: String) -> void:
 			items.append(["resume", "Resume", true])
 			items.append(["map", "Map", true])
 			items.append(["restart", "Back to the last watchfire", true])
+			items.append(["settings", "Settings", true])
 			items.append(["menu", "Main Menu", true])
 	index = 1 if mode == "difficulty" else 0
+	if at >= 0 and at < items.size():
+		index = at
 	while not items[index][2]:
 		index += 1
 	visible = true
@@ -88,25 +105,59 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("pause") and mode == "pause":
 		get_viewport().set_input_as_handled()
 		chosen.emit("resume")
-	elif event.is_action_pressed("pause") and (mode == "sections" or mode == "difficulty"):
+	elif event.is_action_pressed("pause") and (mode == "sections" or mode == "difficulty" or mode == "settings"):
 		get_viewport().set_input_as_handled()
 		chosen.emit("back")
+
+
+## Where row i is written. Long lists start higher and sit closer, so the last row is never below the screen.
+func _row_y(i: int) -> float:
+	return _top() + i * _step()
+
+
+func _top() -> float:
+	return 380.0 if items.size() <= 7 else 345.0
+
+
+func _step() -> float:
+	return 50.0 if items.size() <= 7 else minf(50.0, (690.0 - _top()) / float(items.size() - 1))
+
+
+## A finger on the screen at p: a tap on a choice picks it. In the choice of difficulty the first tap only
+## points at one, so its description can be read, and a second tap on it picks it.
+func tap(p: Vector2) -> bool:
+	if not visible:
+		return false
+	for i in items.size():
+		var y := _row_y(i)
+		if p.y >= y - _step() * 0.72 and p.y < y + _step() * 0.28 and absf(p.x - 640.0) < 300.0 and items[i][2]:
+			if mode == "difficulty" and i != index:
+				index = i
+				queue_redraw()
+				Game.sfx("ui_move", -8.0)
+				return true
+			index = i
+			queue_redraw()
+			Game.sfx("ui_select", -6.0)
+			chosen.emit(items[i][0])
+			return true
+	return false
 
 
 func _draw() -> void:
 	var f := Game.serif
 	if mode == "pause":
-		draw_rect(Rect2(0, 0, 1280, 720), Color(0.02, 0.02, 0.05, 0.6))
+		draw_rect(Rect2(0, 0, 1280, maxf(720.0, size.y)), Color(0.02, 0.02, 0.05, 0.6))
 	else:
-		draw_rect(Rect2(0, 0, 1280, 720), Color(0.02, 0.02, 0.05, 0.25))
+		draw_rect(Rect2(0, 0, 1280, maxf(720.0, size.y)), Color(0.02, 0.02, 0.05, 0.25))
 	# soft dark band so the choices read against any backdrop
 	for k in 6:
-		draw_rect(Rect2(400.0 - k * 22.0, 340, 480.0 + k * 44.0, 40.0 + items.size() * 50.0), Color(0.02, 0.02, 0.05, 0.085))
+		draw_rect(Rect2(400.0 - k * 22.0, _top() - 40.0, 480.0 + k * 44.0, 40.0 + items.size() * _step()), Color(0.02, 0.02, 0.05, 0.085))
 	var big := 110 if mode == "main" else 60
 	draw_string(f, Vector2(0, 230), Game.t(heading), HORIZONTAL_ALIGNMENT_CENTER, 1280, big, Game.CREAM)
 	draw_string(f, Vector2(0, 280), Game.t(sub), HORIZONTAL_ALIGNMENT_CENTER, 1280, 28, Color(1.0, 0.82, 0.55))
 	for i in items.size():
-		var y := 380.0 + i * 50.0
+		var y := _row_y(i)
 		var col := Game.CREAM
 		if not items[i][2]:
 			col = Color(1, 1, 1, 0.28)
@@ -120,4 +171,7 @@ func _draw() -> void:
 	if mode == "difficulty" and index < Game.DIFFICULTY.size():
 		draw_string(f, Vector2(0, 290), Game.t(Game.DIFFICULTY[index]["about"]), HORIZONTAL_ALIGNMENT_CENTER, 1280, 22, Color(1.0, 0.82, 0.55))
 	if mode == "main":
-		draw_string(f, Vector2(0, 690), Game.keys(Game.t("↑ ↓ to choose    ·    Enter to select")), HORIZONTAL_ALIGNMENT_CENTER, 1280, 18, Color(1, 1, 1, 0.5))
+		# under the last choice, however many there are, and never off the bottom of the screen
+		var hint_y := minf(_top() + items.size() * _step() - 6.0, maxf(720.0, size.y) - 14.0)
+		hint_y = maxf(hint_y, 690.0)
+		draw_string(f, Vector2(0, hint_y), Game.t("Tap a choice") if Game.touch else Game.keys(Game.t("↑ ↓ to choose    ·    Enter to select")), HORIZONTAL_ALIGNMENT_CENTER, 1280, 18, Color(1, 1, 1, 0.5))

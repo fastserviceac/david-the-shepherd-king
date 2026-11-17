@@ -1,4 +1,6 @@
 extends Node
+
+const FA = preload("res://scripts/systems/frame_anim.gd")
 ## Global state: input map, save data, chapter data, shared resources.
 
 const SAVE_PATH := "user://save.json"
@@ -15,6 +17,8 @@ var main: Node = null
 var stones_total := 0     # every smooth stone and every place there is to find, counted from the map
 var places_total := 0
 var pad := false          # the last thing touched was a controller: prompts name its buttons, not keys
+var touch := false        # the screen was touched: the on-screen controls show, and prompts name them
+var deck := 0.0           # height (in game pixels) of the strip under the picture that the touch controls stand in
 var gifting := false     # a gift is being given: the world holds still, but its name is shown
 var cinematic := false   # story scene playing: player and enemies hold still
 var backdrop := false    # level is only a background for the menu
@@ -51,7 +55,18 @@ var add_mat: CanvasItemMaterial
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_input()
+	touch = OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+	if "--phone" in OS.get_cmdline_user_args():      # try the phone layout on the computer
+		touch = true
+	if OS.has_feature("mobile") or "--phone" in OS.get_cmdline_user_args():
+		get_tree().root.size_changed.connect(_fit_screen)
+		_fit_screen.call_deferred()
 	_setup_resources()
+	# what he does in the first seconds of any session, in the order he is likely to do it
+	FA.warm("david", ["idle", "walk", "run", "jump", "attack", "roll", "hop", "sway", "duck", "hurt", "flinch",
+		"sling", "throw", "attack2", "attack3", "attack4", "spin", "call", "pickup", "clinch"])
+	FA.warm("jackal", ["walk", "run", "lunge"])
+	FA.warm("sheep", ["walk", "graze", "run"])
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -60.0
@@ -96,8 +111,10 @@ func _setup_resources() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.5):
 		pad = true
-	elif event is InputEventKey:
+		touch = false
+	elif event is InputEventKey and not "--phone" in OS.get_cmdline_user_args():      # trying the phone layout: stay in it
 		pad = false
+		touch = false
 
 
 const PAD_KEYS := {"Space": "A", "Espaço": "A", "J": "X", "K": "B", "E": "Y", "L": "RB", "Shift": "LB", "Q": "LS", "Tab": "Back", "M": "RS",
@@ -107,6 +124,8 @@ const PAD_WORDS := {"Space": "A", "Espaço": "A", "Shift": "LB", "Tab": "Back", 
 ## A prompt as it should read for whatever the player is holding. Text is written for the keyboard ("J  staff");
 ## with a controller in hand the key at the front, and any key named in the words, becomes its button.
 func keys(s: String) -> String:
+	if touch:
+		return _touch_keys(s)
 	if not pad:
 		return s
 	var cut := s.find("  ")
@@ -122,6 +141,79 @@ func keys(s: String) -> String:
 	for w in PAD_WORDS:
 		rest = rest.replace(w, PAD_WORDS[w])
 	return head + rest
+
+
+const TOUCH_KEYS := {"Space": "Jump", "Espaço": "Jump", "Enter": "Tap", "J": "Staff", "K": "Sling", "L": "Dodge",
+		"E": "Grab", "Q": "Call", "Tab": "Growth", "M": "Map", "Esc": "II", "Shift": "Stick", "A": "", "D": "Stick"}
+
+
+## One key as it should be named on a key-cap: the key itself, the controller's button, or the button on the screen.
+func cap(key: String) -> String:
+	if touch:
+		return t(str(TOUCH_KEYS.get(key, key)))
+	if pad:
+		return str(PAD_KEYS.get(key, key))
+	return key
+
+## The same prompt for the on-screen controls: keys become the names on the buttons (in the player's language).
+## In the words only a key on its own is changed: "(Q)", "hold K", ":  J" at the end, never a letter inside a word.
+func _touch_keys(s: String) -> String:
+	var cut := s.find("  ")
+	var head := s.substr(0, cut) if cut > 0 and cut <= 14 else ""
+	var rest := s.substr(cut) if head != "" else s
+	if head != "" and Array(head.split(" ", false)).all(func(tok): return TOUCH_KEYS.has(tok.trim_suffix(":"))):
+		var out: Array = []
+		for tok in head.split(" ", false):
+			var b: String = t(str(TOUCH_KEYS[tok.trim_suffix(":")]))
+			if b != "" and tok.ends_with(":"):
+				b += ":"
+			if b != "" and not b in out:
+				out.append(b)
+		head = " ".join(out)
+	else:
+		rest = head + rest
+		head = ""
+	var re := RegEx.new()
+	re.compile("(?<![\\p{L}])(Space|Espaço|Enter|Shift|Tab|Esc|[JKLQEM])(?![\\p{L}])")
+	var out_s := ""
+	var at := 0
+	for m in re.search_all(rest):
+		var k := m.get_string(1)
+		var before := rest.substr(maxi(m.get_start() - 1, 0), 1)
+		var after := rest.substr(m.get_end(), 1)
+		# a lone capital letter is only a key when it sits in brackets, after "hold", or ends the line after a colon
+		var lone := k.length() == 1
+		var lead := rest.substr(0, m.get_start())
+		var keyish := not lone or (before == "(" and after == ")") or ((lead == "" or lead.ends_with("  ")) and (after == "" or after == " ")) or rest.substr(0, m.get_start()).ends_with(":  ") \
+				or rest.substr(0, m.get_start()).ends_with("hold ") or rest.substr(0, m.get_start()).ends_with("segure ") \
+				or (after == "." and rest.substr(0, m.get_start()).ends_with(": "))
+		out_s += rest.substr(at, m.get_start() - at)
+		var name := t(str(TOUCH_KEYS[k])) if keyish else k
+		if k == "Shift" and keyish:
+			name = t("a gentle push of the stick")
+		out_s += name
+		at = m.get_end()
+	out_s += rest.substr(at)
+	return head + out_s
+
+
+## A screen taller than 16:9 (a foldable opened, a tablet) keeps the picture at full width at the top and opens
+## a strip under it for the touch controls; a wider one keeps the picture whole with bars at its sides.
+func _fit_screen() -> void:
+	var root := get_tree().root
+	var ws := Vector2(DisplayServer.window_get_size())
+	if ws.y <= 0.0:
+		return
+	# the game is only ever played lying on its side: a phone may still report its screen the upright way round
+	# (before it has turned, or for good), which would read as a tall screen and open a strip under the picture.
+	# The long side against the short side is the shape the picture is shown at.
+	var aspect := maxf(ws.x, ws.y) / maxf(minf(ws.x, ws.y), 1.0)
+	if aspect < 1.7 and not OS.get_model_name().begins_with("iPhone"):      # a phone is never that shape: the controls lie over the picture
+		root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+		deck = 1280.0 / aspect - 720.0
+	else:
+		root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+		deck = 0.0
 
 
 func _setup_input() -> void:
@@ -214,7 +306,14 @@ func default_save() -> Dictionary:
 func load_game() -> void:
 	save = default_save()
 	var on_disk := _read_json(SAVE_PATH)
+	if on_disk.is_empty():      # no journey, or one cut short while it was being written: the copy kept from the time before
+		on_disk = _read_json(SAVE_PATH + ".bak")
 	save.merge(on_disk, true)
+	# a file from an older game, or one touched by hand, may hold the wrong kind of thing under a name
+	var fresh := default_save()
+	for k in fresh:
+		if typeof(save[k]) != typeof(fresh[k]) and not (save[k] is float and fresh[k] is int):
+			save[k] = fresh[k]
 	if not on_disk.is_empty() and not on_disk.has("gifts"):
 		# a journey begun before gifts were given at set places: he keeps what he had earned
 		save["gifts"] = []
@@ -226,19 +325,51 @@ func load_game() -> void:
 				give(pair[0], true)
 	if not on_disk.has("pouch"):      # a journey begun before the pouch: it starts full
 		fill_pouch()
-	save["section"] = int(save["section"])
-	save["checkpoint"] = int(save["checkpoint"])
-	save["unlocked"] = int(save["unlocked"])
+	save["section"] = clampi(int(save["section"]), 0, maxi(0, sections().size() - 1))
+	save["checkpoint"] = maxi(0, int(save["checkpoint"]))
+	save["unlocked"] = maxi(0, int(save["unlocked"]))
+	save["difficulty"] = clampi(int(save["difficulty"]), 0, DIFFICULTY.size() - 1)
+	apply_settings()
+	if Engine.has_singleton("GameCenter"):
+		Engine.get_singleton("GameCenter").authenticate()
 	if save.get("finished", false):      # whoever has finished the chapter may walk into any part of it, sections added since included
 		save["unlocked"] = maxi(save["unlocked"], 99)
+
+
+## How loud the whole game is, as the player set it (1.0 when never set).
+func volume() -> float:
+	return clampf(float(save.get("volume", 1.0)), 0.0, 1.0)
+
+
+func apply_settings() -> void:
+	var v := volume()
+	AudioServer.set_bus_mute(0, v <= 0.01)
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(v, 0.01)))
+
+
+## A short tap in the hand on a phone, when a blow lands or he is hurt. Nothing on a computer.
+func buzz(ms: int = 18) -> void:
+	if touch and not fast and save.get("haptics", true):
+		Input.vibrate_handheld(ms)
 
 
 func save_game() -> void:
 	if fast:
 		return
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(save))
+	check_deeds()
+	# Written beside the journey and then put in its place, so being closed mid-write cannot leave half a file;
+	# the journey as it stood before is kept as a second copy.
+	var tmp := SAVE_PATH + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(save))
+	f.close()
+	if _read_json(tmp).is_empty():
+		return
+	if not _read_json(SAVE_PATH).is_empty():
+		DirAccess.copy_absolute(SAVE_PATH, SAVE_PATH + ".bak")
+	DirAccess.rename_absolute(tmp, SAVE_PATH)
 
 
 func new_game() -> void:
@@ -269,7 +400,7 @@ signal place_found(name: String)
 
 const GIFTS := {
 	"voice": {"name": "The Shepherd's Voice", "line": "Sheep that hear his call come to him.", "key": "Q  call", "craft": "voice", "why": "A flock is led, not driven. The shepherd goes ahead, and they follow his voice.", "how": "In the Pastures: bring in four sheep by hand.", "after": 0},
-	"hand": {"name": "The Strong Hand", "line": "Blow follows blow: strike again as each one lands.", "key": "J  J  J  chain the blows", "craft": "hand", "why": "His staff is all there is between the flock and what hunts it.", "how": "At the Well: move the stone, and hold the water.", "after": 1},
+	"hand": {"name": "The Strong Hand", "line": "Blow follows blow. Hold the staff back and let go, and it goes right round him. Struck from a leap, it comes down on them.", "key": "J  J  J  chain the blows", "craft": "hand", "why": "His staff is all there is between the flock and what hunts it.", "how": "At the Well: move the stone, and hold the water.", "after": 1},
 	"sling": {"name": "The Sling", "line": "A stone, whirled and let fly.", "key": "K  hold, then release", "craft": "eye", "why": "It reaches what the staff cannot.", "how": "In the ravine: drive the pack from the brook.", "after": 2},
 	"eye": {"name": "The Sure Eye", "line": "He sees the whole flight of the stone before he lets it go.", "key": "↑ ↓  aim as he winds", "craft": "eye", "why": "A stone that misses is a stone wasted, and the beast is already moving.", "how": "In the Wadi: break the three jars, and bring every boulder down.", "after": 3},
 	"heart": {"name": "The Steady Heart", "line": "One more heart.", "key": "", "craft": "heart", "why": "He stood where he could have run. That is kept.", "how": "In the Bear's Den: drive off the bear.", "after": 4},
@@ -412,6 +543,56 @@ func all_stones() -> bool:
 	return stones_total > 0 and stones().size() >= stones_total
 
 
+## Deeds: what he has done in these hills, counted from how far he has come, so the count is right in any saved
+## game. Each is told once to the phone's own record of achievements, where there is one (Game Center).
+const DEEDS := ["gift_voice", "gift_hand", "gift_sling", "gift_eye", "gift_heart", "gift_feet",
+	"bear", "lion", "stones", "places", "chapter1"]
+
+
+func _past(script_name: String) -> bool:
+	if save.get("finished", false):
+		return true
+	for i in sections().size():
+		if str(sections()[i]["script"]).get_file().get_basename() == script_name:
+			return int(save.get("unlocked", 0)) > i
+	return false
+
+
+func deed_done(id: String) -> bool:
+	if id.begins_with("gift_"):
+		return has(id.trim_prefix("gift_"))
+	match id:
+		"bear": return _past("den")
+		"lion": return _past("section3")
+		"stones": return all_stones()
+		"places": return all_places()
+		"chapter1": return bool(save.get("finished", false))
+	return false
+
+
+func deeds_done() -> int:
+	var n := 0
+	for id in DEEDS:
+		if deed_done(id):
+			n += 1
+	return n
+
+
+## Tells the record of achievements each deed newly done. Safe to call at any time, and as often as wanted.
+func check_deeds() -> void:
+	var told: Array = save.get("deeds_told", [])
+	for id in DEEDS:
+		if deed_done(id) and not id in told:
+			told.append(id)
+			_report_deed(id)
+	save["deeds_told"] = told
+
+
+func _report_deed(id: String) -> void:
+	if Engine.has_singleton("GameCenter"):
+		Engine.get_singleton("GameCenter").award_achievement({"name": "david." + id, "progress": 100.0, "show_completion_banner": true})
+
+
 ## Hearts are earned. He begins with few, and each time he brings the flock through something, one more is his
 ## to keep: counted from how far he has come, so it is right in any saved game.
 const HEART_DEEDS := {
@@ -489,6 +670,7 @@ func label(text: String, size: int, color: Color = CREAM) -> Label:
 func hitstop(seconds: float = 0.06) -> void:
 	if fast:
 		return
+	buzz(18)
 	Engine.time_scale = 0.05
 	await get_tree().create_timer(seconds, true, false, true).timeout
 	Engine.time_scale = 1.0
@@ -627,6 +809,7 @@ func ambience(kind: String) -> void:
 
 
 func _process(delta: float) -> void:
+	FA.pump()
 	if _ambience == "" or get_tree().paused:
 		return
 	_next_event -= delta
