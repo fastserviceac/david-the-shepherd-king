@@ -74,6 +74,8 @@ var goal_t := 99.0           # seconds since the goal last changed
 var keepsakes: Array = []     # smooth stones still lying here: [node, id]
 var ambush := {}              # a pack closing in: walls, beasts and the trigger that starts it
 var tasks: Array = []         # places where he does something with his hands by holding the grab key
+var songs: Array = []         # places where the lyre is asked for: {x, fn, reach, on, again}
+const SETTLE := 22.0          # seconds a sheep stays settled by the song
 var task_label: Label
 var task_now = null
 var pools: Array = []         # rain pools he can walk through: {x, y of the water, half width, tint}
@@ -783,16 +785,51 @@ func _build_foreground() -> void:
 
 # --------------------------------------------------------------- placing things
 
-func add_sheep(x: float, pos = null, lamb: bool = false):
+var flock_here: Array = []    # which of his nine already stand in this section (their ids)
+
+
+## A sheep. Unless `who` is "other" (another man's), it is one of his own nine, with that one's look in every
+## section: `who` may name it; left empty, a lamb is the lamb and a ewe is the next of the nine not yet placed here.
+func add_sheep(x: float, pos = null, lamb: bool = false, who: String = ""):
 	var s = Sheep.new()
 	s.level = self
 	s.wool = pal["wool"]
 	s.size = 0.68 if lamb else 1.0
+	var one := _flock_pick(who, lamb)
+	if not one.is_empty():
+		var w: Array = one["wool"]
+		var m: Array = one["mark"]
+		s.who = str(one["id"])
+		s.named = str(one["name"])
+		s.wool = Color(s.wool.r * float(w[0]), s.wool.g * float(w[1]), s.wool.b * float(w[2]), s.wool.a)
+		s.size = float(one["size"])
+		s.mark = Color(float(m[0]), float(m[1]), float(m[2]), float(m[3]))
 	s.face = -1.0 if rng.randf() < 0.5 else 1.0
 	s.position = pos if pos != null else on_ground(x)
 	add_child(s)
 	sheep_total += 1
 	return s
+
+
+func _flock_pick(who: String, lamb: bool) -> Dictionary:
+	if who == "other" or Game.backdrop:
+		return {}
+	for e in Game.flock():
+		var id := str(e["id"])
+		if id in flock_here or not e.has("wool") or not e.has("mark") or not e.has("size"):
+			continue
+		if (who != "" and id == who) or (who == "" and (id == "lamb") == lamb):
+			flock_here.append(id)
+			return e
+	return {}
+
+
+## The name of this section as the save knows it ("section1", "well", ...).
+func section_name() -> String:
+	var list: Array = Game.sections()
+	if section_idx < 0 or section_idx >= list.size():
+		return ""
+	return str(list[section_idx]["script"]).get_file().get_basename()
 
 
 func add_bush(x: float):
@@ -1129,9 +1166,21 @@ func give_here(id: String) -> void:
 	await _give(id, player.global_position.x, node)
 
 
+## A line of the psalm comes to him where he stands: the same light, the same knee, and the line written.
+func line_here(id: String) -> void:
+	if Game.backdrop or Game.has_line(id):
+		return
+	if not is_instance_valid(player) or player.dead:
+		Game.find_line(id)
+		return
+	var g := {"lit": 1.0}
+	var node := _light_shaft(on_ground(player.global_position.x), g)
+	await _give(id, player.global_position.x, node, true)
+
+
 ## The giving. The world holds still; he goes down on one knee in the light; the gift is named; he rises with it.
-func _give(id: String, x: float, node: Node2D) -> void:
-	var info: Dictionary = Game.GIFTS[id]
+func _give(id: String, x: float, node: Node2D, psalm_line: bool = false) -> void:
+	var info: Dictionary = {"key": ""} if psalm_line else Game.GIFTS[id]
 	Game.cinematic = true
 	Game.gifting = true
 	player.velocity = Vector2.ZERO
@@ -1145,7 +1194,10 @@ func _give(id: String, x: float, node: Node2D) -> void:
 		await get_tree().create_timer(1.3).timeout
 	Game.sfx("gather", -3.0, 0.0)
 	Game.sfx("fire", -8.0, 0.0)
-	Game.give(id)
+	if psalm_line:
+		Game.find_line(id)
+	else:
+		Game.give(id)
 	if not Game.fast:
 		await get_tree().create_timer(4.6).timeout
 		player.act = "kneel_up"
@@ -1386,6 +1438,8 @@ func shepherd_call(from: Vector2, reach: float, startle: bool) -> void:
 			c.called = 6.0
 			c.bolt = 0.0
 			c.hop = 1.0
+		elif c is Sheep and c.calm > 0.0 and c.gathered and absf(c.global_position.x - from.x) < reach:
+			c.rouse()          # held by the song: his voice brings them on again
 	if startle:
 		for n in get_tree().get_nodes_in_group("enemies"):
 			if absf(n.global_position.x - from.x) < reach * 0.6 and n.has_method("startle"):
@@ -1517,6 +1571,8 @@ func say(ids: Array) -> void:
 ## A beast has carried off a sheep: the flock is his to answer for, so it is back to the last watchfire.
 func sheep_taken(_s) -> void:
 	sheep_lost += 1
+	if is_instance_valid(_s) and str(_s.get("who")) != "":
+		Game.flock_at(_s.who, "taken")
 	for n in get_tree().get_nodes_in_group("sheep"):
 		n.threat = 0.0
 		n.worried = 0.0
@@ -1547,6 +1603,8 @@ func lose_follow(s) -> void:
 	s.gathered = false
 	s.gatherable = true
 	s.called = 0.0
+	if s.who != "":
+		Game.flock_at(s.who, section_name())      # out on this ground until he fetches it
 	followers.erase(s)
 	sheep_count = maxi(0, sheep_count - 1)
 	for i in followers.size():
@@ -1562,6 +1620,9 @@ func sheep_in_danger() -> void:
 
 func on_sheep(s) -> void:
 	sheep_count += 1
+	if s.who != "":
+		Game.flock_at(s.who, "")
+		s.name_t = 3.0
 	s.follow_index = followers.size()
 	followers.append(s)
 	Game.burst(self, s.global_position + Vector2(0, -20), Color(1.0, 0.9, 0.6, 0.9), 10, 110.0)
@@ -1595,6 +1656,9 @@ func respawn() -> void:
 		_cave_state(null)
 	player.reset_to(on_ground(checkpoints[cp_index]))
 	Game.fill_pouch()
+	for e in Game.flock():          # the one that was taken is out on this ground again, to be brought in
+		if str(e.get("at", "")) == "taken":
+			e["at"] = section_name()
 	if not ambush.is_empty() and not ambush["cleared"] and not ambush["walls"].is_empty():
 		ambush["run"] += 1          # the pack melts back into the dark; it will come again
 		_clear_ambush()
@@ -1748,6 +1812,51 @@ func _way_on() -> void:
 	var tk := add_task(width - 46.0, Game.t("Go on to %s") % nxt, 0.7, func() -> void:
 		Game.main.start_section(section_idx + 1, 0), 60.0)
 	tk["again"] = true
+
+
+## A place where the lyre is asked for: while he is within `reach` of it the key-cap shows, and when three
+## phrases have landed there `fn` is called (once, unless "again" is set on what is returned).
+func add_song(x: float, fn: Callable, reach: float = 260.0) -> Dictionary:
+	var sg := {"x": x, "fn": fn, "reach": reach, "on": true, "again": false}
+	songs.append(sg)
+	return sg
+
+
+## Three phrases have landed: every sheep that hears them settles. A beast at one is forgotten for a moment, a
+## bolting one stops, a nervous one will stand for him, and those following him hold where they are until he
+## calls or the quiet wears off.
+func song(from: Vector2, reach: float) -> void:
+	var n := 0
+	for s in get_tree().get_nodes_in_group("sheep"):
+		if not is_instance_valid(s) or s.carried or absf(s.global_position.x - from.x) > reach \
+				or absf(s.global_position.y - from.y) > 260.0:
+			continue
+		s.settle(SETTLE)
+		n += 1
+	if n > 0 and not Game.fast:
+		Game.sfx("sheep", -12.0, 0.2)
+	Game.grow("voice", 1.0)
+	for sg in songs:
+		if sg["on"] and absf(from.x - float(sg["x"])) < float(sg["reach"]):
+			if not sg["again"]:
+				sg["on"] = false
+			sg["fn"].call()
+	_on_song(from, n)
+
+
+func _on_song(_from: Vector2, _settled: int) -> void:
+	pass
+
+
+## The song place he is standing in, if any.
+func _song_here():
+	if songs.is_empty() or not Game.has("lyre") or Game.cinematic or respawning or not is_instance_valid(player):
+		return null
+	for sg in songs:
+		if sg["on"] and absf(player.global_position.x - float(sg["x"])) < float(sg["reach"]) \
+				and absf(player.global_position.y - on_ground(float(sg["x"])).y) < 120.0:
+			return sg
+	return null
 
 
 func add_task(x: float, text: String, hold: float, fn: Callable, reach: float = 50.0) -> Dictionary:
@@ -2058,6 +2167,12 @@ func _update_prompt(delta: float) -> void:
 			prompt_key = Game.cap("E")
 			prompt_words = Game.t(str(task_now["text"]))
 			prompt_bar = clampf(task_now["t"] / task_now["hold"], 0.0, 1.0)
+		elif _song_here() != null and player.lyre_t <= 0.0:
+			show = true
+			prompt_key = Game.cap("R")
+			prompt_words = Game.t("play")
+		elif player.lyre_t > 0.0:
+			pass          # the breath line is what he watches now
 		elif tip_t > 0.0:
 			tip_t -= delta
 			show = true

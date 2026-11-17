@@ -90,7 +90,7 @@ func _populate() -> void:
 	# other men's sheep, already crowding the far side of the well. Each carries its owner's mark
 	for i in 6:
 		var x := 2520.0 + i * 42.0
-		var o = add_sheep(x)
+		var o = add_sheep(x, null, false, "other")
 		o.gathered = true
 		o.gatherable = false
 		o.stay = x
@@ -159,6 +159,13 @@ func _populate() -> void:
 
 	add_trigger(1700.0, 1860.0, func() -> void: say(["n_well_custom"]))
 	add_trigger(1900.0, 1960.0, _run_ahead)
+	# before the water is in sight they have smelt it, and will not walk quietly: the place to play them still
+	add_trigger(1400.0, 1500.0, func() -> void:
+		for o in own:
+			if o["state"] == "led":
+				o["s"].hop = 1.0
+		Game.sfx("sheep", -6.0, 0.2))
+	add_song(1570.0, func() -> void: pass, 130.0)
 	add_trigger(2200.0, 2262.0, func() -> void:
 		if opened or stone["on"]:
 			return
@@ -348,6 +355,8 @@ func _run_ahead() -> void:
 		return
 	mixed_up = true
 	for i in own.size():
+		if own[i]["s"].calm > 0.0:      # held by the lyre: it stays where he played, and comes on when he calls
+			continue
 		own[i]["state"] = "mixed"
 		own[i]["s"].stay = 2530.0 + i * 34.0
 		own[i]["s"].hop = 1.0
@@ -606,6 +615,7 @@ func _all_watered() -> void:
 	back_task["on"] = true
 	_hint(OPEN_X + 82.0, 250.0, "Put the stone back over the well")
 	await say(["ps23_2", "n_well_back"])
+	await line_here("p23_waters")
 
 
 ## His work at the troughs done, he sets the bucket and rope down at the well-head for the next man.

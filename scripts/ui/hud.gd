@@ -13,6 +13,7 @@ func _ready() -> void:
 
 var notices: Array = []      # what he has just grown into: [title, line, seconds left]
 var panel := 0.0             # the growth page, held open with Tab
+var page := 0                # which page of the journal is open: 0 his growth, 1 the psalm
 var stone_t := 0.0
 var toasts: Array = []       # a craft strengthened: [craft, rank, seconds left]
 var place_t := 0.0
@@ -24,6 +25,7 @@ func _enter_tree() -> void:
 		Game.grew.connect(_on_grew)
 		Game.gifted.connect(_on_gift)
 		Game.stone_found.connect(_on_stone)
+		Game.line_found.connect(_on_line)
 		Game.place_found.connect(func(n: String) -> void:
 			place_name = n
 			place_t = 6.0)
@@ -42,6 +44,15 @@ func _on_gift(id: String) -> void:
 	Game.sfx("anoint", -5.0, 0.0)
 	Game.sfx("gather", -3.0, 0.0)
 	Game.sfx("fire", -8.0, 0.0)
+
+
+## A line of the psalm has come to him: the lyre, the psalm named, and the line itself.
+func _on_line(id: String) -> void:
+	notices.append(["Psalm 23", id, 7.0, "lyre", 0, true])
+	Game.sfx("gather", -8.0, 0.0)
+
+
+var psalm_t := 0.0           # seconds the whole psalm stays on the screen, at the chapter's end
 
 
 ## One heart of his life: a deep red stone with the light on its shoulder and a thin gold edge, like the
@@ -92,6 +103,13 @@ func _emblem(craft: String, at: Vector2, a: float) -> void:
 			draw_line(at + Vector2(-15, 6), at + Vector2(-20, -18), gold, 2.0, true)
 			draw_line(at + Vector2(15, 6), at + Vector2(20, -18), gold, 2.0, true)
 			draw_circle(at + Vector2(0, 12), 5.0, gold)
+		"lyre":       # the kinnor: two arms, a yoke across them, and its strings
+			draw_arc(at + Vector2(0, 2), 15.0, 0.25, PI - 0.25, 14, gold, 3.0, true)
+			draw_line(at + Vector2(-14.5, 6), at + Vector2(-17, -18), gold, 2.6, true)
+			draw_line(at + Vector2(14.5, 6), at + Vector2(17, -18), gold, 2.6, true)
+			draw_line(at + Vector2(-21, -16), at + Vector2(21, -16), gold, 2.6, true)
+			for k in 4:
+				draw_line(at + Vector2(-9 + k * 6, -15), at + Vector2(-7 + k * 4.6, 15), Color(gold.r, gold.g, gold.b, a * 0.8), 1.2, true)
 		"heart":
 			draw_arc(at + Vector2(-8, -4), 8.5, PI, TAU, 12, gold, 2.6, true)
 			draw_arc(at + Vector2(8, -4), 8.5, PI, TAU, 12, gold, 2.6, true)
@@ -139,7 +157,13 @@ func _process(delta: float) -> void:
 		if toasts[0][2] <= 0.0:
 			toasts.pop_front()
 	panel = move_toward(panel, 1.0 if Input.is_action_pressed("growth") else 0.0, delta * 6.0)
-	if not notices.is_empty() and (Game.gifting or not Game.cinematic):
+	if panel > 0.5 and (Input.is_action_just_pressed("move_right") or Input.is_action_just_pressed("move_left")):
+		page = 1 - page          # the journal has two pages: his growth, and the psalm
+		Game.sfx("ui_move", -10.0, 0.0)
+	elif panel <= 0.0:
+		page = 0
+	psalm_t = maxf(0.0, psalm_t - delta)
+	if not notices.is_empty() and (Game.gifting or not Game.cinematic or notices[0].size() > 5):
 		notices[0][2] -= delta
 		if notices[0][2] <= 0.0:
 			notices.pop_front()
@@ -148,7 +172,13 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var level = Game.main.level
-	if level == null or not is_instance_valid(level) or not is_instance_valid(level.player) or (Game.cinematic and not Game.gifting):
+	if level == null or not is_instance_valid(level) or not is_instance_valid(level.player):
+		return
+	if Game.cinematic and not Game.gifting:      # a story scene: nothing of the game on the screen, but the psalm may be written over it
+		if psalm_t > 0.0:
+			_psalm_page(clampf(minf(11.0 - psalm_t, psalm_t) * 1.2, 0.0, 1.0), false)
+		elif not notices.is_empty() and notices[0].size() > 5:
+			_notice()
 		return
 	var player = level.player
 	if hurt_flash > 0.0:
@@ -215,6 +245,26 @@ func _draw() -> void:
 
 	# what he has just grown into: an emblem in a ring of light, his new craft named large, and what it gives him
 	if not notices.is_empty():
+		_notice()
+
+	# a craft strengthened: its name, its marks and what changed, small, low on the left
+	if not toasts.is_empty():
+		var tt: Array = toasts[0]
+		var ta := clampf(minf(5.5 - tt[2], tt[2]) * 2.0, 0.0, 1.0)
+		var tc: Dictionary = Game.CRAFTS[tt[0]]
+		var tp := Vector2(40.0, 560.0)
+		draw_string(Game.serif, tp, Game.t(tc["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.86, 0.55, ta))
+		var tw := Game.serif.get_string_size(Game.t(tc["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		for k in 3:
+			draw_circle(tp + Vector2(tw + 16.0 + k * 13.0, -6.0), 3.6, Color(1.0, 0.86, 0.5, ta) if k < int(tt[1]) else Color(1, 1, 1, 0.25 * ta))
+		draw_string(Game.serif, tp + Vector2(0, 22), Game.t(tc["gifts"][int(tt[1]) - 1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(cream.r, cream.g, cream.b, 0.85 * ta))
+	_rest(level)
+
+
+## What he has just been given, or the line of the psalm that has just come to him.
+func _notice() -> void:
+	var cream := Game.CREAM
+	if true:
 		var n: Array = notices[0]
 		var age: float = 7.0 - n[2]
 		var na := clampf(minf(age * 2.5, n[2] * 1.4), 0.0, 1.0)
@@ -237,20 +287,18 @@ func _draw() -> void:
 			var filled: bool = k < int(n[4])
 			draw_circle(Vector2(640.0 - 18.0 + k * 18.0, 262.0), 5.0, Color(0.04, 0.03, 0.06, na))
 			draw_circle(Vector2(640.0 - 18.0 + k * 18.0, 262.0), 3.6, Color(1.0, 0.86, 0.5, na) if filled else Color(1, 1, 1, 0.25 * na))
-		draw_string(Game.serif, Vector2(240.0, 292.0), Game.t(n[1]), HORIZONTAL_ALIGNMENT_CENTER, 800.0, 20, Color(cream.r, cream.g, cream.b, 0.9 * na))
+		if n.size() > 5:          # a line of the psalm: it may run to two lines
+			draw_rect(Rect2(0, 310, 1280, 26), Color(0.02, 0.02, 0.05, 0.34 * na))
+			draw_multiline_string(Game.serif, Vector2(240.0, 294.0), str(Game.line(str(n[1]))["text"]), HORIZONTAL_ALIGNMENT_CENTER, 800.0, 21, 2, Color(cream.r, cream.g, cream.b, 0.95 * na))
+		else:
+			draw_string(Game.serif, Vector2(240.0, 292.0), Game.t(n[1]), HORIZONTAL_ALIGNMENT_CENTER, 800.0, 20, Color(cream.r, cream.g, cream.b, 0.9 * na))
 
-	# a craft strengthened: its name, its marks and what changed, small, low on the left
-	if not toasts.is_empty():
-		var tt: Array = toasts[0]
-		var ta := clampf(minf(5.5 - tt[2], tt[2]) * 2.0, 0.0, 1.0)
-		var tc: Dictionary = Game.CRAFTS[tt[0]]
-		var tp := Vector2(40.0, 560.0)
-		draw_string(Game.serif, tp, Game.t(tc["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.86, 0.55, ta))
-		var tw := Game.serif.get_string_size(Game.t(tc["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		for k in 3:
-			draw_circle(tp + Vector2(tw + 16.0 + k * 13.0, -6.0), 3.6, Color(1.0, 0.86, 0.5, ta) if k < int(tt[1]) else Color(1, 1, 1, 0.25 * ta))
-		draw_string(Game.serif, tp + Vector2(0, 22), Game.t(tc["gifts"][int(tt[1]) - 1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(cream.r, cream.g, cream.b, 0.85 * ta))
 
+
+## The rest of the screen: his goal, a sheep in danger out of sight, the journal, a great beast's strength.
+func _rest(level) -> void:
+	var cream := Game.CREAM
+	var player = level.player
 	# what he is to do now: always there, top left, in plain words. When a step is done it is ticked off for a
 	# moment and the next one is written in
 	if is_instance_valid(level) and str(level.goal) != "" and not Game.cinematic:
@@ -286,6 +334,9 @@ func _draw() -> void:
 			draw_arc(at, 17.0, -PI * 0.5, -PI * 0.5 + TAU * minf(sh.threat, 1.0), 28, hot, 5.0, true)
 			draw_colored_polygon(PackedVector2Array([at + Vector2(side * 30.0, 0), at + Vector2(side * 21.0, -8), at + Vector2(side * 21.0, 8)]), hot)
 
+	if player.lyre_t > 0.0 and not Game.cinematic:
+		_breath(player)
+
 	# the journal, held open with Tab: what he is doing and why, what has been given him and what has not,
 	# how his crafts stand, and what the stones and places he has found are worth
 	if panel > 0.01:
@@ -302,7 +353,91 @@ func _draw() -> void:
 			draw_rect(Rect2(x + w * f - 1.0, 644, 2.0, 14), Color(0.05, 0.04, 0.08, 0.9))
 
 
+## The breath line, over his head while he plays: where the breath has been (the trailing curve), where it is
+## (the bright head), the band at the top where a phrase may be let go, and a mark for each phrase landed.
+var _trail: Array = []
+func _breath(player) -> void:
+	var cam: Camera2D = player.cam
+	var at: Vector2 = Vector2(640.0, 360.0) + (player.global_position - cam.get_screen_center_position()) * cam.zoom.x + Vector2(0.0, -188.0 * cam.zoom.y)
+	at.y = maxf(at.y, 120.0)
+	var w := 132.0
+	var h := 44.0
+	var gold := Color(1.0, 0.86, 0.5)
+	var cream := Game.CREAM
+	var v: float = player.breath_v
+	if player.lyre_t < 0.05:
+		_trail.clear()
+	_trail.append(v)
+	while _trail.size() > 54:
+		_trail.pop_front()
+	var top := at.y - h
+	var band: float = h * (1.0 - player.BREATH_TOP)
+	var hot: bool = v >= player.BREATH_TOP and player.lyre_held
+	draw_rect(Rect2(at.x - w * 0.5 - 8.0, top - 8.0, w + 16.0, h + 30.0), Color(0.03, 0.03, 0.07, 0.42))
+	draw_rect(Rect2(at.x - w * 0.5, top, w, band), Color(gold.r, gold.g, gold.b, 0.5 if hot else 0.2))
+	draw_line(Vector2(at.x - w * 0.5, top + band), Vector2(at.x + w * 0.5, top + band), Color(gold.r, gold.g, gold.b, 0.55), 1.0)
+	draw_line(Vector2(at.x - w * 0.5, at.y), Vector2(at.x + w * 0.5, at.y), Color(cream.r, cream.g, cream.b, 0.25), 1.0)
+	var pts := PackedVector2Array()
+	var n := _trail.size()
+	var head_x := at.x + w * 0.5 - 14.0
+	for i in n:
+		pts.append(Vector2(head_x - (n - 1 - i) * ((w - 14.0) / 53.0), at.y - float(_trail[i]) * h))
+	if pts.size() >= 2:
+		draw_polyline(pts, Color(cream.r, cream.g, cream.b, 0.8), 2.0, true)
+	var head := Vector2(head_x, at.y - v * h)
+	draw_circle(head, 7.5 if hot else 5.0, Color(gold.r, gold.g, gold.b, 0.35))
+	draw_circle(head, 4.2 if hot else 3.2, gold if hot else cream)
+	var fl: float = player.lyre_flash
+	if fl > 0.0:            # a phrase landed: a ring opens from the head of the line
+		draw_arc(head, 8.0 + (1.0 - fl) * 26.0, 0.0, TAU, 28, Color(gold.r, gold.g, gold.b, fl), 2.0, true)
+	for k in 3:             # the three phrases of a song
+		var c := Vector2(at.x - 16.0 + k * 16.0, at.y + 12.0)
+		var lit: bool = k < int(player.phrases)
+		draw_circle(c, 4.0, Color(gold.r, gold.g, gold.b, 0.95) if lit else Color(1, 1, 1, 0.18))
+		if not lit:
+			draw_arc(c, 4.0, 0.0, TAU, 14, Color(1, 1, 1, 0.4 if fl >= 0.0 else 0.4 + 0.5 * -fl), 1.0, true)
+
+
+## The second page of the journal: Psalm 23 as far as it has come to him, in the psalm's own order. A line not
+## yet found is a faint rule where it will stand.
+func _psalm_page(a: float, marks: bool = true) -> void:
+	var f := Game.serif
+	var cream := Game.CREAM
+	var gold := Color(1.0, 0.85, 0.5, a)
+	var ink := Color(cream.r, cream.g, cream.b, a)
+	draw_rect(Rect2(50, 46, 1180, 628), Color(0.03, 0.03, 0.07, 0.9 * a))
+	draw_rect(Rect2(50, 46, 1180, 628), Color(1.0, 0.85, 0.5, 0.25 * a), false, 1.5)
+	draw_string(f, Vector2(86, 94), Game.t("The shepherd's journal"), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, gold)
+	draw_string(f, Vector2(794, 94), Game.t("Lines  %d of %d") % [Game.psalm().size(), Game.PSALM.size()], HORIZONTAL_ALIGNMENT_RIGHT, 400, 18, gold)
+	draw_line(Vector2(86, 108), Vector2(1194, 108), Color(1.0, 0.85, 0.5, 0.3 * a), 1.0)
+	_emblem("lyre", Vector2(640, 150), a)
+	draw_string(f, Vector2(0, 204), Game.t("Psalm 23").to_upper(), HORIZONTAL_ALIGNMENT_CENTER, 1280, 16, gold)
+	var y := 250.0
+	for e in Game.PSALM:
+		var id := str(e["id"])
+		if Game.has_line(id):
+			var txt := str(Game.line(id)["text"])
+			draw_multiline_string(f, Vector2(240, y), txt, HORIZONTAL_ALIGNMENT_CENTER, 800.0, 20, 2, ink)
+			y += f.get_multiline_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, 800.0, 20).y + 12.0
+		else:
+			draw_line(Vector2(540, y - 7.0), Vector2(740, y - 7.0), Color(1, 1, 1, 0.16 * a), 1.0)
+			y += 30.0
+	if marks:
+		_page_mark(a)
+
+
+## Which page is open, and that there is another: two small marks at the foot of the journal.
+func _page_mark(a: float) -> void:
+	for k in 2:
+		draw_circle(Vector2(632.0 + k * 16.0, 658.0), 3.6, Color(1.0, 0.85, 0.5, a) if k == page else Color(1, 1, 1, 0.25 * a))
+	draw_string(Game.serif, Vector2(590.0, 663.0), "‹", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.5 * a))
+	draw_string(Game.serif, Vector2(676.0, 663.0), "›", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.5 * a))
+
+
 func _journal(a: float) -> void:
+	if page == 1:
+		_psalm_page(a)
+		return
 	var f := Game.serif
 	var cream := Game.CREAM
 	var gold := Color(1.0, 0.85, 0.5, a)
@@ -337,17 +472,17 @@ func _journal(a: float) -> void:
 	draw_string(f, Vector2(x, 142), Game.t("Gifts").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
 	for i in Game.GIFT_ORDER.size():
 		var g: Dictionary = Game.GIFTS[Game.GIFT_ORDER[i]]
-		var y := 174.0 + i * 82.0
+		var y := 172.0 + i * 70.0
 		var his: bool = Game.has(Game.GIFT_ORDER[i])
 		draw_circle(Vector2(x + 8, y - 7), 7.0, Color(1.0, 0.82, 0.45, a) if his else Color(1, 1, 1, 0.14 * a))
 		if not his:
 			draw_arc(Vector2(x + 8, y - 7), 7.0, 0.0, TAU, 20, Color(1, 1, 1, 0.4 * a), 1.2, true)
 		draw_string(f, Vector2(x + 26, y), Game.t(g["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, ink if his else dim)
 		if his:
-			draw_multiline_string(f, Vector2(x + 26, y + 20), Game.t(g["line"]) + "  " + Game.t(g["why"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 14, 3, dim)
+			draw_multiline_string(f, Vector2(x + 26, y + 18), Game.t(g["line"]) + "  " + Game.t(g["why"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 13, 3, dim)
 		else:
-			draw_string(f, Vector2(x + 26, y + 20), Game.t("Still to earn").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.85, 0.5, 0.75 * a))
-			draw_multiline_string(f, Vector2(x + 26, y + 38), Game.t(g["how"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 15, 2, ink)
+			draw_string(f, Vector2(x + 26, y + 17), Game.t("Still to earn").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.85, 0.5, 0.75 * a))
+			draw_multiline_string(f, Vector2(x + 26, y + 34), Game.t(g["how"]), HORIZONTAL_ALIGNMENT_LEFT, 360.0, 14, 2, ink)
 
 	# --- the five crafts: slow strengthening of what he has
 	x = 866.0
@@ -371,3 +506,4 @@ func _journal(a: float) -> void:
 		if not his:
 			line = Game.t("Not yet given.")
 		draw_multiline_string(f, Vector2(x, y + 36.0), line, HORIZONTAL_ALIGNMENT_LEFT, 320.0, 14, 2, dim)
+	_page_mark(a)

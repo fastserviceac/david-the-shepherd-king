@@ -80,6 +80,19 @@ const WIND_TIME := 0.42
 const SPIN_TIME := 0.54
 const PLUNGE_LAND := 0.3
 var leap_t := 0.0         # a running leap: a streak of dust behind him
+# the lyre: while the key is held a breath rises and falls; let go at its top and a phrase lands
+var lyre_t := 0.0         # seconds he has been seated with it (0: not playing)
+var lyre_held := false    # the key is down and a breath is under way
+var lyre_idle := 0.0      # seconds since he last let go: after a little he gets up
+var breath := 0.0         # how far through the breath, 0..1
+var breath_v := 0.0       # where the line stands now, 0..1
+var breath_noise := 0.0   # a beast near: the line will not hold still
+var phrases := 0          # phrases landed in this song, of three
+var lyre_flash := 0.0     # a phrase just landed (above zero) or was let go too soon (below)
+const BREATH := 2.4       # seconds a breath takes to rise and fall
+const BREATH_TOP := 0.8   # let go above this and the phrase lands
+const LYRE_SIT := 0.5
+const LYRE_RISE := 0.4
 
 
 func _ready() -> void:
@@ -157,6 +170,83 @@ func _shepherd_call() -> void:
 		level.shepherd_call(global_position, Game.call_reach(), v >= 2)
 
 
+## The lyre. He sits where he stands and plays for as long as the key is held: the breath line rises and falls,
+## and letting go near its top lands a phrase. Three phrases and the song goes out to every sheep that can hear.
+## A beast close by makes the line jump; a blow, a leap or any other act ends the playing.
+func _update_lyre(delta: float, free: bool, able: bool) -> void:
+	lyre_flash = move_toward(lyre_flash, 0.0, delta * 1.5)
+	if act == "play_up":
+		if act_t >= LYRE_RISE:
+			act = ""
+		return
+	if act != "play":
+		lyre_t = 0.0
+		if free and Game.has("lyre") and Input.is_action_just_pressed("lyre") and absf(velocity.x) < 90.0:
+			act = "play"
+			act_t = 0.0
+			lyre_t = 0.001
+			lyre_held = true
+			lyre_idle = 0.0
+			breath = 0.0
+			breath_v = 0.0
+			phrases = 0
+			call_t = 0.0
+			velocity.x = 0.0
+			Game.duck(true)
+		return
+	lyre_t += delta
+	if not able or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("attack") \
+			or Input.is_action_just_pressed("roll") or Input.is_action_just_pressed("sling"):
+		stop_lyre(false)
+		return
+	breath_noise = 0.0
+	for n in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(n) and absf(n.global_position.x - global_position.x) < 340.0 and absf(n.global_position.y - global_position.y) < 200.0:
+			breath_noise = 1.0
+	if Input.is_action_pressed("lyre"):
+		if not lyre_held:
+			lyre_held = true
+			breath = 0.0
+		lyre_idle = 0.0
+		breath = fmod(breath + delta / BREATH, 1.0)
+		var jump := breath_noise * 0.2 * sin(lyre_t * 23.0) * sin(lyre_t * 7.3)
+		breath_v = clampf(0.5 - 0.5 * cos(breath * TAU) + jump, 0.0, 1.0)
+	elif lyre_held:           # let go
+		lyre_held = false
+		if breath_v >= BREATH_TOP:
+			phrases += 1
+			lyre_flash = 1.0
+			Game.buzz(14)
+			Game.sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][clampi(phrases - 1, 0, 2)])      # stand-in for the lyre: three rising notes
+			if phrases >= 3:
+				phrases = 0
+				ring_t = 1.0
+				lyre_idle = 0.9          # he plays on a moment, then gets up
+				Game.sfx("anoint", -12.0, 0.0)
+				if level != null and level.has_method("song"):
+					level.song(global_position, Game.song_reach())
+		else:
+			lyre_flash = -1.0
+			Game.sfx("ui_move", -9.0, 0.0, 0.7)
+	else:
+		lyre_idle += delta
+		breath_v = move_toward(breath_v, 0.0, delta * 1.8)
+		if lyre_idle > 1.7:
+			stop_lyre(true)
+
+
+func stop_lyre(rising: bool) -> void:
+	if act != "play":
+		return
+	act = "play_up" if rising else ""
+	act_t = 0.0
+	lyre_t = 0.0
+	lyre_held = false
+	phrases = 0
+	if not Game.cinematic:
+		Game.duck(false)
+
+
 ## Called when a sheep comes to him: he turns and calls it, if he is standing free.
 func call_out() -> void:
 	if is_on_floor() and absf(velocity.x) < 30.0 and attack_t <= 0.0 and not charging and act == "":
@@ -169,6 +259,9 @@ func reset_to(pos: Vector2) -> void:
 	hp = max_hp
 	dead = false
 	charging = false
+	if act == "play" or act == "play_up":
+		act = ""
+	lyre_t = 0.0
 	attack_t = 0.0
 	invuln = 1.0
 	stun = 0.0
@@ -228,6 +321,7 @@ func _physics_process(delta: float) -> void:
 	leap_t = maxf(0.0, leap_t - delta * 2.0)
 	if free and call_cd <= 0.0 and Input.is_action_just_pressed("call") and Game.has("voice"):
 		_shepherd_call()
+	_update_lyre(delta, free, can_act and on_floor)
 	if free and Input.is_action_just_pressed("grab"):
 		_try_clinch()
 	_update_clinch(delta)
@@ -547,6 +641,7 @@ func hurt(amount: int, from_x: float, kind: String = "body") -> bool:
 	if slipped:
 		_escaped(from_x)
 		return false
+	stop_lyre(false)
 	hp -= amount
 	invuln = 1.3
 	stun = 0.25
@@ -800,6 +895,16 @@ func _current_frame() -> Texture2D:
 		if act_t < 1.3:
 			return ly[clampi(int(act_t / 1.3 * 9.0), 0, 8)]
 		return FA.pingpong(ly.slice(9, 34), act_t - 1.3, 6.0)
+	if act == "play" or act == "play_up":
+		# the same seated playing as at the watchfire, quicker to sit and to rise; without those frames, he kneels
+		var ly: Array = FA.frames("david", "lyre")
+		if ly.size() < 34:
+			return _one_shot("kneel", clampf(act_t / LYRE_SIT, 0.0, 1.0) if act == "play" else 1.0 - clampf(act_t / LYRE_RISE, 0.0, 1.0))
+		if act == "play_up":
+			return ly[clampi(8 - int(act_t / LYRE_RISE * 8.0), 0, 8)]
+		if act_t < LYRE_SIT:
+			return ly[clampi(int(act_t / LYRE_SIT * 9.0), 0, 8)]
+		return FA.pingpong(ly.slice(9, 34), act_t - LYRE_SIT, 6.0 if lyre_held else 3.0)
 	if act == "carry":
 		var c: Array = FA.frames("david", "carry")
 		return c[int(ph * c.size()) % c.size()]

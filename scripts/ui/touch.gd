@@ -18,6 +18,7 @@ var buttons: Array = [
 	{"id": "roll", "label": "Dodge", "pos": Vector2(1084, 530), "r": 48.0, "acts": ["roll"]},
 	{"id": "grab", "label": "Grab", "pos": Vector2(944, 660), "r": 44.0, "acts": ["grab"]},
 	{"id": "call", "label": "Call", "pos": Vector2(962, 546), "r": 42.0, "acts": ["call"]},
+	{"id": "lyre", "label": "Lyre", "pos": Vector2(1118, 424), "r": 40.0, "acts": ["lyre"]},
 	{"id": "growth", "label": "Growth", "pos": Vector2(1040, 132), "r": 30.0, "acts": ["growth"]},
 	{"id": "map", "label": "Map", "pos": Vector2(1124, 132), "r": 30.0, "acts": ["map"]},
 	{"id": "pause", "label": "II", "pos": Vector2(1208, 132), "r": 30.0, "acts": ["pause"]},
@@ -98,6 +99,8 @@ func _shown(b: Dictionary) -> bool:
 		return b["id"] == "pause" and m.menu.mode != "main"
 	if b["id"] == "call":
 		return Game.has("voice")
+	if b["id"] == "lyre":
+		return Game.has("lyre")
 	return true
 
 

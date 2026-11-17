@@ -38,6 +38,12 @@ var bleat := 0.0
 var safe := false         # no beast goes for it (the lamb once it has slipped away)
 var prey := false         # a beast will go for it even though it is not yet his to gather (a strayed ewe)
 var carried := false      # a beast has it in its jaws: it goes where the beast goes, and does not walk or answer a hand
+var who := ""             # which of his own nine it is (its id in the save's flock); "" for another man's
+var named := ""           # the name it answers to, if it has one
+var name_t := 0.0         # seconds its name stays written over it
+var restless := false     # will not stand: it paces, and trots off from his hand, until the lyre quiets it
+var calm := 0.0           # seconds it stays settled by the song
+var held_x := NAN         # where the song stopped it while it was following him
 const TAKE := 4.0         # seconds with a beast at its side before it is carried off
 
 
@@ -48,9 +54,39 @@ func _ready() -> void:
 	add_to_group("sheep")
 
 
+## The song has reached it. A beast at it is forgotten for a moment; it stops bolting; it stands for his hand;
+## and if it was following him it holds where it is until he calls or the quiet wears off.
+func settle(seconds: float) -> void:
+	calm = seconds
+	bolt = 0.0
+	called = 0.0
+	worried = 0.0
+	threat = maxf(0.0, threat - 0.5)
+	name_t = 3.0
+	if gathered and is_nan(stay) and leap < 0.0:
+		held_x = global_position.x
+		stay = held_x
+	if not Game.fast and not Game.backdrop:
+		Game.burst(level, global_position + Vector2(0, -34.0 * size), Color(1.0, 0.9, 0.6, 0.7), 5, 50.0)
+
+
+## The quiet is over: it follows him again.
+func rouse() -> void:
+	calm = 0.0
+	if not is_nan(held_x) and stay == held_x:
+		stay = NAN
+		hop = 0.6
+	held_x = NAN
+
+
 func _process(delta: float) -> void:
 	t += delta
 	hop = maxf(0.0, hop - delta * 2.5)
+	name_t = maxf(0.0, name_t - delta)
+	if calm > 0.0:
+		calm -= delta
+		if calm <= 0.0:
+			rouse()
 	if worried > 0.0:          # a beast is at it: it cries out, and will be carried off if he does not come
 		worried -= delta
 		bleat -= delta
@@ -79,13 +115,20 @@ func _process(delta: float) -> void:
 			called -= delta
 			if absf(to) > 30.0:
 				_walk(signf(to) * 120.0, delta)
+		elif calm > 0.0 and not wild:
+			pass          # settled by the song: it stands where it is, and will stand for his hand
 		elif (wild and absf(to) < 170.0 and absf(player.global_position.y - global_position.y) < 90.0) \
+				or (restless and absf(to) < 150.0 and absf(player.global_position.y - global_position.y) < 90.0) \
 				or (skittish and absf(to) < 150.0 and absf(player.global_position.y - global_position.y) < 90.0 \
 				and absf(player.velocity.x) > 175.0):
 			bolt = 0.75
 			bolt_dir = -signf(to) if absf(global_position.x - home_x) < 330.0 else signf(home_x - global_position.x)
 			hop = 1.0
 			Game.sfx("sheep", -8.0, 0.2)
+		elif restless:            # to and fro over the same few paces, never grazing
+			if absf(global_position.x - home_x) > 70.0:
+				bolt_dir = signf(home_x - global_position.x)
+			_walk(bolt_dir * 62.0, delta)
 	if not gathered:
 		if gatherable and not Game.backdrop and global_position.distance_to(player.global_position + Vector2(0, -20)) < 52.0:
 			gathered = true
@@ -174,7 +217,7 @@ func _draw() -> void:
 		# standing: graze, look up, graze again (played forward then back)
 		var g: Array = FA.frames("sheep", "graze")
 		var n := g.size()
-		var k := int(t * 12.0) % maxi(1, 2 * n - 2)
+		var k := int(t * (5.0 if calm > 0.0 else 12.0)) % maxi(1, 2 * n - 2)      # settled, it grazes slowly
 		tex = g[k if k < n else 2 * n - 2 - k]
 	FA.draw(self, tex, face, 0.46 * size, wool, 1.4, 0.0, Vector2.ZERO, Vector2.ONE, lift)
 	if threat > 0.02:          # how close it is to being lost: a ring closing over it
@@ -184,6 +227,13 @@ func _draw() -> void:
 		draw_arc(at, 14.0, -PI * 0.5, -PI * 0.5 + TAU * minf(threat, 1.0), 28, hot, 4.5, true)
 		draw_line(at + Vector2(0, -6), at + Vector2(0, 2), hot, 3.0, true)      # and a mark inside it, so it reads from across the screen
 		draw_circle(at + Vector2(0, 6.5), 1.8, hot)
+	if named != "" and name_t > 0.0 and not Game.backdrop:      # the name it answers to, for a moment
+		var na := clampf(minf(name_t, 3.0 - name_t) * 2.0, 0.0, 1.0)
+		var label := Game.t(named)
+		var lw := Game.serif.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		var lp := Vector2(-lw * 0.5, -78.0 * size + lift)
+		draw_string_outline(Game.serif, lp, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color(0.02, 0.02, 0.05, 0.6 * na))
+		draw_string(Game.serif, lp, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.93, 0.8, 0.95 * na))
 	if mark.a > 0.0:
 		var mc := Vector2(-face * 13.0 * size, -39.0 * size + lift)
 		for k in 6:          # soft-edged: many faint layers, widest first

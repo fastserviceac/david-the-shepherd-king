@@ -278,6 +278,14 @@ func _anointing() -> void:
 	player.act_t = 0.0
 	if not Game.fast:
 		await get_tree().create_timer(2.4).timeout
+	# the line this hour gives him, and then the whole psalm, every line that was still missing written in
+	Game.find_line("p23_oil")
+	if not Game.fast:
+		await get_tree().create_timer(7.2).timeout
+	Game.psalm_whole()
+	if not Game.fast and is_instance_valid(Game.main) and is_instance_valid(Game.main.hud):
+		Game.main.hud.psalm_t = 11.0
+		await get_tree().create_timer(11.0).timeout
 	complete()
 
 ## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.

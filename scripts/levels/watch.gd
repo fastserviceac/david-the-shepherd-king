@@ -191,6 +191,7 @@ func _keep_watch() -> void:
 	if not Game.fast:
 		create_tween().tween_property(self, "dark_amount", 0.0, 6.0)
 	await say(["n_watch_dawn"])
+	await line_here("p23_table")
 	complete()
 
 

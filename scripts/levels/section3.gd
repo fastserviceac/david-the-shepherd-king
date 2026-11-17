@@ -214,6 +214,7 @@ func _on_sheep(s) -> void:
 			w.queue_free()
 	arena_walls.clear()
 	add_hint(4150.0, 150.0, "Carry it down off the ridge")
+	Game.find_line("p23_rod")
 	say(["n_s3_end"])
 
 
@@ -285,6 +286,7 @@ func _last_words() -> void:
 	if spoken:
 		return
 	spoken = true
+	Game.find_line("p23_soul")
 	await say(["n_s3_remember", "1sam17_37"])
 	told = true
 	if is_instance_valid(player) and carrying and player.global_position.x > end_x - 60.0:

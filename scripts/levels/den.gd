@@ -139,6 +139,7 @@ func _start_bear() -> void:
 			w.queue_free()
 		walls.clear()
 		await give_here("heart")
+		Game.find_line("p23_valley")
 		say(["n_den_out"]))
 
 

@@ -117,7 +117,7 @@ func _input(event: InputEvent) -> void:
 		touch = false
 
 
-const PAD_KEYS := {"Space": "A", "Espaço": "A", "J": "X", "K": "B", "E": "Y", "L": "RB", "Shift": "LB", "Q": "LS", "Tab": "Back", "M": "RS",
+const PAD_KEYS := {"Space": "A", "Espaço": "A", "J": "X", "K": "B", "E": "Y", "L": "RB", "Shift": "LB", "Q": "LS", "Tab": "Back", "M": "RS", "R": "RT",
 		"Enter": "A", "Esc": "Start", "A": "", "D": "Stick"}
 const PAD_WORDS := {"Space": "A", "Espaço": "A", "Shift": "LB", "Tab": "Back", "Enter": "A", "Esc": "Start"}
 
@@ -144,7 +144,7 @@ func keys(s: String) -> String:
 
 
 const TOUCH_KEYS := {"Space": "Jump", "Espaço": "Jump", "Enter": "Tap", "J": "Staff", "K": "Sling", "L": "Dodge",
-		"E": "Grab", "Q": "Call", "Tab": "Growth", "M": "Map", "Esc": "II", "Shift": "Stick", "A": "", "D": "Stick"}
+		"E": "Grab", "Q": "Call", "R": "Lyre", "Tab": "Growth", "M": "Map", "Esc": "II", "Shift": "Stick", "A": "", "D": "Stick"}
 
 
 ## One key as it should be named on a key-cap: the key itself, the controller's button, or the button on the screen.
@@ -229,6 +229,7 @@ func _setup_input() -> void:
 	_bind("grab", [KEY_E, KEY_I], [JOY_BUTTON_Y])
 	_bind("walk", [KEY_SHIFT], [JOY_BUTTON_LEFT_SHOULDER])
 	_bind("call", [KEY_Q, KEY_O], [JOY_BUTTON_LEFT_STICK])
+	_bind("lyre", [KEY_R, KEY_U], [], [JOY_AXIS_TRIGGER_RIGHT, 1.0])
 	_bind("growth", [KEY_TAB], [JOY_BUTTON_BACK])
 	_bind("map", [KEY_M], [JOY_BUTTON_RIGHT_STICK])
 	_bind("accept", [KEY_ENTER, KEY_SPACE, KEY_Z, KEY_J], [JOY_BUTTON_A])
@@ -300,14 +301,23 @@ func sections() -> Array:
 
 func default_save() -> Dictionary:
 	return {"section": 0, "checkpoint": 0, "has_sling": false, "unlocked": 0, "started": false, "finished": false, "difficulty": 1,
-			"growth": {}, "stones": [], "gifts": []}
+			"growth": {}, "stones": [], "gifts": [], "psalm": [], "flock": []}
 
 
 func load_game() -> void:
-	save = default_save()
 	var on_disk := _read_json(SAVE_PATH)
 	if on_disk.is_empty():      # no journey, or one cut short while it was being written: the copy kept from the time before
 		on_disk = _read_json(SAVE_PATH + ".bak")
+	take_save(on_disk)
+	apply_settings()
+	if Engine.has_singleton("GameCenter"):
+		Engine.get_singleton("GameCenter").authenticate()
+
+
+## Makes a journey read from disk the one being played. Whatever it holds is kept; whatever a newer game needs
+## and an older file lacks (gifts, the pouch, the psalm, his nine sheep, the lyre) is added beside it.
+func take_save(on_disk: Dictionary) -> void:
+	save = default_save()
 	save.merge(on_disk, true)
 	# a file from an older game, or one touched by hand, may hold the wrong kind of thing under a name
 	var fresh := default_save()
@@ -325,13 +335,14 @@ func load_game() -> void:
 				give(pair[0], true)
 	if not on_disk.has("pouch"):      # a journey begun before the pouch: it starts full
 		fill_pouch()
+	if not on_disk.is_empty() and not on_disk.has("psalm"):
+		# a journey begun before the psalm was gathered line by line: he has the lines of the places he has been through
+		lines_for(99 if save.get("finished", false) else int(save.get("section", 0)))
+	_from_the_start()
 	save["section"] = clampi(int(save["section"]), 0, maxi(0, sections().size() - 1))
 	save["checkpoint"] = maxi(0, int(save["checkpoint"]))
 	save["unlocked"] = maxi(0, int(save["unlocked"]))
 	save["difficulty"] = clampi(int(save["difficulty"]), 0, DIFFICULTY.size() - 1)
-	apply_settings()
-	if Engine.has_singleton("GameCenter"):
-		Engine.get_singleton("GameCenter").authenticate()
 	if save.get("finished", false):      # whoever has finished the chapter may walk into any part of it, sections added since included
 		save["unlocked"] = maxi(save["unlocked"], 99)
 
@@ -383,6 +394,7 @@ func new_game() -> void:
 	save["unlocked"] = unlocked
 	save["finished"] = finished
 	save["started"] = true
+	_from_the_start()
 	save_game()
 
 
@@ -405,8 +417,9 @@ const GIFTS := {
 	"eye": {"name": "The Sure Eye", "line": "He sees the whole flight of the stone before he lets it go.", "key": "↑ ↓  aim as he winds", "craft": "eye", "why": "A stone that misses is a stone wasted, and the beast is already moving.", "how": "In the Wadi: break the three jars, and bring every boulder down.", "after": 3},
 	"heart": {"name": "The Steady Heart", "line": "One more heart.", "key": "", "craft": "heart", "why": "He stood where he could have run. That is kept.", "how": "In the Bear's Den: drive off the bear.", "after": 4},
 	"feet": {"name": "The Swift Feet", "line": "The running leap: jump at a full run to go higher and farther.", "key": "Run, then Space", "craft": "feet", "why": "A lamb in a lion's mouth is lost in the time it takes to walk.", "how": "On the Ridge: reach the light at a run.", "after": 5},
+	"lyre": {"name": "The Lyre", "line": "Hold, and let each phrase go at the top of the breath. Three phrases settle the sheep that hear them.", "key": "R  hold, release at the top", "craft": "voice", "why": "A frightened flock cannot be driven quiet. It can be played quiet.", "how": "From his father's house.", "after": -1},
 }
-const GIFT_ORDER := ["voice", "hand", "sling", "eye", "heart", "feet"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [
@@ -480,6 +493,11 @@ func call_reach() -> float:
 	return [430.0, 540.0, 640.0, 1000.0][rank("voice")] if has("voice") else 0.0
 
 
+## How far the lyre is heard.
+func song_reach() -> float:
+	return 420.0 + 50.0 * rank("voice")
+
+
 ## A gift is given: once, and for good.
 func give(id: String, quiet: bool = false) -> void:
 	if has(id) or not GIFTS.has(id):
@@ -501,6 +519,106 @@ func gifts_for(section_idx: int) -> void:
 			give(id, true)
 	if has("sling"):
 		save["has_sling"] = true
+	lines_for(section_idx)
+
+
+# ------------------------------------------------------------- the psalm, and his own nine
+## Psalm 23 comes to him a line at a time, each at the place that taught it. The lines are kept in the order of
+## the psalm; `after` is the section that gives each one (99: only when the whole psalm is played, at the end).
+signal line_found(id: String)
+
+const PSALM := [
+	{"id": "p23_shepherd", "after": 0}, {"id": "p23_pastures", "after": 0}, {"id": "p23_waters", "after": 1},
+	{"id": "p23_soul", "after": 5}, {"id": "p23_paths", "after": 99}, {"id": "p23_valley", "after": 4},
+	{"id": "p23_rod", "after": 5}, {"id": "p23_table", "after": 6}, {"id": "p23_oil", "after": 7},
+	{"id": "p23_goodness", "after": 99},
+]
+
+
+func psalm() -> Array:
+	return save.get("psalm", [])
+
+
+func has_line(id: String) -> bool:
+	return id in psalm()
+
+
+## A line of the psalm, come to him for the first time.
+func find_line(id: String, quiet: bool = false) -> void:
+	var list: Array = psalm()
+	if id in list or not PSALM.any(func(e): return e["id"] == id):
+		return
+	list.append(id)
+	save["psalm"] = list
+	if not quiet:
+		save_game()
+		line_found.emit(id)
+
+
+## Whoever walks into a later section has the lines the earlier ones would have given him.
+func lines_for(section_idx: int) -> void:
+	for e in PSALM:
+		if int(e["after"]) < section_idx:
+			find_line(str(e["id"]), true)
+
+
+## The whole psalm: every line that was still missing, in the psalm's order. Returns the ones that were new.
+func psalm_whole() -> Array:
+	var fresh: Array = []
+	for e in PSALM:
+		if not has_line(str(e["id"])):
+			fresh.append(str(e["id"]))
+			find_line(str(e["id"]), true)
+	save_game()
+	return fresh
+
+
+## His father's flock: eight ewes and this year's lamb, the same nine in every section. Each has its own look
+## (`wool` multiplies the section's wool colour, `size` its height; `mark` is kept clear, because at the Well a
+## daubed rump is how another man's sheep is told from his), four answer to a name, and `at` says where it is: "" with him, the name of a section it is still out in, or "taken".
+const FLOCK := [
+	{"id": "lamb", "name": "Shai", "wool": [1.0, 1.0, 1.0], "size": 0.68, "mark": [0, 0, 0, 0]},
+	{"id": "rachel", "name": "Rachel", "wool": [0.93, 0.9, 0.85], "size": 1.08, "mark": [0, 0, 0, 0]},
+	{"id": "devorah", "name": "Devorah", "wool": [1.0, 0.97, 0.9], "size": 0.94, "mark": [0, 0, 0, 0]},
+	{"id": "noga", "name": "Noga", "wool": [1.08, 1.08, 1.1], "size": 1.0, "mark": [0, 0, 0, 0]},
+	{"id": "ewe4", "name": "", "wool": [0.9, 0.86, 0.8], "size": 1.03, "mark": [0, 0, 0, 0]},
+	{"id": "ewe5", "name": "", "wool": [1.0, 1.0, 1.0], "size": 0.97, "mark": [0, 0, 0, 0]},
+	{"id": "ewe6", "name": "", "wool": [0.97, 0.93, 0.86], "size": 1.05, "mark": [0, 0, 0, 0]},
+	{"id": "ewe7", "name": "", "wool": [0.86, 0.84, 0.82], "size": 0.92, "mark": [0, 0, 0, 0]},
+	{"id": "ewe8", "name": "", "wool": [1.03, 1.0, 0.94], "size": 1.0, "mark": [0, 0, 0, 0]},
+]
+
+
+func flock() -> Array:
+	var list = save.get("flock", [])
+	if not (list is Array) or list.size() != FLOCK.size() or not list.all(func(e): return e is Dictionary and e.has("id")):
+		list = []
+		for e in FLOCK:
+			var one: Dictionary = e.duplicate(true)
+			one["at"] = ""
+			list.append(one)
+		save["flock"] = list
+	return list
+
+
+func flock_one(id: String) -> Dictionary:
+	for e in flock():
+		if str(e["id"]) == id:
+			return e
+	return {}
+
+
+## Where one of the nine is now: "" with him, a section's name, or "taken".
+func flock_at(id: String, where: String) -> void:
+	var e := flock_one(id)
+	if not e.is_empty():
+		e["at"] = where
+
+
+## What every journey has from its first step, old or new: the lyre from his father's house, and his nine.
+func _from_the_start() -> void:
+	give("lyre", true)
+	flock()
 
 
 ## The shepherd's pouch. Smooth stones are what the sling was made for: for every three he has found, the pouch
@@ -752,7 +870,7 @@ func slowmo(scale: float = 0.3, seconds: float = 0.9) -> void:
 
 ## Plays a sound effect from audio/sfx. Pitch varies a little each time so
 ## repeated sounds (steps, hits) never sound mechanical.
-func sfx(sound: String, volume_db: float = 0.0, pitch_vary: float = 0.07) -> void:
+func sfx(sound: String, volume_db: float = 0.0, pitch_vary: float = 0.07, pitch: float = 1.0) -> void:
 	if fast:
 		return
 	var path := "res://audio/sfx/%s.mp3" % sound
@@ -762,7 +880,7 @@ func sfx(sound: String, volume_db: float = 0.0, pitch_vary: float = 0.07) -> voi
 	_sfx_next = (_sfx_next + 1) % _sfx_pool.size()
 	p.stream = load(path)
 	p.volume_db = volume_db - 5.0
-	p.pitch_scale = 1.0 + randf_range(-pitch_vary, pitch_vary)
+	p.pitch_scale = pitch + randf_range(-pitch_vary, pitch_vary)
 	p.play()
 
 

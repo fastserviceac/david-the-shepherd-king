@@ -7,6 +7,8 @@ var fold_x := 7300.0      # where the fold stands, at the far end
 var wild_ewe              # the one that only his call will bring
 var thorn_ewe             # the one caught in the brake
 var _far := 0.0           # the farthest he has come, for the goal
+var restless_ewe          # Devorah: she will not stand until the lyre quiets her
+var song_spot := {}
 
 
 func _setup() -> void:
@@ -52,6 +54,11 @@ func _populate() -> void:
 		add_tree(tx, rng.randf_range(0.8, 1.3), rng.randf() < 0.4)
 
 	add_sheep(700.0, null, true)      # the flock is nine: eight ewes and this year's lamb, in every section
+	# one that will not stand: she paces under the olive and trots off from his hand. The lyre is what quiets her,
+	# and the first place he has reason to take it up
+	restless_ewe = add_sheep(905.0, null, false, "devorah")
+	restless_ewe.restless = true
+	song_spot = add_song(905.0, func() -> void: pass, 170.0)
 	add_sheep(0.0, Vector2(1320.0, platforms[1].position.y))
 	# two nervous ones in the meadow: they bolt from a running boy, and must be walked up to
 	for nx in [1640.0, 1935.0]:
@@ -65,7 +72,6 @@ func _populate() -> void:
 	add_stone("s1_leap", Vector2(2080.0, platforms[6].position.y))
 	add_store("s1_store", 1760.0)     # hung in the olive by the steps: for when he has a sling
 	add_sheep(0.0, Vector2(3600.0, platforms[4].position.y))
-	add_sheep(4280.0)
 
 	add_jackal(4420.0, 4060.0, 4560.0)      # dusk brings the first of them down to the flock: the reason there is a shepherd
 	add_bush(1800.0)
@@ -84,7 +90,9 @@ func _populate() -> void:
 	add_gift("voice", 2180.0, func() -> bool: return sheep_count >= 4, "Bring in all four behind you.  The nervous ones will not stand for running")
 	add_hint(1560.0, 150.0, "Shift  walk softly")
 	_build_fold(fold_x)
-	add_trigger(2500.0, 2700.0, func() -> void: say(["ps23_1"]))
+	add_trigger(2500.0, 2700.0, func() -> void:
+		Game.find_line("p23_shepherd")
+		say(["ps23_1"]))
 	add_trigger(fold_x - 80.0, fold_x + 100.0, _at_fold, false)
 	_beyond_the_meadow()
 
@@ -104,7 +112,18 @@ func _at_fold() -> void:
 		await say(["n_s1_missing"])
 		return
 	await say(["n_s1_to_well"])
+	await line_here("p23_pastures")      # if the lyre never brought it to him out on the hill, it comes at the fold
 	complete()
+
+
+## The first time his playing settles them, the line of the psalm that is about exactly this comes to him.
+func _on_song(_from: Vector2, settled: int) -> void:
+	if settled <= 0 or Game.has_line("p23_pastures") or Game.backdrop:
+		return
+	if not Game.fast:
+		await get_tree().create_timer(1.4).timeout
+	if not done and not Game.cinematic and not respawning and is_instance_valid(player) and player.is_on_floor():
+		line_here("p23_pastures")
 
 
 ## The longer way home. Past the meadow the ground is rougher: a brake of thorn where a ewe has caught herself,
@@ -145,6 +164,8 @@ func _physics_process(delta: float) -> void:
 	if Game.backdrop or done or not is_instance_valid(player):
 		return
 	_far = maxf(_far, player.global_position.x)
+	if is_instance_valid(restless_ewe) and restless_ewe.gathered:
+		song_spot["on"] = false
 	set_goal(_goal_now())
 
 
@@ -161,4 +182,6 @@ func _goal_now() -> String:
 		if player.global_position.x > wild_ewe.global_position.x + 500.0:
 			return "Go back west and call the wild ewe (Q)"
 		return "Call the wild ewe (Q)"
+	if _far >= 780.0 and _far < 2150.0 and Game.has("lyre") and is_instance_valid(restless_ewe) and not restless_ewe.gathered and restless_ewe.calm <= 0.0:
+		return "Quiet the restless ewe with the lyre (R)"
 	return "Gather the nine sheep"

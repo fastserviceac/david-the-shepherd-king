@@ -260,6 +260,46 @@
   "n_dawn_recall": {
    "text": "Samuel came no more to see Saul until the day of his death. And the LORD said: “Fill your horn with oil, and go. I will send you to Jesse the Bethlehemite, for I have provided a king for myself amongst his sons.”",
    "ref": "1 Samuel 15:35; 16:1"
+  },
+  "p23_shepherd": {
+   "text": "The LORD is my shepherd; I shall lack nothing.",
+   "ref": "Psalm 23:1"
+  },
+  "p23_pastures": {
+   "text": "He makes me lie down in green pastures.",
+   "ref": "Psalm 23:2"
+  },
+  "p23_waters": {
+   "text": "He leads me beside still waters.",
+   "ref": "Psalm 23:2"
+  },
+  "p23_soul": {
+   "text": "He restores my soul.",
+   "ref": "Psalm 23:3"
+  },
+  "p23_paths": {
+   "text": "He guides me in the paths of righteousness for his name's sake.",
+   "ref": "Psalm 23:3"
+  },
+  "p23_valley": {
+   "text": "Even though I walk through the valley of the shadow of death, I will fear no evil, for you are with me.",
+   "ref": "Psalm 23:4"
+  },
+  "p23_rod": {
+   "text": "Your rod and your staff, they comfort me.",
+   "ref": "Psalm 23:4"
+  },
+  "p23_table": {
+   "text": "You prepare a table before me in the presence of my enemies.",
+   "ref": "Psalm 23:5"
+  },
+  "p23_oil": {
+   "text": "You anoint my head with oil. My cup runs over.",
+   "ref": "Psalm 23:5"
+  },
+  "p23_goodness": {
+   "text": "Surely goodness and loving kindness shall follow me all the days of my life, and I will dwell in the LORD's house forever.",
+   "ref": "Psalm 23:6"
   }
  }
 }

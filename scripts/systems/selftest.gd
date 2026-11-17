@@ -102,8 +102,82 @@ func smoke(m) -> void:
 	Game.save["lang"] = "pt"
 	_check(Game.t("The Well") == "O Poço" and str(Game.line("ps23_1")["text"]).begins_with("O SENHOR"), "Portuguese is shown when it is chosen")
 	Game.save["lang"] = "en"
+	_old_save()
 	print("SMOKE %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)
+
+
+## A journey saved before the psalm, the lyre and the named flock: it must load with everything it had, and with
+## the new things beside it. Nothing is read from or written to the player's own file.
+func _old_save() -> void:
+	var kept: Dictionary = Game.save.duplicate(true)
+	var old := {"section": 5, "checkpoint": 2, "has_sling": true, "unlocked": 5, "started": true, "finished": false, "difficulty": 2,
+			"growth": {"feet": 40.0, "voice": 3.0}, "stones": ["s1_start", "well_start"], "gifts": ["voice", "hand", "sling", "eye", "heart"],
+			"places": ["foldcave"], "pouch": 0, "lang": "pt", "seen": {"A D  move": 5.0}}
+	Game.take_save(old.duplicate(true))
+	var same := true
+	for k in old:
+		if JSON.stringify(Game.save.get(k)) != JSON.stringify(old[k]) and k != "gifts":
+			same = false
+	for g in old["gifts"]:
+		if not Game.has(g):
+			same = false
+	_check(same, "an older save loads with everything it held")
+	_check(Game.has("lyre") and Game.flock().size() == 9 and str(Game.flock()[0]["id"]) == "lamb", "and is given the lyre and his nine sheep")
+	_check(Game.has_line("p23_pastures") and Game.has_line("p23_waters") and Game.has_line("p23_valley") and not Game.has_line("p23_rod") and not Game.has_line("p23_goodness"),
+			"and the lines of the psalm from the places he has been through")
+	var again: Dictionary = Game.save.duplicate(true)
+	again["psalm"] = ["p23_waters"]
+	again["flock"][2]["at"] = "section1"
+	Game.take_save(again.duplicate(true))
+	_check(Game.psalm() == ["p23_waters"] and str(Game.flock()[2]["at"]) == "section1" and Game.save["gifts"].count("lyre") == 1, "a save that already has them is left as it is")
+	Game.take_save({"section": 3, "flock": "nine", "psalm": 4})
+	_check(Game.flock().size() == 9 and Game.psalm() is Array, "a spoiled flock or psalm in the file is made good")
+	Game.save = kept
+
+
+## The lyre, played by holding the key and letting go at the top of the breath: three phrases, and the sheep
+## that hear them settle. Run at the start of the Pastures, beside the restless ewe.
+func _lyre(lv) -> void:
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	var lines: Array = Game.psalm().duplicate()
+	Game.give("lyre", true)
+	Game.save["psalm"] = []
+	_check(lv.flock_here.size() == 9 and lv.sheep_total == 9, "the nine of the Pastures are his own nine (%d)" % lv.flock_here.size())
+	var ewe = lv.restless_ewe
+	_check(ewe.named == "Devorah" and ewe.who == "devorah" and is_equal_approx(ewe.size, float(Game.flock_one("devorah")["size"])), "a named ewe wears her own look")
+	var was_gathered: bool = ewe.gathered
+	await _goto(ewe.global_position.x - 220.0)
+	var p = lv.player
+	var landed := 0
+	for round in 3:
+		Input.action_press("lyre")
+		for i in 240:
+			await tree.physics_frame
+			if p.breath_v >= 0.93:
+				break
+		Input.action_release("lyre")
+		await _frames(3)
+		if round < 2:
+			landed += 1 if p.phrases == round + 1 else 0
+	_check(landed == 2, "letting go at the top of the breath lands a phrase (%d of the first two)" % landed)
+	_check(ewe.calm > 0.0 or was_gathered, "three phrases settle the sheep that hear them")
+	_check(Game.has_line("p23_pastures"), "and the line of the psalm comes to him there")
+	await _frames(150)
+	_check(p.act == "" and p.lyre_t == 0.0, "he gets up when he stops playing")
+	Input.action_press("lyre")
+	await _frames(20)
+	Input.action_release("lyre")
+	await _frames(3)
+	_check(p.phrases == 0 and p.lyre_flash < 0.0, "let go too soon, the phrase does not land")
+	Input.action_press("jump")
+	await _frames(3)
+	Input.action_release("jump")
+	_check(p.act == "", "a leap ends the playing")
+	await _frames(40)
+	Game.save["gifts"] = had
+	Game.give("lyre", true)
+	Game.save["psalm"] = lines
 
 
 ## The wolf, the leopard, the viper and the hyena, each on the flat ground of the watch with a sheep or two. In the
@@ -262,6 +336,7 @@ func _hyena(lv) -> void:
 
 
 func _s1(lv) -> void:
+	await _lyre(lv)
 	await _goto(46.0)
 	await _frames(6)
 	_check("s1_start" in Game.stones(), "a smooth stone can be found")
