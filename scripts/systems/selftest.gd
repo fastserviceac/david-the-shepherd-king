@@ -572,6 +572,14 @@ func _fort_map(m) -> void:
 	m.map._toggle()
 	_check(m.map.view == "hills" and m.map.ids == range(9) and m.map._here() == -1, "and Tab goes on to the hills, where his father's house now is")
 	m.map.close()
+	var baf_i := _index("back_and_forth")
+	Game.save["unlocked"] = baf_i
+	m.section_idx = baf_i
+	m.map.open(true, baf_i)
+	await _frames(40)
+	_check(m.map.view == "land" and m.map.ids == [sum_i + 1, baf_i] and m.map._here() == 1 and m.map._spot(1).y > m.map._spot(0).y + 12.0,
+			"at the chapter's end the road home is the land's second place, south of the ridge road's mark, and he stands there")
+	m.map.close()
 	Game.save["unlocked"] = gate_i + 1
 	m.section_idx = gate_i
 	m.map.open(true, gate_i)
@@ -1716,7 +1724,8 @@ func placeshots(m, dir: String) -> void:
 			await _snap(dir, "map_gibeah_" + lg)
 			m.map.close()      # no picture of him walking here: a fortress road is walked in half a second, and saving a picture takes longer, so he would arrive and travel
 		# the wider land once the ridge road is a place on it, and the hills with his father's house
-		m.section_idx = _index("ridge_road")
+		Game.save["unlocked"] = _index("back_and_forth")
+		m.section_idx = _index("back_and_forth")
 		for lg in ["en", "pt"]:
 			Game.save["lang"] = lg
 			m.map.open(true, m.section_idx)
