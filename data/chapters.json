@@ -149,6 +149,27 @@
             "frames:steward/idle",
             "frames:youth/idle"
           ]
+        },
+        {
+          "title": "The Armour-Bearer",
+          "script": "res://scripts/levels/armour_bearer.gd",
+          "aim": "Serve in the king's house: water, oil, a word carried, the king's shield and spear borne to his door, and the shield-man's drill.",
+          "why": "He was anointed to be king, and he is given another man's shield to carry. Service comes first, and no one is watching.",
+          "needs": [
+            "res://art/c2_yard_backdrop.png",
+            "res://art/c2_yard_mid.png",
+            "res://art/ground_yard.png",
+            "res://art/props/c2_hall_door_day.png",
+            "frames:david/bear",
+            "frames:david/bear_idle",
+            "frames:david/block",
+            "frames:spearman/idle",
+            "frames:spearman/raise",
+            "frames:spearman/swing",
+            "frames:steward/idle",
+            "frames:youth/idle",
+            "frames:jonathan/idle"
+          ]
         }
       ]
     },

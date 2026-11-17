@@ -2198,6 +2198,7 @@ var prompt_a := 0.0
 var prompt_key := ""
 var prompt_words := ""
 var prompt_bar := 0.0
+var prompt_plate := false   # a level in bright daylight sets this: prompts and tips are drawn on a dark plate
 var tip := ""            # something the fight itself has just taught him, shown for a few seconds
 var tip_t := 0.0
 
@@ -2289,6 +2290,8 @@ func _draw_prompt(ci: CanvasItem) -> void:
 	var total := key_w + gap + words_w
 	var x := -total * 0.5
 	var a := prompt_a
+	if prompt_plate:              # a pale wall in daylight behind the words: a dark plate under them
+		ci.draw_rect(Rect2(x - 12.0, -25.0, total + 24.0, 36.0), Color(0.05, 0.04, 0.06, 0.5 * a))
 	if prompt_key != "":          # a key-cap: a small rounded tile with the key on it
 		var r := Rect2(x, -19.0, key_w, 25.0)
 		ci.draw_rect(r.grow(1.0), Color(0.02, 0.02, 0.05, 0.55 * a))

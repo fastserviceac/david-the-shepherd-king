@@ -119,3 +119,16 @@ run $V/saul_idle art/saul/anim idle key=green halo=3 wide=1.3 tall=1.3 size=136 
 run $V/saul_rest art/saul/anim rest key=green halo=3 wide=1.3 tall=1.3 size=136 erode=3 href=597 mode=range a=0 b=120 step=3 steady=999     # he eases: played once and held
 # paintings: cp tools/src/art_in/c2/c2_hall_backdrop_2.png tools/src/art_in/c2_hall_backdrop.png ; python3 tools/scenery.py c2_hall
 # props: python3 tools/hall_props.py ; python3 tools/scenery.py c2_hall_lamp
+
+# Chapter Two, the Armour-Bearer (Higgsfield seedance_2_0 clips tools/src/clips/c2/{c2_bearer,c2_shield_block,spearman_swing}.mp4,
+# frames extracted with ffmpeg -vf fps=24 into <dir>/<clip>/f%03d.png, the outer 8 rows and 3 columns overwritten with their neighbours)
+# David with the king's shield and spear: the same href as his walk, default canvas (the spear's point is only a little above his head)
+run $V/c2_bearer $D bear mode=loop double=0 href=605 step=2 soft=1 steady=40     # the loop found is already two steps (44 frames): double=1 gave four
+# standing and raising the shield are one cut, then split, so both stand on the same spot:
+#   python3 tools/anim.py $V/c2_shield_block <tmp> blockall mode=range a=0 b=38 step=2 href=605 soft=1 steady=999
+#   blockall_00..12 -> art/david/anim/bear_idle_00..12 (he stands), blockall_13..19 -> art/david/anim/block_00..06 (the shield comes up, he braces)
+# the old soldier of the yard: one cut, then split the same way (screen 74,132,72: halo=3)
+#   python3 tools/anim.py $V/spearman_swing <tmp> all key=green halo=3 wide=1.7 tall=1.3 size=158 erode=3 hframe=0 mode=range a=0 b=110 step=2 steady=999
+#   all_00..06 -> art/spearman/anim/idle, all_07..12 -> raise, all_34..55 -> swing (the stroke lands at its frame 4, then he draws back)
+# painting: cp tools/src/art_in/c2/c2_yard_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_yard   (fades its foot to trodden earth)
+# the wall band, the hall door and the ground by day, from the dusk paintings: python3 tools/yard_day.py

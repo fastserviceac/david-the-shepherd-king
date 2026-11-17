@@ -77,6 +77,7 @@ func smoke(m) -> void:
 			"ridge_road": await _ridge_road(lv)
 			"gibeah_gate": await _gibeah_gate(lv)
 			"kings_hall": await _kings_hall(lv)
+			"armour_bearer": await _armour_bearer(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -2053,6 +2054,115 @@ func _kings_hall(lv) -> void:
 	Game.main.hud.page = 0
 
 
+## The Armour-Bearer: the work of the yard in its order, the king's shield on his arm, the block, and the drill.
+func _armour_bearer(lv) -> void:
+	var p = lv.player
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	for a in ["move_right", "jump", "attack", "sling", "lyre"]:
+		Input.action_release(a)
+	await _frames(20)
+	var idx: int = Game.chapter_start(1) + 4
+	_check(not Game.has("shieldarm") and int(Game.GIFTS["shieldarm"]["after"]) == idx and lv.section_idx == idx and "shieldarm" in Game.GIFT_ORDER,
+			"he comes to the yard without the Shield Arm, which this section gives")
+	_check(not p.shield and lv.step == 0 and lv.water_task["on"] and not lv.steward_task["on"] and not lv.mark_task["on"],
+			"he begins with empty hands and a servant's work: water first")
+	# without the king's shield the Staff key is the staff, and nothing is raised
+	Game.give("shieldarm", true)
+	await _goto(lv.START_X)
+	Input.action_press("attack")
+	await _frames(14)
+	Input.action_release("attack")
+	_check(not p.blocking and not p.shield_up, "the Shield Arm does nothing where he does not bear the king's shield")
+	Game.save["gifts"] = had.duplicate()
+	await _frames(40)
+	# the first two days, by their tasks
+	lv._water()
+	lv._pour()
+	lv._oil()
+	_check(lv.step == 3 and lv.lamps_task["on"], "water drawn and poured, oil asked for: the lamps are next")
+	await lv._lamps()
+	_check(lv.day == 2 and lv.step == 4 and lv.word_task["on"] and absf(p.global_position.x - lv.HALL_X) < 120.0, "the day ends, and the next finds him at the door of the hall")
+	lv._word()
+	await lv._arms()
+	_check(p.shield and lv.step == 6 and lv.door_task["on"], "the steward puts the king's shield and spear into his hands")
+	# bearing them he walks, does not leap, and neither staff nor sling is in his hands
+	await _goto(lv.STORE_X)
+	Input.action_press("move_right")
+	Input.action_press("jump")
+	await _frames(70)
+	Input.action_release("jump")
+	_check(p.is_on_floor() and absf(p.velocity.x) <= p.WALK + 2.0 and p.velocity.x > 60.0, "bearing them he walks and does not leap (%d)" % int(p.velocity.x))
+	Input.action_release("move_right")
+	Input.action_press("sling")
+	await _frames(10)
+	_check(not p.charging and p.attack_t <= 0.0, "and the sling stays in his belt")
+	Input.action_release("sling")
+	Input.action_press("attack")
+	await _frames(14)
+	_check(not p.blocking and p.attack_t <= 0.0, "before the drill he carries the shield and cannot yet raise it, and he does not strike")
+	Input.action_release("attack")
+	await lv._stand()
+	_check(lv.day == 3 and lv.step == 7 and lv.mark_task["on"], "the third morning: the shield-man calls him")
+	# the drill
+	await _goto(lv.MARK_X)
+	lv._begin_drill()
+	_check(lv.drilling and p.shield_learn and lv.in_place(), "he takes his place, and is let raise the shield")
+	Input.action_press("attack")
+	await _frames(12)
+	_check(p.blocking, "the Staff key raises the king's shield")
+	var hp0: int = p.hp
+	p.invuln = 0.0      # he was set down at the door a moment ago, and nothing can touch him for a second after that
+	_check(not p.hurt(1, p.global_position.x + 60.0) and p.hp == hp0 and p.block_flash > 0.0, "a blow from the front lands on it and does no harm")
+	p.invuln = 0.0
+	_check(p.hurt(1, p.global_position.x - 60.0) and p.hp == hp0 - 1, "a blow from behind is not stopped by it")
+	p.hp = hp0
+	p.invuln = 0.0
+	p.stun = 0.0
+	await _frames(int(p.BLOCK_HOLD * 60.0) + 30)
+	_check(not p.blocking and p.block_spent, "held up too long, the arm drops")
+	Input.action_release("attack")
+	await _goto(lv.MARK_X)
+	p.facing = 1
+	lv.stood = 0
+	lv.bout = 0
+	lv._rest(0.2)
+	# a blow not met: nothing is lost but the bout
+	lv.stood = 2
+	var n := 0
+	while n < 400 and lv.stood == 2:
+		await tree.physics_frame
+		n += 1
+	_check(lv.stood == 0 and p.hp == hp0 and lv.bout == 0, "a blow he does not meet stings, costs no heart, and the bout begins again")
+	# now he raises it for each stroke, not before
+	n = 0
+	while n < 4000 and not lv.passed:
+		await tree.physics_frame
+		n += 1
+		p.invuln = 0.0
+		if absf(p.global_position.x - lv.MARK_X) > 30.0 and not Game.cinematic:
+			p.global_position = lv.on_ground(lv.MARK_X)
+			p.facing = 1
+		if lv.phase == "strike":
+			Input.action_press("attack")
+		else:
+			Input.action_release("attack")
+	Input.action_release("attack")
+	_check(lv.passed and p.hp == hp0, "three bouts stood through: the drill is passed (%d frames)" % n)
+	for i in 400:
+		await tree.physics_frame
+		if Game.has("shieldarm") and lv.end_task["on"]:
+			break
+	_check(Game.has("shieldarm") and lv.end_task["on"] and p.shield, "and the Shield Arm is given, the king's shield still on his arm")
+	await lv._end()
+	_check(lv.done and not p.shield, "he carries them back to the king's door; they were never his")
+	var told := Game._ui_pt.has(Game.GIFTS["shieldarm"]["line"]) and Game._ui_pt.has(Game.GIFTS["shieldarm"]["key"]) and Game._ui_pt.has(Game.GIFTS["shieldarm"]["why"]) \
+			and Game.narration.has("1sam16_21b") and Game.narration_pt.has("1sam16_21b") and Game._ui_pt.has(lv._goal_now())
+	for e in Game.main.hud.COURT:
+		told = told and Game._ui_pt.has(e[0]) and Game._ui_pt.has(e[1])
+	_check(told and str(Game.GIFTS["shieldarm"]["line"]).contains("never his"), "it is told in Portuguese too, and the gift says the shield is the king's")
+	Game.save["gifts"] = had
+
+
 # ---- real-flow check: narration, pause, section change, chapter end ----
 
 func _press(action: String) -> void:
@@ -2194,11 +2304,26 @@ func flow(m, dir: String) -> void:
 	_check(m.state == "play" and m.section_idx == first + 3, "the Gate of Gibeah done, the King's Hall follows it")
 	m.level._rest()
 	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 4 and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first + 4 and Game.has("favour"), "the king rested and the King's Favour given, the Armour-Bearer follows it")
+	m.level.bear(true)
+	m.level._passed()
+	t = 0.0
+	while t < 60.0 and not (Game.has("shieldarm") and m.level.end_task["on"] and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(Game.has("shieldarm"), "the drill passed, the Shield Arm is given")
+	m.level._end()
+	t = 0.0
 	while t < 90.0 and m.state != "menu":
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 4 and Game.has("favour"), "the king rested and the King's Favour given, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 5 and Game.has("shieldarm"), "the king's arms carried back to his door, what is built of Chapter Two ends and returns to the menu")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

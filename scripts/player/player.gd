@@ -95,6 +95,19 @@ const BREATH_TOP := 0.8   # let go above this and the phrase lands
 const LYRE_SIT := 0.5
 const LYRE_RISE := 0.4
 
+# The king's shield and spear (the Armour-Bearer). They are never his: a level puts them in his hands (`shield`)
+# and takes them back. While he bears them he walks, and does nothing else with his hands but raise the shield.
+var shield := false       # the king's shield is on his arm and the king's spear in his hand
+var shield_learn := false # at the drill, before the Shield Arm is his, he is let raise it
+var shield_up := false    # the key is held and his arm has not dropped
+var blocking := false     # the shield is fully up: a blow from the front lands on it and does no harm
+var block_t := 0.0        # how long it has been held up
+var block_u := 0.0        # how far up it is, 0..1
+var block_spent := false  # held too long: the arm has dropped, and he must let go before he can raise it again
+var block_flash := 0.0    # a blow has just landed on it
+const BLOCK_RAISE := 0.14 # seconds to bring it up
+const BLOCK_HOLD := 1.3   # and how long the arm can keep it there
+
 
 func _ready() -> void:
 	_set_hearts()
@@ -174,6 +187,25 @@ func _shepherd_call() -> void:
 ## The lyre. He sits where he stands and plays for as long as the key is held: the breath line rises and falls,
 ## and letting go near its top lands a phrase. Three phrases and the song goes out to every sheep that can hear.
 ## A beast close by makes the line jump; a blow, a leap or any other act ends the playing.
+## The Shield Arm: with the king's shield on his arm, the Staff key raises it. It comes up in a moment and cannot
+## be kept up for long, so it has to be raised for the blow, not before it.
+func _update_block(delta: float, able: bool) -> void:
+	block_flash = move_toward(block_flash, 0.0, delta * 3.0)
+	var down: bool = Input.is_action_pressed("attack")
+	var held: bool = shield and able and down and (Game.has("shieldarm") or shield_learn)
+	if not down:
+		block_spent = false
+	if not held:
+		block_t = 0.0
+	elif not block_spent:
+		block_t += delta
+		if block_t > BLOCK_HOLD:
+			block_spent = true
+	shield_up = held and not block_spent
+	block_u = move_toward(block_u, 1.0 if shield_up else 0.0, delta / (BLOCK_RAISE if shield_up else 0.22))
+	blocking = shield_up and block_u >= 0.99
+
+
 func _update_lyre(delta: float, free: bool, able: bool) -> void:
 	lyre_flash = move_toward(lyre_flash, 0.0, delta * 1.5)
 	if act == "play_up":
@@ -311,7 +343,8 @@ func _physics_process(delta: float) -> void:
 	hop_t = maxf(0.0, hop_t - delta)
 	opening_t = maxf(0.0, opening_t - delta)
 	var free: bool = can_act and on_floor and roll_t <= 0.0 and hop_t <= 0.0 and sway_t <= 0.0 and clinch_t <= 0.0 \
-			and not charging and attack_t <= 0.0 and act == ""
+			and not charging and attack_t <= 0.0 and act == "" and not shield
+	_update_block(delta, can_act and on_floor)
 	ducking = free and Input.is_action_pressed("move_down") and absf(dir) < 0.1
 	# one dodge key, three escapes: towards the enemy he rolls through, away he skips back, standing he leans back
 	if free and roll_cd <= 0.0 and Input.is_action_just_pressed("roll"):
@@ -343,7 +376,7 @@ func _physics_process(delta: float) -> void:
 	if free and Input.is_action_just_pressed("grab"):
 		_try_clinch()
 	_update_clinch(delta)
-	if ducking or sway_t > 0.0 or clinch_t > 0.0:
+	if ducking or sway_t > 0.0 or clinch_t > 0.0 or shield_up:
 		dir = 0.0
 	if hop_t > 0.0:
 		dir = 0.0
@@ -358,7 +391,7 @@ func _physics_process(delta: float) -> void:
 	var top := lerpf(WALK, run_top, smoothstep(0.32, 0.75, move_t))
 	if on_floor and not frozen:
 		Game.grow("feet", absf(velocity.x) * delta / 100.0)
-	if calm or Input.is_action_pressed("walk"):
+	if calm or shield or Input.is_action_pressed("walk"):
 		top = WALK
 	if act == "play" and lyre_feet:
 		top = WALK * 0.8          # a man playing does not hurry
@@ -377,7 +410,7 @@ func _physics_process(delta: float) -> void:
 	var g := GRAVITY * (1.35 if velocity.y > 0.0 else 1.0)
 	velocity.y = minf(velocity.y + g * delta, 900.0)
 
-	if buffer > 0.0 and coyote > 0.0 and not charging and act != "carry":      # with a lamb on his shoulders he does not leap
+	if buffer > 0.0 and coyote > 0.0 and not charging and act != "carry" and not shield:      # with a lamb on his shoulders he does not leap
 		velocity.y = JUMP
 		if Game.has("feet") and absf(velocity.x) > RUN * 0.92:      # the running leap
 			velocity.y = JUMP * 1.14
@@ -411,8 +444,8 @@ func _physics_process(delta: float) -> void:
 		air_t += delta
 
 	shadow_drop = 0.0 if is_on_floor() else FA.ground_drop(self)
-	_update_attack(delta, can_act)
-	_update_sling(delta, can_act)
+	_update_attack(delta, can_act and not shield)      # the staff and the sling are not in his hands while he bears the king's arms
+	_update_sling(delta, can_act and not shield)
 
 	invuln = maxf(0.0, invuln - delta)
 	stun = maxf(0.0, stun - delta)
@@ -661,19 +694,32 @@ func hurt(amount: int, from_x: float, kind: String = "body") -> bool:
 	if slipped:
 		_escaped(from_x)
 		return false
+	if blocking and (from_x - global_position.x) * facing >= 0.0:      # it lands on the king's shield
+		block_flash = 1.0
+		shake = 3.0
+		velocity.x = -facing * 70.0
+		Game.buzz(20)
+		Game.sfx("logs", -9.0, 0.12, 1.3)
+		if level != null and level.has_method("blocked"):
+			level.blocked(from_x)
+		return false
 	stop_lyre(false)
 	hp -= amount
 	invuln = 1.3
 	stun = 0.25
 	hurt_t = 0.5
 	Game.buzz(45)
-	Game.sfx("hurt", -1.0)
-	if Game.main and Game.main.hud:
+	Game.sfx("hurt", -1.0 if amount > 0 else -9.0)
+	if Game.main and Game.main.hud and amount > 0:      # a padded pole at the drill stings and costs nothing
 		Game.main.hud.hurt_flash = 1.0
 	charging = false
 	var away := 1.0 if global_position.x >= from_x else -1.0
 	velocity = Vector2(280.0 * away, -300.0)
 	shake = 7.0
+	if amount <= 0:            # a knock, not a wound: a step back and no more
+		velocity = Vector2(110.0 * away, -110.0)
+		invuln = 0.5
+		shake = 4.0
 	if hp <= 0:
 		hp = 0
 		dead = true
@@ -934,6 +980,15 @@ func _current_frame() -> Texture2D:
 	if act == "carry":
 		var c: Array = FA.frames("david", "carry")
 		return c[int(ph * c.size()) % c.size()]
+	if shield and act == "" and not FA.frames("david", "bear").is_empty():
+		# the king's shield on his arm and the king's spear upright in his hand: raising the shield, walking, standing
+		if block_u > 0.0 and not FA.frames("david", "block").is_empty():
+			return _one_shot("block", block_u)
+		if run > 0.12:
+			var bw: Array = FA.frames("david", "bear")
+			return bw[int(ph * bw.size()) % bw.size()]
+		var bi: Array = FA.frames("david", "bear_idle")
+		return FA.pingpong(bi if not bi.is_empty() else FA.frames("david", "bear").slice(0, 1), idle_clock, 6.0)
 
 	# shoving something heavy along: braced low, both hands on it
 	if level != null and level.get("push_t") != null and level.push_t > 0.0 and not FA.frames("david", "push").is_empty():
@@ -1072,6 +1127,10 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, 24.0 + pu * 96.0, 0.0, TAU, 40, Color(1.0, 0.93, 0.76, (1.0 - pu) * 0.5), 3.5, true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	FA.draw(self, tex, face, SPRITE_SCALE, col, tall, shove * 0.27, Vector2.ZERO, Vector2.ONE)      # the footage already crouches and stretches; scaling it as well read as a size glitch
+	if block_flash > 0.0:      # the blow on the shield: a short bright ring before him
+		for k in 2:
+			draw_arc(Vector2(facing * 30.0, -62.0), 16.0 + (1.0 - block_flash) * (26.0 + k * 12.0), (0.0 if facing > 0 else PI) - 1.1, (0.0 if facing > 0 else PI) + 1.1, 14,
+				Color(1.0, 0.93, 0.72, block_flash * (0.6 - k * 0.25)), 3.0 - k, true)
 	if charging:
 		_draw_aim()
 	if ring_t > 0.0:      # the call going out across the hillside

@@ -68,6 +68,8 @@ func _ready() -> void:
 	# what he does in the first seconds of any session, in the order he is likely to do it
 	FA.warm("david", ["idle", "walk", "run", "jump", "attack", "roll", "hop", "sway", "duck", "hurt", "flinch",
 		"sling", "throw", "attack2", "attack3", "attack4", "spin", "call", "pickup", "clinch"])
+	if has("favour"):      # in the king's house he may be given the king's shield to bear
+		FA.warm("david", ["bear", "bear_idle", "block"])
 	FA.warm("jackal", ["walk", "run", "lunge"])
 	FA.warm("sheep", ["walk", "graze", "run"])
 	for i in 2:
@@ -494,8 +496,11 @@ const GIFTS := {
 	# "after" is Chapter Two's fourth section (Game.chapter_start(1) + 3). The proposal gives this gift two things: the journal gains
 	# the court (built: its third page), and doors in the fortress open to him (not built: there are no such doors yet, and the gift says so).
 	"favour": {"name": "The King's Favour", "line": "The king has asked that he stay. The journal gains a page: the court at Gibeah, and those he has met there. The inner doors of the fortress will open to him when they are built; there are none yet.", "key": "Tab  the journal, then ← →", "craft": "voice", "why": "A boy sent for once is a visitor. One the king asks to keep belongs to the house.", "how": "In the king's hall: play until the shadow on the wall is down.", "after": 11, "chapter": 1, "emblem": "lyre"},
+	# "after" is Chapter Two's fifth section (Game.chapter_start(1) + 4). The shield is the king's: `player.shield` is set by a level
+	# that puts it on his arm, and without it this gift does nothing. He never wears armour (1 Samuel 17:39).
+	"shieldarm": {"name": "The Shield Arm", "line": "With the king's shield on his arm he can raise it, and a blow from the front that lands on it does no harm. It comes up for the blow and cannot be held up long. The shield is the king's and never his: where he does not bear it, there is nothing to raise.", "key": "J  hold, while he bears the king's shield", "craft": "hand", "why": "An armour-bearer stands between his lord and the blow. He is not there to strike.", "how": "In the yard at Gibeah: stand through the shield-man's drill.", "after": 12, "chapter": 1},
 }
-const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady", "favour"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady", "favour", "shieldarm"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [

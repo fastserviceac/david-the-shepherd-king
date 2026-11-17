@@ -59,7 +59,7 @@ def fade_foot(im, start=0.6, floor=(26, 19, 17)):
     return Image.fromarray((a * (1 - t) + np.array(floor, np.float32) * t).astype(np.uint8))
 
 
-FADE = {'c2_road', 'c2_court'}
+FADE = {'c2_road': (26, 19, 17), 'c2_court': (26, 19, 17), 'c2_yard': (118, 104, 88)}      # the yard by day sinks to trodden earth, not to dark
 def pier(im, wide=96):
     """A wall band that repeats unmirrored: its left end becomes a pier standing a little proud of the wall
     (the wall's own stone from further along, lighter, with a shadow down its right side), so the join is an edge of masonry."""
@@ -80,7 +80,7 @@ names = sys.argv[1:] or sorted({os.path.basename(f).rsplit('_', 1)[0] for f in g
 for n in names:
     p = '%s/%s_backdrop.png' % (SRC, n)
     if os.path.exists(p):
-        (lambda m: fade_foot(m) if n in FADE else m)(fit(Image.open(p).convert('RGB'), 5120, 2880)).save('art/%s_backdrop.png' % n); print('backdrop', n)
+        (lambda m: fade_foot(m, floor=FADE[n]) if n in FADE else m)(fit(Image.open(p).convert('RGB'), 5120, 2880)).save('art/%s_backdrop.png' % n); print('backdrop', n)
     p = '%s/%s_mid.png' % (SRC, n)
     if os.path.exists(p):
         (lambda m: pier(m) if n in PIER else m)((lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440)))).save('art/%s_mid.png' % n); print('mid', n)

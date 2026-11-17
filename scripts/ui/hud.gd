@@ -448,6 +448,7 @@ const COURT := [
 	["Jonathan, the king's son", "Seen up on the wall of the yard. They have not met: that comes after the Valley of Elah.", "1 Samuel 14:49; 18:1"],
 	["The steward", "Keeps the storehouse, and received what Jesse sent.", "Not in scripture"],
 	["The gatekeeper", "Bars the gate at dusk, and opens it on no boy's word.", "Not in scripture"],
+	["The old shield-man", "Drills the young men of the yard with a padded pole, and taught him to raise the king's shield.", "Not in scripture"],
 ]
 
 
@@ -463,13 +464,13 @@ func _court_page(a: float) -> void:
 	draw_line(Vector2(86, 108), Vector2(1194, 108), Color(1.0, 0.85, 0.5, 0.3 * a), 1.0)
 	draw_string(f, Vector2(0, 150), Game.t("The court at Gibeah").to_upper(), HORIZONTAL_ALIGNMENT_CENTER, 1280, 16, gold)
 	draw_string(f, Vector2(240, 176), Game.t("Those he has met in the king's house."), HORIZONTAL_ALIGNMENT_CENTER, 800, 15, dim)
-	var y := 232.0
+	var y := 226.0
 	for e in COURT:
 		draw_circle(Vector2(268, y - 7), 4.0, gold)
 		draw_string(f, Vector2(288, y), Game.t(e[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 21, ink)
 		draw_string(f, Vector2(700, y), Game.t(e[2]), HORIZONTAL_ALIGNMENT_RIGHT, 312, 13, Color(1.0, 0.85, 0.5, 0.75 * a))
 		draw_multiline_string(f, Vector2(288, y + 24), Game.t(e[1]), HORIZONTAL_ALIGNMENT_LEFT, 724.0, 15, 2, dim)
-		y += 84.0
+		y += 72.0
 	_page_mark(a)
 
 
