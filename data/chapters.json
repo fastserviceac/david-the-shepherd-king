@@ -109,6 +109,30 @@
             "frames:kid/idle",
             "frames:wolf/walk"
           ]
+        },
+        {
+          "title": "The Gate of Gibeah",
+          "script": "res://scripts/levels/gibeah_gate.gd",
+          "aim": "Get in at the barred gate, hand your father's gift to the steward, and wait to be called.",
+          "why": "A shepherd boy does not walk into a king's hall. Someone has to bring him.",
+          "needs": [
+            "res://art/c2_gibeah_backdrop.png",
+            "res://art/c2_court_backdrop.png",
+            "res://art/c2_gibeah_mid.png",
+            "res://art/props/c2_gate.png",
+            "res://art/props/c2_gate_open.png",
+            "res://art/props/c2_hall_door.png",
+            "frames:david/lyre_walk",
+            "frames:david/lyre_stand",
+            "frames:donkey/idle",
+            "frames:donkey/walk",
+            "frames:donkey/balk",
+            "frames:donkey/calm",
+            "frames:kid/idle",
+            "frames:gatekeeper/idle",
+            "frames:youth/idle",
+            "frames:steward/idle"
+          ]
         }
       ]
     },

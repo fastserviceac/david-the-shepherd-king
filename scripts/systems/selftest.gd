@@ -75,6 +75,7 @@ func smoke(m) -> void:
 			"section4": await _s4(lv)
 			"summons": await _summons(lv)
 			"ridge_road": await _ridge_road(lv)
+			"gibeah_gate": await _gibeah_gate(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -423,6 +424,95 @@ func _ridge_road(lv) -> void:
 	await _frames(10)
 	_check(lv.gate_task["on"], "with the load whole at the foot of Gibeah, he can go up")
 	lv.do_task(lv.gate_task)
+	await _frames(30)
+	Game.save["gifts"] = had
+
+
+## Chapter Two, the Gate of Gibeah: a man takes more phrases than a flock, a phrase let go too soon takes one
+## back, and his quiet does not last; the young man answers for him, the gate is a step into the yard, and the
+## steward receives the gift piece by piece while he is quiet.
+func _gibeah_gate(lv) -> void:
+	var p = lv.player
+	var d = lv.donkey
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	for g in ["lyre", "voice", "walksong", "steady"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling", "lyre"]:
+		Input.action_release(a)
+	_check(not lv.inside and d.led and lv.sheep_total == 0, "he comes to the gate leading the donkey, outside the wall")
+	_check(p.cam.limit_right == int(lv.OUT_END), "and the yard cannot be seen from outside it")
+	await _goto(lv.WATCH_X - 200.0)
+	await _frames(30)
+	var ge: Dictionary = lv.ears["gate"]
+	_check(lv.refused and ge["on"], "the gatekeeper turns him away")
+	ge["heard"] = 0
+	ge["calm"] = 0.0
+	ge["was"] = false
+	await _frames(3)
+	_check(not lv.ask_task["on"] and not lv.enter_task["on"], "unplayed, he will be asked nothing and the gate stays shut")
+	await _play_song(p, 3)
+	_check(int(ge["heard"]) == 3 and ge["calm"] == 0.0, "three phrases, enough for a flock, do not quiet a man (%d heard)" % int(ge["heard"]))
+	Input.action_press("lyre")
+	for i in 200:
+		await tree.physics_frame
+		if p.act == "play" and p.breath_v > 0.2 and p.breath_v < 0.7:
+			break
+	Input.action_release("lyre")
+	await _frames(3)
+	_check(int(ge["heard"]) == 2, "a phrase let go too soon takes one back (%d heard)" % int(ge["heard"]))
+	await _play_song(p, 2)
+	await _frames(3)
+	_check(ge["calm"] > 0.0 and lv.ask_task["on"], "the fourth quiets him, and now he can be asked (heard %d)" % int(ge["heard"]))
+	ge["calm"] = 0.03
+	await _frames(8)
+	_check(ge["calm"] == 0.0 and not lv.ask_task["on"] and lv._need(ge) == lv.AGAIN, "his quiet wears off, and he must be played to again, though less")
+	await _play_song(p, lv.AGAIN)
+	await _frames(3)
+	_check(ge["calm"] > 0.0 and lv.ask_task["on"], "played to again, he listens again")
+	lv.do_task(lv.ask_task)
+	await _frames(10)
+	_check(lv.asked and lv.enter_task["on"] and not ge["on"], "the young man answers for him and the gate is opened")
+	Input.action_release("lyre")
+	await _frames(120)
+	lv.do_task(lv.enter_task)
+	await _frames(20)
+	_check(lv.inside and p.global_position.x > lv.YARD_X and absf(d.global_position.x - p.global_position.x) < 200.0 and p.cam.limit_left == int(lv.YARD_X),
+			"through the gate he is in the yard, the donkey with him (he at %d)" % int(p.global_position.x))
+	# the steward
+	var se: Dictionary = lv.ears["store"]
+	_check(not lv.offer_task["on"] or lv._near_load(), "the gift cannot be offered with the donkey left behind")
+	await _goto(lv.STORE_X - 80.0)
+	d.global_position = lv.on_ground(p.global_position.x - 92.0)
+	await _frames(10)
+	_check(lv.offer_task["on"] and not se["on"], "with the load at the storehouse, the gift can be offered")
+	lv.do_task(lv.offer_task)
+	await _frames(10)
+	_check(lv.turned and se["on"] and not lv.give_task["on"], "the steward would leave it till morning")
+	se["heard"] = 0
+	await _play_song(p, lv.STORE_NEED - 1)
+	_check(se["calm"] == 0.0, "he takes more than the gatekeeper did")
+	await _play_song(p, 1)
+	await _frames(3)
+	_check(se["calm"] > 0.0 and lv.give_task["on"], "the fifth phrase quiets him: the gift can be handed over")
+	var before: float = se["calm"]
+	lv.do_task(lv.give_task)
+	await _frames(3)
+	_check(lv.given == 1 and se["calm"] < before - 1.0 and lv.give_task["on"], "each thing he receives costs some of his quiet (%.1f to %.1f)" % [before, se["calm"]])
+	se["calm"] = 0.03
+	await _frames(8)
+	_check(not lv.give_task["on"] and lv.given == 1, "and when it is gone he turns back to his tally")
+	await _play_song(p, lv.AGAIN)
+	await _frames(3)
+	lv.do_task(lv.give_task)
+	await _frames(3)
+	_check(lv.given == 2 and not lv.wait_task["on"], "played to again, he takes the wine")
+	lv.do_task(lv.give_task)
+	await _frames(10)
+	_check(lv.given == 3 and lv.wait_task["on"] and not d.led and not se["on"], "and the young goat: the gift is delivered whole, and the donkey is the stable's")
+	Input.action_release("lyre")
+	await _frames(120)
+	await _goto(lv.HALL_X)
+	lv.do_task(lv.wait_task)
 	await _frames(30)
 	Game.save["gifts"] = had
 
@@ -1989,11 +2079,18 @@ func flow(m, dir: String) -> void:
 	_check(m.state == "play" and m.section_idx == first + 1, "the Summons done, the Ridge Road follows it")
 	m.level._arrive()
 	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 2 and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first + 2, "the Ridge Road done, the Gate of Gibeah follows it")
+	m.level._wait_called()
+	t = 0.0
 	while t < 60.0 and m.state != "menu":
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 2, "the Ridge Road done, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 3, "the Gate of Gibeah done, what is built of Chapter Two ends and returns to the menu")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

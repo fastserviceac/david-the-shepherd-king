@@ -59,7 +59,22 @@ def fade_foot(im, start=0.6, floor=(26, 19, 17)):
     return Image.fromarray((a * (1 - t) + np.array(floor, np.float32) * t).astype(np.uint8))
 
 
-FADE = {'c2_road'}
+FADE = {'c2_road', 'c2_court'}
+def pier(im, wide=96):
+    """A wall band that repeats unmirrored: its left end becomes a pier standing a little proud of the wall
+    (the wall's own stone from further along, lighter, with a shadow down its right side), so the join is an edge of masonry."""
+    a = np.asarray(im).astype(np.float32)
+    w = a.shape[1]
+    src = a[:, w // 2:w // 2 + wide].copy()
+    src[..., :3] = np.clip(src[..., :3] * 1.16 + 4, 0, 255)
+    src[..., 3] = a[:, :wide, 3].max(axis=1, keepdims=True)          # as tall as the wall is here
+    a[:, :wide] = src
+    for k in range(14):                                                 # its shadow on the wall beside it
+        a[:, wide + k, :3] *= 0.55 + 0.45 * k / 14
+    a[:, :3, :3] *= 1.12; a[:, wide - 4:wide, :3] *= 0.8
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
+PIER = {'c2_gibeah'}
+FEATHER = {'c2_gate', 'c2_gate_open', 'c2_hall_door'}
 
 names = sys.argv[1:] or sorted({os.path.basename(f).rsplit('_', 1)[0] for f in glob.glob(SRC + '/*_backdrop.png') + glob.glob(SRC + '/*_mid.png')})
 for n in names:
@@ -68,7 +83,7 @@ for n in names:
         (lambda m: fade_foot(m) if n in FADE else m)(fit(Image.open(p).convert('RGB'), 5120, 2880)).save('art/%s_backdrop.png' % n); print('backdrop', n)
     p = '%s/%s_mid.png' % (SRC, n)
     if os.path.exists(p):
-        (lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440))).save('art/%s_mid.png' % n); print('mid', n)
+        (lambda m: pier(m) if n in PIER else m)((lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440)))).save('art/%s_mid.png' % n); print('mid', n)
 
 # props: tools/src/art_in/props/<name>.png on magenta -> art/props/<name>.png, cut out and trimmed to the object
 for p in sorted(glob.glob(SRC + '/props/*.png')):
@@ -78,4 +93,11 @@ for p in sorted(glob.glob(SRC + '/props/*.png')):
     im = key_magenta(Image.open(p).convert('RGB'))
     a = np.asarray(im)[..., 3] > 40
     ys = np.where(a.sum(axis=1) > 2)[0]; xs = np.where(a.sum(axis=0) > 2)[0]
-    im.crop((max(xs[0] - 4, 0), max(ys[0] - 4, 0), xs[-1] + 5, ys[-1] + 5)).save('art/props/%s.png' % n); print('prop', n)
+    im = im.crop((max(xs[0] - 4, 0), max(ys[0] - 4, 0), xs[-1] + 5, ys[-1] + 5))
+    if n in FEATHER:         # a piece of wall that stands in front of the wall band: its two ends melt into it
+        px = np.asarray(im).astype(np.float32)
+        w = px.shape[1]; k = int(w * 0.1)
+        ramp = np.ones(w, np.float32); ramp[:k] = np.linspace(0, 1, k) ** 1.5; ramp[-k:] = ramp[:k][::-1]
+        px[..., 3] *= ramp[None, :]
+        im = Image.fromarray(px.astype(np.uint8))
+    im.save('art/props/%s.png' % n); print('prop', n)

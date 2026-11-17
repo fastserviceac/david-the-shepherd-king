@@ -221,3 +221,26 @@ Built from what is already in the game: the donkey, the kid and the lyre on foot
 | c2_road_mid | image, as the midgrounds in Part 5 (magenta), 16:9 | Dry-stone terrace and field walls with a gap in them, two or three gnarled grey-green olive trees, thorn scrub, tufts of dry grass and low limestone boulders beside a ridge road, lit by a low warm sun from the left, honey and amber stone with soft cool-brown shadows, a little dimmer and warmer than morning. Keep it low and sparse. | `art/c2_road_mid.png` (save the picture as `tools/src/art_in/c2_road_mid.png`, then `python3 tools/scenery.py c2_road`) |
 
 Not needed after all: `c2_lead`, `c2_coax` (the donkey follows the song), the ford and rockfall props (the pool and loose stones of Chapter One serve), and `c2_jebus_backdrop` (Jebus is on the hill in `c2_road_backdrop`).
+
+---
+
+## Part 9: what Section 3, The Gate of Gibeah, uses (added 17 November)
+
+Built (`scripts/levels/gibeah_gate.gd`). Reused: the donkey, the kid and the lyre on foot from the Summons; the well, jar and embers props of Chapter One; the collected `c2_gibeah_backdrop` (outside the wall) and `c2_court_backdrop` (the yard, its busy foot faded by `tools/scenery.py`). Made on Higgsfield on 17 November (`nano_banana_pro` 2K at 2 credits a picture, `seedance_2_0` 720p 5 s at 22.5 a clip):
+
+| Name | Kind | Prompt (closing lines as Parts 1, 3, 5 and 6) | The game looks for |
+|---|---|---|---|
+| steward_start | image, Part 1, with `keeper_start` attached as a guide to framing | Part 1's steward, "tired at the end of a long day" |  |
+| steward_idle | video, 5 s, start image steward_start | The steward stands with his hands folded, tired at the end of a long day. He shifts his weight wearily, lifts one hand and rubs his brow, lets out a slow breath, nods once slowly, and folds his hands again. His feet stay on the same spot. | `art/steward/anim/idle_NN.png` |
+| gatekeeper_start | image, as Part 1 | The gatekeeper of a hill fortress, a thickset watchman of about forty-five with a full black beard and a stern face, a knee-length rough brown wool tunic, a wide leather belt, a short dark charcoal-brown cloak pinned at one shoulder and leather sandals, holding a tall plain wooden staff upright. (The first try gave him an olive cloak, which a green screen would cut away; say "no green or olive".) |  |
+| gatekeeper_idle | video, 5 s, start image gatekeeper_start | The gatekeeper stands squarely on guard, holding his tall wooden staff upright. He shifts his weight, looks slowly to one side and back, shakes his head once slowly as if refusing someone, and stands still again. | `art/gatekeeper/anim/idle_NN.png` |
+| youth_start | image, as Part 1 | The young man of 1 Samuel 16:18, drawn to match the film shot `c2_witness`: a slim youth of about seventeen with olive skin, clean-shaven, short dark curly hair, a plain knee-length tunic of coarse undyed tan cloth with a round neck and short sleeves, sandals, no belt. |  |
+| youth_idle | video, 5 s, start image youth_start | Part 3's `courtier_idle`, hands at his sides | `art/youth/anim/idle_NN.png` |
+| c2_gibeah_mid | image, Part 5 midground | A long, unbroken stretch of the wall of an Iron Age hill fortress seen straight on: thick wall of rough field stone about twice a man's height with a plain level top, the same height from edge to edge so that it can repeat, dry weeds and fallen stones at its foot, last amber light of dusk. No gate, door, tower, window or torches. (The band is tiled, so the gate cannot be in it. Made twice: the first had a face-like cluster of stones and one bright end. Both came with a ghost strip of wall above the real one, under a second stripe of magenta; everything above the real wall top (row 434 of 1536 in the kept one) was filled with flat magenta before `scenery.py`. Mirrored stonework shows as a pattern, so this level sets `mid_mirror = false` and `scenery.py` builds a pier at the band's left end to carry the join.) | `art/c2_gibeah_mid.png` |
+| c2_gate | image, Part 6 prop, seen straight on | A shut double gate of plain heavy timber planks with wooden cross-beams and a wooden bar, in a square gateway of large rough field stones with a timber lintel and a short stretch of wall each side. No metal fittings. (Say "wooden farm-style double door": "fortress gate ... shut tight" was refused by the filter, and the first picture had medieval iron hinges.) | `art/props/c2_gate.png` |
+| c2_gate_open | image, from c2_gate as reference | The same gate with both leaves swung inward and open. | `art/props/c2_gate_open.png` |
+| c2_hall_door | image, Part 6 prop, with c2_gate as a guide to style | The doorway of a plain stone hall seen straight on: one tall rectangular doorway with field-stone jambs and a heavy timber lintel, its plank door open inward, warm lamplight from inside on the threshold, a short stretch of wall each side. | `art/props/c2_hall_door.png` |
+
+The three gate and door props have their two ends feathered by `scenery.py` so they melt into the wall band.
+
+Not used after all: `steward_receive`, `courtier_beckon` (one idle each is enough), the Part 5 `c2_gibeah_mid` with a gate tower in it, and `c2_yard_backdrop` / `c2_yard_mid` (the collected court painting is the yard at dusk; Section 5's morning yard may still want them).

@@ -42,6 +42,7 @@ var leaves := Color(0, 0, 0, 0)    # drifting leaves or petals; transparent for 
 var backdrop_art := ""        # painted far background image, optional
 var midground_art := ""       # painted midground strip with transparency, optional
 var mid_tint := Color(0.6, 0.56, 0.7)
+var mid_mirror := true        # every other midground tile is mirrored so the joins match; false for a band that hides its own join (a built wall)
 var pal: Dictionary = {}
 var segments: Array = []      # ground surfaces, each a PackedVector2Array left to right
 var platforms: Array = []     # Rect2 ledges
@@ -267,7 +268,7 @@ func _build_painted() -> void:
 			sp.position = Vector2(x, 96.0)
 			mid.add_child(sp)
 			x += tile_w - 1.0
-			flip = not flip
+			flip = mid_mirror and not flip
 		add_child(mid)
 		layers.append({"node": mid, "s": 0.4})
 
