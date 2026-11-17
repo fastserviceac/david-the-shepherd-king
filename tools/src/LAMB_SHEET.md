@@ -14,7 +14,7 @@ Standing and walking with the lyre are on `tools/src/C2_SHEET.md` (`c2_lyre_stan
 
 Video settings: 720p, 16:9, no audio, one at a time. Seconds are given per clip.
 
-Estimated cost for all 11 clips: about 660 credits on Runway (kling-4, about 60 a clip) or about 26,700 on ElevenLabs (veo-3.1-lite, about 2,424 a clip). The start picture is about 1,200 ElevenLabs credits if made there.
+Estimated cost for all 11 clips (12 with `david_cradle`, added for tranche 3 so he carries the newborn in his arms, not on his shoulders): about 660 credits on Runway (kling-4, about 60 a clip) or about 26,700 on ElevenLabs (veo-3.1-lite, about 2,424 a clip). The start picture is about 1,200 ElevenLabs credits if made there.
 
 ## Start picture for the newborn (image)
 
@@ -57,6 +57,7 @@ Every prompt ends with:
 |---|---|---|
 | david_rub | 6 | The young shepherd kneels on both knees and, with a handful of dry grass in each hand, rubs briskly and gently at something small lying on the ground in front of him, pauses to look at it, and rubs again. |
 | david_gather | 6 | The young shepherd kneels on one knee, slides both hands under a very small newborn lamb lying on the ground in front of him, lifts it against his chest, wraps the edge of his cloak round it, and stands. |
+| david_cradle | 5 | The young shepherd walks steadily on the spot as if on a treadmill, holding a very small newborn lamb against his chest in both arms, wrapped in the edge of his cloak, his head bowed toward it, a full walking cycle repeated. |
 
 ## After the clips arrive
 
@@ -69,3 +70,15 @@ Every prompt ends with:
 
 - Rubbing a newborn dry with grass and bringing it to its mother is ordinary shepherd practice, not scripture.
 - Lambing in the Judean hills falls from winter into early spring. The plan's "spring" should read "late winter to spring".
+
+## Lambing night, made 17 November 2026 (owner's yes in the tranche 3 session)
+
+Higgsfield, 213.5 credits: `tools/src/lamb_start.png` (nano_banana_pro 2K) and the eight clips in `tools/src/clips/`, all `seedance_2_0` 720p, no re-rolls. Cut settings are at the end of `tools/build_anims.sh`; frames are checked for rims, ragged legs and scale against `lie`, `walk` and `kneel_hold`. What was judged:
+
+- `ewe_labour` shows her on her chest, not her side, straining and lifting her head. It was kept.
+- `lamb_stand` is one slow rise, with no fall back, and the camera creeps in. Each frame is set on its own feet.
+- `lamb_totter` is a brisk trot rather than a wobble. One loop is cut, frames 49 to 97.
+- `david_rub` shows little grass in his hands. His feet carry faint dark smudges from the floor shadow.
+- `david_gather` and `david_cradle` are clean, and the lamb is in his arms throughout.
+
+Voice: ElevenLabs eleven_v4, 1,353 credits, the eight group C lines in `audio/narration/` and `audio/narration/pt/`, loudness matched to `n_watch_fold`.

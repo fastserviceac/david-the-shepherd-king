@@ -47,6 +47,11 @@ var calm := 0.0           # seconds it stays settled by the song
 var held_x := NAN         # where the song stopped it while it was following him
 var rest_t := -1.0        # seconds since it lay down to the song (-1: on its feet)
 var rise_t := -1.0        # seconds since it began to get up again (-1: not getting up)
+var pose := ""            # a frame set of its own the story has it play (art/sheep/anim/<pose>_NN.png): labour, tending, a newborn's first stand
+var pose_t := 0.0
+var pose_fps := 8.0
+var pose_once := false     # played once and held on its last frame, rather than back and forth
+var pose_tall := 1.4       # the canvas height factor that set was cut with
 const LIE_S := 1.6        # how long lying down takes, from its own frames (sheep_lie)
 const RISE_S := 1.2       # and getting up again (the lying-down frames, backwards)
 const TAKE := 4.0         # seconds with a beast at its side before it is carried off
@@ -225,7 +230,13 @@ func _draw() -> void:
 		tex = jump[clampi(int(clampf(leap, 0.0, 1.0) * (jump.size() - 1)), 0, jump.size() - 1)]
 		FA.draw(self, tex, face, 0.46 * size, wool, 2.7, 0.0, Vector2.ZERO, Vector2.ONE, lift)
 		return
-	if moving:
+	var tall := 1.4
+	if pose != "" and not FA.frames("sheep", pose).is_empty():
+		var pf: Array = FA.frames("sheep", pose)
+		pose_t += get_process_delta_time()
+		tex = pf[mini(int(pose_t * pose_fps), pf.size() - 1)] if pose_once else FA.pingpong(pf, pose_t, pose_fps)
+		tall = pose_tall
+	elif moving:
 		rest_t = -1.0
 		var arr: Array = FA.frames("sheep", "walk")
 		var rn: Array = FA.frames("sheep", "run")
@@ -255,7 +266,7 @@ func _draw() -> void:
 		var n := g.size()
 		var k := int(t * (5.0 if calm > 0.0 else 12.0)) % maxi(1, 2 * n - 2)      # settled, it grazes slowly
 		tex = g[k if k < n else 2 * n - 2 - k]
-	FA.draw(self, tex, face, 0.46 * size, wool, 1.4, 0.0, Vector2.ZERO, Vector2.ONE, lift)
+	FA.draw(self, tex, face, 0.46 * size, wool, tall, 0.0, Vector2.ZERO, Vector2.ONE, lift)
 	if threat > 0.02:          # how close it is to being lost: a ring closing over it
 		var at := Vector2(0, -62.0 * size + lift)
 		var hot := Color(1.0, 0.36, 0.22, 0.55 + 0.4 * absf(sin(t * 9.0)))

@@ -11,7 +11,24 @@
           "title": "The Pastures",
           "script": "res://scripts/levels/section1.gd",
           "aim": "Bring the flock into the fold before dark.",
-          "why": "They are his father's sheep, not his own. A shepherd answers for every one of them."
+          "why": "They are his father's sheep, not his own. A shepherd answers for every one of them.",
+          "then": {
+              "title": "Lambing Night",
+              "script": "res://scripts/levels/lambing.gd",
+              "aim": "Find the ewe that has gone off alone, see her through the birth, and bring her and her lamb home to the fold.",
+              "why": "The lambs born in these cold weeks are next year's flock. A ewe lambing alone in the dark is easy prey for anything that hunts.",
+              "done": "lamb_born",
+              "needs": [
+                  "frames:sheep/ewe_labour",
+                  "frames:sheep/ewe_tend",
+                  "frames:sheep/lamb_wake",
+                  "frames:sheep/lamb_stand",
+                  "frames:sheep/lamb_totter",
+                  "frames:david/rub",
+                  "frames:david/gather",
+                  "frames:david/cradle"
+              ]
+          }
         },
         {
           "title": "The Well",

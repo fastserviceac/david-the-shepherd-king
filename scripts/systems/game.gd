@@ -359,6 +359,34 @@ func section_lacks(idx: int) -> Array:
 	return out
 
 
+## The night played before a section, once, when there is one ("then" in chapters.json: its own script, title,
+## aim, why, needs and the save key that marks it done). Chapter One's lambing night comes before the Pastures,
+## weeks before that evening, so that the lamb in the flock is one he brought into the world. It has no number of
+## its own in the list: the save's section numbers stay as they have always been.
+func interlude(idx: int) -> Dictionary:
+	if idx < 0 or idx >= _sections.size():
+		return {}
+	return _sections[idx].get("then", {})
+
+
+func interlude_lacks(idx: int) -> Array:
+	var out: Array = []
+	for need in interlude(idx).get("needs", []):
+		var parts := str(need).trim_prefix("frames:").split("/")
+		if parts.size() != 2 or FA._paths(parts[0], parts[1]).is_empty():
+			out.append(str(need))
+	return out
+
+
+func interlude_ready(idx: int) -> bool:
+	return not interlude(idx).is_empty() and (fast or force_ready or interlude_lacks(idx).is_empty())
+
+
+## Walking into this section from its beginning, does its night come first?
+func interlude_due(idx: int) -> bool:
+	return interlude_ready(idx) and not bool(save.get(str(interlude(idx).get("done", "")), false))
+
+
 ## He has come far enough to walk into this section, and it is there to walk into.
 func section_open(idx: int) -> bool:
 	return idx >= 0 and idx < _sections.size() and idx <= int(save.get("unlocked", 0)) and section_ready(idx)
@@ -370,7 +398,7 @@ func chapter_open(ch: int) -> bool:
 
 func default_save() -> Dictionary:
 	return {"section": 0, "checkpoint": 0, "has_sling": false, "unlocked": 0, "started": false, "finished": false, "difficulty": 1, "v": 2,
-			"growth": {}, "stones": [], "gifts": [], "psalm": [], "flock": []}
+			"growth": {}, "stones": [], "gifts": [], "psalm": [], "flock": [], "lamb_born": false, "interlude": false}
 
 
 func load_game() -> void:
@@ -402,6 +430,9 @@ func take_save(on_disk: Dictionary) -> void:
 		for pair in [["voice", 1], ["feet", 2], ["eye", 2], ["heart", 1]]:
 			if rank(pair[0]) >= int(pair[1]):
 				give(pair[0], true)
+	if not on_disk.is_empty() and not on_disk.has("lamb_born"):
+		# a journey begun before the lambing night was played: Shai has been with the flock all along
+		save["lamb_born"] = int(save.get("unlocked", 0)) > 0 or bool(save.get("finished", false)) or int(save.get("section", 0)) > 0
 	if not on_disk.has("pouch"):      # a journey begun before the pouch: it starts full
 		fill_pouch()
 	if not on_disk.is_empty() and not on_disk.has("psalm"):

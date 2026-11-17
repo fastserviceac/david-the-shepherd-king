@@ -144,3 +144,18 @@ run $V/c2_lamp $D lamp mode=range a=12 b=58 step=2 href=400 soft=1 steady=999   
 # The screen is a bright true green (107,169,92): halo=3. The loop found is two strides (66 frames).
 run $V/runner_run art/runner/anim run key=green halo=3 wide=1.9 tall=1.3 size=152 erode=3 mode=loop double=1 steady=40     # the men running south; drawn mirrored
 # painting: cp tools/src/art_in/c2/c2_elah_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_elah   (fades its foot to dark, as the road's)
+
+# Chapter One, the lambing night (Higgsfield seedance_2_0 clips tools/src/clips/{ewe_labour,ewe_tend,lamb_wake,lamb_stand,
+# lamb_totter,david_rub,david_gather,david_cradle}.mp4, frames extracted with ffmpeg -vf fps=24 into <dir>/<clip>/f%03d.png).
+# The ewes are cut at the standing height of tools/src/sheep_start_large.png (540) and the lamb at its own standing height
+# (601), so a lying set keeps its true size; the lamb is drawn at sheep size 0.5. lamb_stand drifts in scale (the camera
+# creeps in), so each frame is set on its own feet.
+S="key=blue wide=1.5 tall=1.4 size=110 erode=9"; G="key=green halo=2 soft=1 href=598 steady=999"
+run $V/ewe_labour art/sheep/anim ewe_labour mode=range a=0 b=144 step=3 href=540 steady=999 ${=S}
+run $V/ewe_tend art/sheep/anim ewe_tend mode=range a=0 b=144 step=3 href=540 steady=999 ${=S}
+run $V/lamb_wake art/sheep/anim lamb_wake mode=range a=0 b=120 step=2 href=601 steady=999 ${=S}
+run $V/lamb_stand art/sheep/anim lamb_stand mode=range a=0 b=192 step=3 href=601 steady=999 feet=each ${=S}
+run $V/lamb_totter art/sheep/anim lamb_totter mode=range a=48 b=96 step=2 href=601 steady=40 ${=S}
+run $V/david_rub $D rub mode=range a=72 b=144 step=2 ${=G}
+run $V/david_gather $D gather mode=range a=32 b=144 step=2 wide=2.0 ${=G}
+run $V/david_cradle $D cradle mode=range a=8 b=47 step=1 ${=G} steady=40

@@ -15,6 +15,9 @@ var hud
 var menu
 var intro
 var section_idx := 0
+var in_interlude := false   # the night played before a section (Game.interlude) is what is being played now
+var after_interlude := false   # that night has just been played, and the section it comes before follows it
+var from_night := false        # the section now being played came straight on from its night
 var state := "boot"      # menu, play, paused, transition
 var testing := false
 var tester
@@ -109,20 +112,55 @@ func _ready() -> void:
 	show_menu()
 
 
-func load_level(idx: int, checkpoint: int = 0) -> void:
+func load_level(idx: int, checkpoint: int = 0, night: bool = false) -> void:
 	if level != null and is_instance_valid(level):
 		level.queue_free()
 		level = null
 		await get_tree().process_frame
 	Game.FA.keep_only(["david", "sheep", "jackal"])      # the last place's beasts and people are let go
 	section_idx = idx
-	var sec: Dictionary = Game.sections()[idx]
+	in_interlude = night
+	var sec: Dictionary = Game.interlude(idx) if night else Game.sections()[idx]
 	level = load(sec["script"]).new()
 	level.section_idx = idx
 	level.start_checkpoint = checkpoint
 	world.add_child(level)
 	Game.music(level.mood)
 	Game.ambience(level.ambience)
+
+
+## What is being played now, as chapters.json describes it: the section, or the night played before it.
+func here() -> Dictionary:
+	if in_interlude:
+		return Game.interlude(section_idx)
+	return Game.sections()[clampi(section_idx, 0, Game.sections().size() - 1)]
+
+
+## The night before a section (Game.interlude): played once, from the section's beginning, before the section itself.
+func start_interlude(idx: int, checkpoint: int = 0) -> void:
+	state = "transition"
+	menu.close()
+	await overlay.fade_to(1.0, 0.5)
+	get_tree().paused = false
+	Game.backdrop = false
+	Game.cinematic = false
+	await load_level(idx, checkpoint, true)
+	Game.save["section"] = idx
+	Game.save["checkpoint"] = 0
+	Game.save["started"] = true
+	Game.save["interlude"] = true
+	Game.save_game()
+	hud.visible = true
+	state = "play"
+	await overlay.fade_to(0.0, 0.7)
+	if checkpoint == 0:
+		var ch: Dictionary = Game.chapters[Game.chapter_of(idx)]
+		var night: Dictionary = Game.interlude(idx)
+		Game.cinematic = true
+		await overlay.title_card(Game.t("Chapter %s  ·  %s") % [Game.t(ch["number"]), Game.t(ch["title"])], Game.t(night["title"]), Game.t(str(night.get("aim", ""))))
+		Game.cinematic = false
+		if is_instance_valid(level) and in_interlude and section_idx == idx:
+			level.begin()
 
 
 func show_menu() -> void:
@@ -141,6 +179,11 @@ func show_menu() -> void:
 
 
 func start_section(idx: int, checkpoint: int = 0, seen_film: bool = false) -> void:
+	if checkpoint == 0 and tester == null and Game.interlude_due(idx) and not after_interlude:
+		start_interlude(idx)      # its night comes first
+		return
+	from_night = after_interlude
+	after_interlude = false
 	state = "transition"
 	menu.close()
 	await overlay.fade_to(1.0, 0.5)
@@ -151,6 +194,7 @@ func start_section(idx: int, checkpoint: int = 0, seen_film: bool = false) -> vo
 	Game.save["section"] = idx
 	Game.save["checkpoint"] = checkpoint
 	Game.save["started"] = true
+	Game.save["interlude"] = false
 	Game.save_game()
 	# a story film leads into the section, when one has been made for it
 	var film: String = Game.sections()[idx].get("film", "")
@@ -180,6 +224,14 @@ func complete_section() -> void:
 	if testing or state != "play":
 		return
 	state = "transition"
+	if in_interlude:
+		# the night is over: the section it comes before follows it, from its beginning
+		Game.save[str(Game.interlude(section_idx).get("done", ""))] = true
+		Game.save["interlude"] = false
+		Game.save_game()
+		after_interlude = true
+		start_section(section_idx)
+		return
 	var next := section_idx + 1
 	var ch := Game.chapter_of(section_idx)
 	if next < Game.sections().size() and Game.chapter_of(next) == ch:
@@ -230,6 +282,9 @@ func complete_section() -> void:
 func _on_menu(id: String) -> void:
 	match id:
 		"continue":
+			if Game.save.get("interlude", false) and Game.interlude_ready(int(Game.save["section"])):
+				start_interlude(int(Game.save["section"]))
+				return
 			start_section(int(Game.save["section"]), 0, true)      # he has seen the film that leads in; it is not shown again      # a place is rebuilt whole when the game is reopened, so he begins it whole: its sheep, stones and tasks are not kept half done
 		"new":
 			menu.open("difficulty")
@@ -291,6 +346,8 @@ func _on_menu(id: String) -> void:
 			elif id.begins_with("chapter_"):
 				menu.chapter = id.trim_prefix("chapter_").to_int()
 				menu.open("sections")
+			elif id.begins_with("interlude_"):      # the night before a section, played again from the list
+				start_interlude(id.trim_prefix("interlude_").to_int())
 			elif id.begins_with("section_"):
 				Game.gifts_for(id.trim_prefix("section_").to_int())
 				start_section(id.trim_prefix("section_").to_int())

@@ -45,7 +45,9 @@ var attack_dur := 0.3
 var queued := false
 var throw_t := 0.0
 var hurt_t := 0.0
-var act := ""             # story pose: "kneel", "kneel_up", "carry"
+var act := ""             # story pose: "kneel", "kneel_up", "carry", "rub", "gather"
+var carry_set := "carry"  # what he carries in "carry": a grown lamb on his shoulders, or ("cradle") a newborn held to his chest
+const GATHER_S := 4.0     # seconds to gather a newborn up and stand (the clip's own pace)
 var move_t := 0.0         # how long he has kept moving: he sets off at a walk and breaks into a run
 var carry_free := false   # while he carries the lamb, the player still chooses where he walks
 var carry_tip_cd := 0.0   # so the reminder that his hands are full is not shown on every press
@@ -879,7 +881,7 @@ func _update_pose(delta: float) -> void:
 	var on_floor := is_on_floor()
 	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
 	var idle := 1.0 - run
-	var stride := 95.0 if act == "carry" else (WALK_CYCLE_PX if absf(velocity.x) < WALK + 30.0 else CYCLE_PX)
+	var stride := (WALK_CYCLE_PX if carry_set == "cradle" else 95.0) if act == "carry" else (WALK_CYCLE_PX if absf(velocity.x) < WALK + 30.0 else CYCLE_PX)
 	ph = fposmod(ph + absf(velocity.x) * delta / stride, 1.0)
 	land = move_toward(land, 0.0, delta * 4.5)
 
@@ -961,6 +963,14 @@ func _current_frame() -> Texture2D:
 		return FA.pingpong(FA.frames("david", "kneel_hold"), act_t, 8.0)
 	if act == "kneel_up":
 		return _one_shot("kneel_up", act_t / 1.6)
+	if act == "rub":          # on his knees, rubbing a newborn dry with handfuls of grass
+		if FA.frames("david", "rub").is_empty():
+			return FA.pingpong(FA.frames("david", "kneel_hold"), act_t, 8.0)
+		return FA.pingpong(FA.frames("david", "rub"), act_t, 10.0)
+	if act == "gather":       # he slides his hands under it, lifts it to his chest in his cloak, and stands
+		if FA.frames("david", "gather").is_empty():
+			return _one_shot("kneel_up", act_t / 1.6)
+		return _one_shot("gather", act_t / GATHER_S)
 	if act.begins_with("lyre") and not FA.frames("david", "lyre").is_empty():
 		# seated with the kinnor: he sits down, plays with his head bowed, then lifts his face and plays on
 		var ly: Array = FA.frames("david", "lyre")
@@ -988,7 +998,9 @@ func _current_frame() -> Texture2D:
 			return ly[clampi(int(act_t / LYRE_SIT * 9.0), 0, 8)]
 		return FA.pingpong(ly.slice(9, 34), act_t - LYRE_SIT, 6.0 if lyre_held else 3.0)
 	if act == "carry":
-		var c: Array = FA.frames("david", "carry")
+		var c: Array = FA.frames("david", carry_set)
+		if c.is_empty():
+			c = FA.frames("david", "carry")
 		return c[int(ph * c.size()) % c.size()]
 	if shield and act == "" and not FA.frames("david", "bear").is_empty():
 		# the king's shield on his arm and the king's spear upright in his hand: raising the shield, walking, standing
