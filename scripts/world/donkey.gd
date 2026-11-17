@@ -30,7 +30,7 @@ func _ready() -> void:
 func hear(from: Vector2, reach: float) -> void:
 	if absf(from.x - global_position.x) > reach:
 		return
-	quiet = QUIET * float(Game.diff()["warning"])
+	quiet = QUIET * float(Game.diff()["warning"]) * Game.song_hold()
 	if balking:
 		balking = false
 		ease_t = 1.0

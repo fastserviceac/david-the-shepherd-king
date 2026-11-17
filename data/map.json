@@ -356,6 +356,12 @@
    "x": -2.3,
    "z": -0.5,
    "about": "The open yard, where the king's arms are carried and the drill is done."
+  },
+  "night_fit": {
+   "view": "gibeah",
+   "x": 2.4,
+   "z": 0.05,
+   "about": "The same hall in the deep of the night. Scripture says only that David played when the trouble came on the king (1 Samuel 16:23); the lamps and the hour are invention."
   }
  },
  "relief": {

@@ -170,6 +170,21 @@
             "frames:youth/idle",
             "frames:jonathan/idle"
           ]
+        },
+        {
+          "title": "The Night Fit",
+          "script": "res://scripts/levels/night_fit.gd",
+          "aim": "Play the king through the night: every wave, with the lamps kept burning.",
+          "why": "The king is worse at night, and there is no one else who can do this.",
+          "needs": [
+            "res://art/c2_hall_backdrop.png",
+            "res://art/props/c2_hall_lamp_night.png",
+            "res://art/props/c2_hall_lamp_out.png",
+            "frames:david/lyre",
+            "frames:david/lamp",
+            "frames:saul/idle",
+            "frames:saul/rest"
+          ]
         }
       ]
     },

@@ -225,7 +225,7 @@ func phrase(from: Vector2, feet: bool) -> void:
 	e["heard"] = int(e["heard"]) + 1
 	if int(e["heard"]) >= _need(e):
 		e["heard"] = 0
-		e["calm"] = float(e["hold"]) * float(Game.diff()["warning"])
+		e["calm"] = float(e["hold"]) * float(Game.diff()["warning"]) * Game.song_hold()
 		e["hold"] = e["calm"]
 		e["was"] = true
 		Game.sfx("anoint", -14.0, 0.0)

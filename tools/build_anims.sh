@@ -132,3 +132,9 @@ run $V/c2_bearer $D bear mode=loop double=0 href=605 step=2 soft=1 steady=40    
 #   all_00..06 -> art/spearman/anim/idle, all_07..12 -> raise, all_34..55 -> swing (the stroke lands at its frame 4, then he draws back)
 # painting: cp tools/src/art_in/c2/c2_yard_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_yard   (fades its foot to trodden earth)
 # the wall band, the hall door and the ground by day, from the dusk paintings: python3 tools/yard_day.py
+
+# Chapter Two, the Night Fit (Higgsfield seedance_2_0 clip tools/src/clips/c2/c2_lamp.mp4, frames extracted with
+# ffmpeg -vf fps=24 into <dir>/c2_lamp/f%03d.png, the outer 8 rows and 3 columns overwritten with their neighbours).
+# The start picture was shrunk to give room above his head, so he is 400 px tall here, not 605.
+run $V/c2_lamp $D lamp mode=range a=12 b=58 step=2 href=400 soft=1 steady=999     # he raises the taper to the lamp and shields the new flame
+# the lamp gone out, from the burning one: python3 tools/lamp_out.py

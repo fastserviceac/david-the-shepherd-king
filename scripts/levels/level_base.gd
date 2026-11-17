@@ -1861,7 +1861,7 @@ func song(from: Vector2, reach: float, walking: bool = false) -> void:
 		if not is_instance_valid(s) or s.carried or absf(s.global_position.x - from.x) > reach \
 				or absf(s.global_position.y - from.y) > 260.0:
 			continue
-		s.settle(SETTLE, not walking)
+		s.settle(SETTLE * Game.song_hold(), not walking)
 		n += 1
 	if n > 0 and not Game.fast:
 		Game.sfx("sheep", -12.0, 0.2)

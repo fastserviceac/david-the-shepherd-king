@@ -68,6 +68,8 @@ var rest_t := -1.0             # seconds since he began to ease; below zero whil
 var steward: Node2D
 var youth: Node2D
 var lamp_glow: Sprite2D
+var room: Sprite2D             # the painting of the hall, for a later section to dim
+var turn_say: Array = ["n_c2s4_turn"]      # what is told the first time the king turns away
 var clock := 0.0
 var placed := false
 var pose_play := 0             # for a screenshot: frames until the lyre key is pressed for him
@@ -109,6 +111,7 @@ func _ready() -> void:
 		# its back wall meets its floor (PAINT_FLOOR of its height) lies just behind the figures' feet.
 		var far: Node2D = layers[0]["node"]
 		var bg := far.get_child(0) as Sprite2D
+		room = bg
 		layers.remove_at(0)
 		far.position = Vector2.ZERO
 		var wide := (VIEW_R - VIEW_L) / (PAINT_R - PAINT_L)
@@ -127,11 +130,7 @@ func _dress(_seg: PackedVector2Array) -> void:
 
 
 func _populate() -> void:
-	if ResourceLoader.exists("res://art/props/c2_hall_lamp.png"):      # the lamp that throws the king's shadow
-		var lamp := add_sprite("res://art/props/c2_hall_lamp.png", Vector2(LAMP_X, 556.0), 1.0, 1, Color(1, 1, 1))
-		lamp.scale = Vector2.ONE * (172.0 / lamp.texture.get_height())
-		add_painter(Vector2(LAMP_X, 558.0), 1, func(ci: CanvasItem) -> void: FA.shadow(ci, 54.0, 0.9))
-		lamp_glow = add_glow(Vector2(LAMP_X, 556.0 - 160.0), Color(1.0, 0.66, 0.32, 0.5), 210.0)
+	_build_lamps()
 	# the corners of the room are beyond the lamp: the painting's side walls, and what the frame cuts through there, stand in the dark
 	var dusk := Color(0.035, 0.025, 0.04)
 	for side in [[VIEW_L - 40.0, VIEW_L + 70.0, VIEW_L + 230.0], [VIEW_R + 40.0, VIEW_R - 40.0, VIEW_R - 170.0]]:
@@ -141,11 +140,7 @@ func _populate() -> void:
 			pg.vertex_colors = PackedColorArray([Color(dusk, part[2]), Color(dusk, part[3]), Color(dusk, part[3]), Color(dusk, part[2])])
 			pg.z_index = -46
 			add_child(pg)
-	steward = add_person("steward", 196.0, 1.0, false, 2)
-	youth = add_person("youth", 286.0, 1.0, false, 2)
-	for who in [steward, youth]:          # in the room's light, and a little back from the two the lamp is on
-		if is_instance_valid(who):
-			who.modulate = Color(0.94, 0.78, 0.6)
+	_build_people()
 	_build_king()
 	if Game.backdrop:
 		return
@@ -162,6 +157,25 @@ func _populate() -> void:
 	words.animated = true
 	over.add_child(words)
 	add_trigger(KING_X - FAR + 20.0, KING_X, _come_before)
+
+
+## The lamp that throws the king's shadow. The Night Fit has more than one, and they go out.
+func _build_lamps() -> void:
+	if not ResourceLoader.exists("res://art/props/c2_hall_lamp.png"):
+		return
+	var lamp := add_sprite("res://art/props/c2_hall_lamp.png", Vector2(LAMP_X, 556.0), 1.0, 1, Color(1, 1, 1))
+	lamp.scale = Vector2.ONE * (172.0 / lamp.texture.get_height())
+	add_painter(Vector2(LAMP_X, 558.0), 1, func(ci: CanvasItem) -> void: FA.shadow(ci, 54.0, 0.9))
+	lamp_glow = add_glow(Vector2(LAMP_X, 556.0 - 160.0), Color(1.0, 0.66, 0.32, 0.5), 210.0)
+
+
+## Who else is in the room: in the evening, the two who brought him. At night, no one.
+func _build_people() -> void:
+	steward = add_person("steward", 196.0, 1.0, false, 2)
+	youth = add_person("youth", 286.0, 1.0, false, 2)
+	for who in [steward, youth]:          # in the room's light, and a little back from the two the lamp is on
+		if is_instance_valid(who):
+			who.modulate = Color(0.94, 0.78, 0.6)
 
 
 ## The king on his seat, and his shadow on the wall behind him. Unpainted, a player sees neither (and the
@@ -300,7 +314,12 @@ func phrase(from: Vector2, _feet: bool) -> void:
 		line_t = 0.0
 	_on_phrase()
 	if shadow <= 0.0:
-		_rest()
+		_shadow_down()
+
+
+## The shadow is all the way down. Here that is the end of it; at night it is the end of one wave.
+func _shadow_down() -> void:
+	_rest()
 
 
 func phrase_lost(from: Vector2, _feet: bool) -> void:
@@ -350,7 +369,7 @@ func _turn_away() -> void:
 	Game.cinematic = true
 	if not turned_once:
 		turned_once = true
-		await say(["n_c2s4_turn"])
+		await say(turn_say)
 	Game.cinematic = true
 	await Game.main.overlay.fade_to(1.0, 0.6)
 	player.reset_to(on_ground(START_X))
@@ -359,6 +378,10 @@ func _turn_away() -> void:
 	await Game.main.overlay.fade_to(0.0, 0.7)
 	Game.cinematic = false
 	turning = false
+	_begun_again()
+
+
+func _begun_again() -> void:
 	show_tip("Begin again.  Slowly: let go only at the top of the breath", 6.0)
 
 

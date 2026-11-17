@@ -78,6 +78,7 @@ func smoke(m) -> void:
 			"gibeah_gate": await _gibeah_gate(lv)
 			"kings_hall": await _kings_hall(lv)
 			"armour_bearer": await _armour_bearer(lv)
+			"night_fit": await _night_fit(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -543,7 +544,7 @@ func _fort_map(m) -> void:
 	_check(m.map._fort_known() and m.map.view == "gibeah" and m.map._g(m.map.index) == gate_i and m.map._here() == m.map.index,
 			"opened at the Gate of Gibeah, the map is the fortress and he stands at its gate")
 	var names: Array = m.map.ids.map(func(g): return m.map._key(m.map.ids.find(g)))
-	_check(names.slice(0, 3) == ["gibeah_gate", "kings_hall", "armour_bearer"], "its places are the fortress's sections, in order (%s)" % str(names))
+	_check(names.slice(0, 4) == ["gibeah_gate", "kings_hall", "armour_bearer", "night_fit"], "its places are the fortress's sections, in order (%s)" % str(names))
 	_check(m.map._open_to(0) and m.map._open_to(1) and not m.map._open_to(2), "a place in it is open only once he has come to it")
 	await _frames(30)
 	var gate_at: Vector2 = m.map._spot(0)
@@ -1675,7 +1676,7 @@ func placeshots(m, dir: String) -> void:
 			await _snap(dir, "map_land_" + lg)
 			m.map.close()
 		# the fortress, as it is once he serves in it
-		Game.save["unlocked"] = _index("armour_bearer")
+		Game.save["unlocked"] = _index("night_fit") + 1
 		Game.save["gifts"] = ["voice", "hand", "sling", "lyre", "walksong", "steady", "favour"]
 		m.section_idx = _index("kings_hall")
 		for lg in ["en", "pt"]:
@@ -2115,6 +2116,104 @@ func _kings_hall(lv) -> void:
 	Game.main.hud.page = 0
 
 
+## The Night Fit: the hall's playing in waves, the lamps between them, what he already has, and the Night Song.
+func _night_fit(lv) -> void:
+	var p = lv.player
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	var gifts: Array = Game.save.get("gifts", [])
+	gifts.erase("nightsong")
+	for g in ["lyre", "voice", "walksong", "steady", "favour"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling", "lyre", "grab"]:
+		Input.action_release(a)
+	var idx: int = Game.chapter_start(1) + 5
+	_check(not Game.has("nightsong") and int(Game.GIFTS["nightsong"]["after"]) == idx and lv.section_idx == idx and "nightsong" in Game.GIFT_ORDER
+			and Game.song_hold() == 1.0, "he comes into the night without the Night Song, which this section gives")
+	_check(lv.lamps.size() == 3 and lv.lamps_wanting() == 0 and lv.dark != null and lv.dark_amount > 0.5 and not is_instance_valid(lv.steward) and not is_instance_valid(lv.youth),
+			"the hall at night: three lamps burning in the dark, and no one else in the room")
+	_check(lv.up > 0.1 and lv.WAVES.size() == 3 and lv.WAVES[2]["start"] > lv.WAVES[1]["start"] and lv.WAVES[1]["start"] > lv.WAVES[0]["start"]
+			and lv.WAVES[2]["shake"] > lv.WAVES[0]["shake"], "a lost phrase costs more than in the evening, and each wave is stronger than the last")
+	await _goto(lv.KING_X - 380.0)
+	await _frames(30)
+	lv._begin_trial()
+	_check(lv.trial and lv.wave == 0 and not lv.lull and absf(lv.shadow - float(lv.WAVES[0]["start"])) < 0.03, "come before the king, the first wave begins (%.2f)" % lv.shadow)
+	lv.swell_wait = 99.0
+	await _goto(lv.KING_X - 300.0)
+	# the King's Favour: once in a wave he is waited for
+	var hp: int = p.hp
+	lv.shadow = 1.0 - lv.up * 0.5
+	lv.phrase_lost(p.global_position, false)
+	_check(lv.grace_used and not lv.turning and lv.trial and is_equal_approx(lv.shadow, lv.GRACE_AT), "the King's Favour: the loss that would have turned the king away does not, once")
+	lv._gutter(1)
+	lv.shadow = 1.0 - lv.up * 0.5
+	lv.phrase_lost(p.global_position, false)
+	_check(lv.turning or lv.turned_once, "the second time he turns his face to the wall")
+	for i in 500:
+		await tree.physics_frame
+		if not lv.turning:
+			break
+	_check(lv.trial and not lv.turning and lv.wave == 0 and lv.lamps_wanting() == 0 and absf(lv.shadow - float(lv.WAVES[0]["start"])) < 0.02 and not lv.grace_used and p.hp == hp
+			and not Game.cinematic and not lv.done, "no one is hurt: the lamps are lit again and he begins the same wave again (%s)" % str([lv.trial, lv.turning, lv.wave, lv.lamps_wanting(), lv.shadow, lv.grace_used, p.hp, hp, Game.cinematic]))
+	# the first wave brought down: a lull, and a lamp guttering
+	await _goto(lv.KING_X - 300.0)
+	lv.swell_wait = 99.0
+	lv.shadow = lv.down * 0.5
+	lv.phrase(p.global_position, false)
+	await _until(func() -> bool: return not Game.cinematic, 300)
+	_check(lv.lull and not lv.rested and lv.wave == 0 and lv.lamps[0]["state"] == "low" and lv.lamps[0]["task"]["on"] and lv.lamps_out() == 0,
+			"the first wave down is not the end: the lamp by the door gutters, and wants tending")
+	lv.phrase(p.global_position, false)
+	_check(lv.lull and not lv.rested and lv.wave == 0, "playing on does not light a lamp, nor bring the next wave")
+	_check(lv.song_noise(p.global_position) == 0.0 and lv.song_pace(p.global_position) == 1.0, "between waves the breath is his own")
+	lv.lamps[0]["t"] = 0.05
+	await _frames(12)
+	var s0: float = lv.shadow
+	await _frames(90)
+	_check(lv.lamps[0]["state"] == "out" and lv.lamps_out() == 1 and lv.shadow > s0 + 0.01 and lv.lull, "left alone the lamp goes out, and the dark lets the shadow grow (%.3f to %.3f)" % [s0, lv.shadow])
+	await _goto(lv.lamps[0]["task"]["x"])
+	Input.action_press("grab")
+	await _until(func() -> bool: return lv.lamps[0]["state"] == "lit", 300)
+	Input.action_release("grab")
+	_check(lv.lamps[0]["state"] == "lit" and not lv.lamps[0]["task"]["on"], "he gets up and tends it at its stand, and it burns")
+	await _until(func() -> bool: return lv.wave == 1, 300)
+	_check(lv.wave == 1 and not lv.lull and lv.shadow >= float(lv.WAVES[1]["start"]) - 0.001 and lv.swell_shake > float(lv.WAVES[0]["shake"]),
+			"every lamp burning, the second wave comes, taller and stronger (%.2f)" % lv.shadow)
+	lv.swell_wait = 99.0
+	lv.shadow = lv.down * 0.5
+	lv.phrase(lv.on_ground(lv.KING_X - 300.0), false)
+	_check(lv.lull and lv.lamps_wanting() == 2, "the second wave down, two lamps gutter")
+	lv._tend(0)
+	lv._tend(1)
+	await _until(func() -> bool: return lv.wave == 2, 300)
+	_check(lv.wave == 2 and not lv.lull, "and the last wave comes")
+	# the last wave: it shakes and hurries at once, and the lamp by the king gutters in the middle of it
+	lv.swell_on = 0.0
+	lv.swell_wait = 0.01
+	await _frames(60)
+	_check(lv.swell > 0.3 and lv.song_noise(p.global_position) > 0.3 and lv.song_pace(p.global_position) > 1.2, "in the last wave a swell shakes the breath line and hurries it at once")
+	_check(lv.lamps_wanting() == 0, "the first swell leaves the lamps alone")
+	lv.swell_on = 0.0
+	lv.swell_wait = 0.01
+	await _frames(60)
+	_check(lv.lamps[lv.MID_LAMP]["state"] == "low" and lv.trial and not lv.lull, "at the second the lamp by the king gutters, in the middle of the playing")
+	lv._tend(lv.MID_LAMP)
+	lv.swell_on = 0.0
+	lv.swell_wait = 99.0
+	lv.shadow = lv.down * 0.5
+	lv.phrase(lv.on_ground(lv.KING_X - 300.0), false)
+	_check(lv.rested and not lv.trial and lv.rest_t >= 0.0, "the last wave down, the king rests")
+	for i in 400:
+		await tree.physics_frame
+		if lv.done:
+			break
+	_check(Game.has("nightsong") and lv.done and Game.song_hold() > 1.4, "and the Night Song is given: the quiet his playing leaves holds longer")
+	# the gift is real outside this room: a sheep settled by the song stays settled longer
+	var g: Dictionary = Game.GIFTS["nightsong"]
+	_check(Game._ui_pt.has(g["name"]) and Game._ui_pt.has(g["line"]) and Game._ui_pt.has(g["why"]) and Game._ui_pt.has(g["how"]), "it is told in Portuguese too")
+	Input.action_release("lyre")
+	Game.save["gifts"] = had
+
+
 ## The Armour-Bearer: the work of the yard in its order, the king's shield on his arm, the block, and the drill.
 func _armour_bearer(lv) -> void:
 	var p = lv.player
@@ -2380,11 +2479,18 @@ func flow(m, dir: String) -> void:
 	_check(Game.has("shieldarm"), "the drill passed, the Shield Arm is given")
 	m.level._end()
 	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 5 and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first + 5 and Game.has("shieldarm"), "the king's arms carried back to his door, the Night Fit follows it")
+	m.level._rest()
+	t = 0.0
 	while t < 90.0 and m.state != "menu":
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 5 and Game.has("shieldarm"), "the king's arms carried back to his door, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 6 and Game.has("nightsong"), "the king brought to rest in the night and the Night Song given, what is built of Chapter Two ends and returns to the menu")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

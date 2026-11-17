@@ -499,8 +499,11 @@ const GIFTS := {
 	# "after" is Chapter Two's fifth section (Game.chapter_start(1) + 4). The shield is the king's: `player.shield` is set by a level
 	# that puts it on his arm, and without it this gift does nothing. He never wears armour (1 Samuel 17:39).
 	"shieldarm": {"name": "The Shield Arm", "line": "With the king's shield on his arm he can raise it, and a blow from the front that lands on it does no harm. It comes up for the blow and cannot be held up long. The shield is the king's and never his: where he does not bear it, there is nothing to raise.", "key": "J  hold, while he bears the king's shield", "craft": "hand", "why": "An armour-bearer stands between his lord and the blow. He is not there to strike.", "how": "In the yard at Gibeah: stand through the shield-man's drill.", "after": 12, "chapter": 1},
+	# "after" is Chapter Two's sixth section (Game.chapter_start(1) + 5). What it does is one number, song_hold(): the quiet his
+	# playing leaves lasts that many times longer, wherever a quiet is counted down (sheep, the donkey, a man played to).
+	"nightsong": {"name": "The Night Song", "line": "The quiet his playing leaves holds longer after he stops: half as long again and more, for sheep, for a beast on the road, and for a man who has been played to.", "key": "", "craft": "voice", "why": "A song that only holds while it is played is no use to a man who must sleep, or to a flock that must be left.", "how": "In the king's hall at night: play through every wave, and keep the lamps burning.", "after": 13, "chapter": 1, "emblem": "lyre"},
 }
-const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady", "favour", "shieldarm"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady", "favour", "shieldarm", "nightsong"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [
@@ -577,6 +580,11 @@ func call_reach() -> float:
 ## How far the lyre is heard.
 func song_reach() -> float:
 	return 420.0 + 50.0 * rank("voice")
+
+
+## The Night Song: how many times longer the quiet his playing leaves lasts after he stops.
+func song_hold() -> float:
+	return 1.6 if has("nightsong") else 1.0
 
 
 ## A gift is given: once, and for good.
