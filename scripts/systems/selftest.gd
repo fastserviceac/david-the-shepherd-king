@@ -73,14 +73,15 @@ func smoke(m) -> void:
 			"section3": await _s3(lv)
 			"watch": await _watch(lv)
 			"section4": await _s4(lv)
+			"summons": await _summons(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
 	var missing := 0
-	for i in Game.sections().size():
+	for i in Game.chapter_sections(0).size():      # the map is of Chapter One's hills; later chapters go back to it, and have no place of their own on it yet
 		if not m.map.data.get("places", {}).has(m.map._key(i)):
 			missing += 1
-	_check(not m.map.data.is_empty() and missing == 0, "every section has its place on the map")
+	_check(not m.map.data.is_empty() and missing == 0, "every section of Chapter One has its place on the map")
 	m.map.open(true, 2)
 	var q: Vector2 = m.map._at(31.7054, 35.2024)
 	var q2: Vector2 = m.map._spot(2)
@@ -103,8 +104,275 @@ func smoke(m) -> void:
 	_check(Game.t("The Well") == "O Poço" and str(Game.line("ps23_1")["text"]).begins_with("O SENHOR"), "Portuguese is shown when it is chosen")
 	Game.save["lang"] = "en"
 	_old_save()
+	_chapters()
 	print("SMOKE %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)
+
+
+## The sections of every chapter run on in one list, and a journey saved when there was only Chapter One still
+## loads: what it had is kept, a finished Chapter One opens Chapter Two, and nothing past that is opened early.
+func _chapters() -> void:
+	var kept: Dictionary = Game.save.duplicate(true)
+	var first: int = Game.chapter_sections(0).size()
+	var names: Array = []
+	for i in first:
+		names.append(str(Game.sections()[i]["script"]).get_file().get_basename())
+	_check(first == 8 and names == ["section1", "well", "section2", "wadi", "den", "section3", "watch", "section4"],
+			"Chapter One's eight sections keep their numbers")
+	_check(Game.sections().size() > first and Game.chapter_of(first - 1) == 0 and Game.chapter_of(first) == 1 and Game.chapter_start(1) == first
+			and str(Game.sections()[first]["script"]).get_file().get_basename() == "summons", "Chapter Two's sections follow them")
+	# a finished Chapter One, saved by the game as it was: "unlocked" 99, no chapter anywhere in the file
+	var done := {"section": 0, "checkpoint": 0, "has_sling": true, "unlocked": 99, "started": false, "finished": true, "difficulty": 1,
+			"growth": {"hand": 120.0, "voice": 20.0}, "stones": ["s1_start", "well_start", "s1_cave"], "pouch": 1,
+			"gifts": ["lyre", "voice", "hand", "sling", "eye", "heart", "feet"], "places": ["foldcave"],
+			"psalm": ["p23_shepherd", "p23_pastures", "p23_waters"], "flock": Game.flock().duplicate(true), "deeds_told": ["bear", "lion"]}
+	Game.take_save(done.duplicate(true))
+	var same := true
+	for k in done:
+		if k != "unlocked" and JSON.stringify(Game.save.get(k)) != JSON.stringify(done[k]):
+			same = false
+	_check(same, "a finished Chapter One loads with its gifts, crafts, stones, deeds and psalm as they were")
+	_check(int(Game.save["unlocked"]) == first and int(Game.save["v"]) == 2, "and Chapter Two's first section is unlocked, and no more than that (%d)" % int(Game.save["unlocked"]))
+	_check(Game.earned_hearts() == 3 and Game.deed_done("chapter1") and Game.deed_done("lion"), "its hearts and deeds are counted as before")
+	var was_fast: bool = Game.fast
+	Game.fast = false          # as a player meets it: a section is open only when its pictures exist
+	var lacks: Array = Game.section_lacks(first)
+	_check(Game.section_open(first) == lacks.is_empty() and Game.chapter_open(1) == lacks.is_empty(),
+			"a section is shut to players while any of its pictures is missing (%d missing)" % lacks.size())
+	main.menu.chapter = 0
+	main.menu.open("sections")
+	var rows: Array = main.menu.items.map(func(it): return it[0])
+	_check(rows.slice(0, first) == range(first).map(func(i): return "section_%d" % i) and ("chapter_1" in rows) == lacks.is_empty(),
+			"the menu lists Chapter One's sections, and Chapter Two only when it can be walked into")
+	Game.force_ready = true
+	main.menu.open("sections")
+	rows = main.menu.items.map(func(it): return it[0])
+	main.menu.chapter = 1
+	main.menu.open("sections")
+	_check("chapter_1" in rows and main.menu.items[0][0] == "section_%d" % first and main.menu.items[0][2] == true and main.menu.heading == "Chapter Two",
+			"with its pictures there, Chapter Two has its own list and its first section is open")
+	main.menu.chapter = 0
+	main.menu.close()
+	Game.force_ready = false
+	Game.fast = was_fast
+	Game.gifts_for(first)
+	_check(Game.has("feet") and Game.has("lyre") and not Game.has("walksong") and Game.has_line("p23_oil"), "he comes into Chapter Two with what Chapter One gave him, and not yet its own gift")
+	# an unfinished journey from the same older game is left where it was
+	Game.take_save({"section": 5, "checkpoint": 1, "unlocked": 5, "started": true, "finished": false, "gifts": ["lyre", "voice"], "psalm": [], "pouch": 0})
+	_check(int(Game.save["unlocked"]) == 5 and int(Game.save["section"]) == 5 and not Game.section_open(first), "an unfinished older journey is left where it was")
+	# a journey of the game as it is now, partway into Chapter Two
+	Game.take_save({"v": 2, "section": first, "checkpoint": 0, "unlocked": first + 1, "started": true, "finished": true, "gifts": ["lyre", "walksong"], "psalm": [], "pouch": 0})
+	_check(int(Game.save["unlocked"]) == mini(first + 1, Game.sections().size()) and int(Game.save["section"]) == first and Game.has("walksong"),
+			"a journey saved inside Chapter Two loads inside Chapter Two")
+	main.menu.open("main")
+	_check(main.menu.items[0][0] == "continue", "and can be continued from the menu")
+	main.menu.close()
+	Game.take_save(kept)
+
+
+## Chapter Two, the Summons: the nine out of the night fold, past the mules by the lyre, the Walking Song, the
+## keeper shown the named ones, the count and the well, and the donkey played home past the same mules.
+func _summons(lv) -> void:
+	var p = lv.player
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	var gifts: Array = had.duplicate()
+	gifts.erase("walksong")
+	Game.save["gifts"] = gifts
+	for g in ["lyre", "voice"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling"]:
+		Input.action_release(a)
+	_check(lv.sheep_total == 9 and lv.flock_here.size() == 9 and lv.sheep_count == 0, "his own nine are shut in the night fold (%d gathered)" % lv.sheep_count)
+	await _goto(lv.NIGHT_FOLD_X)
+	await _frames(20)
+	_check(lv.sheep_count == 0, "and do not come out until the bar is lifted")
+	lv.do_task(lv.bar_task)
+	await _gather_nine(lv)
+	_check(lv.sheep_count == 9, "the bar lifted, they come to him (%d)" % lv.sheep_count)
+	_check(not Game.has("walksong"), "the Walking Song is not his before the trial")
+	Input.action_press("lyre")
+	await _frames(12)
+	_check(p.act == "play" and not p.lyre_feet, "until then he sits to play")
+	Input.action_release("lyre")
+	Input.action_press("jump")
+	await _frames(3)
+	Input.action_release("jump")
+	await _frames(40)
+	# unquieted, they will not pass a mule
+	await _goto(lv.MULES[0] - 420.0)
+	await _frames(200)
+	Input.action_press("move_right")
+	Input.action_press("walk")
+	await _until(func() -> bool: return lv.brays > 0 or p.global_position.x > lv.MULES[0] + 700.0, 900)
+	Input.action_release("move_right")
+	Input.action_release("walk")
+	await _frames(70)
+	_check(lv.brays >= 1 and lv.sheep_count < 9, "led up to a mule unquieted, the flock bolts (%d still with him)" % lv.sheep_count)
+	_check(lv.song_noise(Vector2(lv.MULES[0] + 100.0, 0)) > 0.0 and lv.song_noise(Vector2(lv.MULES[0] - 330.0, 0)) == 0.0, "close to a mule his playing is unsettled; a little way off it is not")
+	# quieted with the lyre, called on, and walked: they pass both
+	var brays_before: int = lv.brays
+	for mx in lv.MULES:
+		lv.hush = 999.0          # held quiet while the test puts the flock back together behind him
+		await _gather_nine(lv)
+		await _goto(mx - 325.0)
+		p.facing = 1
+		await _frames(260)
+		lv.hush = 0.0
+		brays_before = lv.brays if mx == lv.MULES[0] else brays_before
+		await _play_song(p, 3)
+		_check(lv.hush > 0.0, "a song quiets the flock for a while")
+		var held := 0
+		for sh in lv.followers:
+			held += 1 if not is_nan(sh.stay) else 0
+		await _frames(10)
+		Input.action_press("call")
+		await _frames(3)
+		Input.action_release("call")
+		await _frames(3)
+		var roused := 0
+		for sh in lv.followers:
+			roused += 1 if is_nan(sh.stay) else 0
+		if mx == lv.MULES[0]:
+			_check(held == 9 and roused == 9 and p.act == "", "the song holds them where they stand, and his call from where he sits brings them on (%d held, %d roused)" % [held, roused])
+		Input.action_press("move_right")
+		Input.action_press("walk")
+		await _until(func() -> bool: return p.global_position.x > mx + lv.MULE_REACH + 420.0, 900)
+		Input.action_release("move_right")
+		Input.action_release("walk")
+		await _frames(60)
+	_check(lv.brays == brays_before and lv.sheep_count == 9, "quieted, called on and walked, all nine pass both mules (%d, %d brays)" % [lv.sheep_count, lv.brays - brays_before])
+	# the gift, at its place
+	await _goto(lv.GIFT_X)
+	await _frames(40)
+	_check(Game.has("walksong") and p.act == "", "all nine brought past the mules, the Walking Song is given")
+	main.hud.page = 0          # the journal in Chapter Two: its own gift, and what he carries from the hills
+	Input.action_press("growth")
+	await _frames(30)
+	_check(main.hud.panel > 0.5, "the journal opens in Chapter Two")
+	Input.action_release("growth")
+	await _frames(20)
+	# played on his feet: he keeps walking, and what follows keeps following
+	Input.action_press("move_right")
+	Input.action_press("walk")
+	await _frames(30)
+	Input.action_press("lyre")
+	await _frames(4)
+	_check(p.act == "play" and p.lyre_feet and absf(p.velocity.x) > 40.0, "begun while walking, he plays on his feet and walks on")
+	var x0: float = p.global_position.x
+	await _play_song(p, 3, true)
+	var follows := 0
+	for sh in lv.followers:
+		if sh.calm > 0.0 and is_nan(sh.stay):
+			follows += 1
+	_check(follows == 9 and p.global_position.x > x0 + 150.0, "the flock is quieted and still follows him (%d of 9)" % follows)
+	Input.action_release("lyre")
+	Input.action_release("walk")
+	await _until(func() -> bool: return lv.penned, 900)
+	Input.action_release("move_right")
+	_check(lv.penned and lv.pick_task["on"], "at the day fold the nine go in, and the keeper is to be shown them")
+	await _frames(300)
+	# the named ones: the wrong sheep is refused, the right one is known
+	var not_lamb = null
+	for sh in lv.followers:
+		if sh.who != "lamb" and not_lamb == null:
+			not_lamb = sh
+	await _goto(not_lamb.global_position.x)
+	await _frames(6)
+	lv.do_task(lv.pick_task)
+	_check(lv.ask_i == 0 and lv.wrong == 1, "shown the wrong sheep, the keeper is not satisfied")
+	for id in lv.ASK:
+		for sh in lv.followers:
+			if sh.who == id:
+				await _goto(sh.global_position.x)
+				await _frames(6)
+				lv.do_task(lv.pick_task)
+	_check(lv.ask_i == lv.ASK.size() and not lv.pick_task["on"] and lv.count_task["on"], "shown the lamb and the three named ewes, he knows them (%d of 4)" % lv.ask_i)
+	lv.do_task(lv.count_task)
+	await _frames(20)
+	lv.do_task(lv.well_task)
+	await _frames(20)
+	_check(lv.counted and lv.handed and lv.halter_task["on"], "counted in and shown the well, the flock is the keeper's")
+	# the donkey: it will not pass a mule unplayed, and passes when he plays as he walks
+	var d = lv.donkey
+	lv.do_task(lv.halter_task)
+	await _goto(lv.MULES[1] + 420.0)
+	p.facing = -1
+	d.global_position = lv.on_ground(p.global_position.x + 92.0)
+	Input.action_press("move_left")
+	Input.action_press("walk")
+	await _frames(420)
+	Input.action_release("move_left")
+	Input.action_release("walk")
+	_check(d.balks >= 1 and d.balking and d.global_position.x > lv.MULES[1], "led up to a mule unplayed, the donkey plants its feet")
+	await _goto(d.global_position.x - 92.0)
+	p.facing = -1
+	var played := {"feet": false}
+	var home := func() -> bool: return absf(d.global_position.x - lv.GATE_X) < 140.0
+	Input.action_press("move_left")
+	Input.action_press("walk")
+	await _frames(25)
+	var holding := false
+	for i in 6000:
+		if home.call():
+			break
+		# he waits for it when it hangs back, and goes on when it comes
+		if p.global_position.x < d.global_position.x - 170.0:
+			Input.action_release("move_left")
+		else:
+			Input.action_press("move_left")
+		if p.act != "play":
+			if absf(p.velocity.x) >= 40.0:      # take it up again, walking
+				Input.action_release("lyre")
+				await tree.physics_frame
+				Input.action_press("lyre")
+				holding = true
+			else:
+				Input.action_press("move_left")
+		elif holding and p.breath_v >= 0.93:
+			Input.action_release("lyre")
+			holding = false
+		elif not holding:
+			Input.action_press("lyre")
+			holding = true
+		played["feet"] = played["feet"] or p.lyre_feet
+		await tree.physics_frame
+	for a in ["move_left", "walk", "lyre"]:
+		Input.action_release(a)
+	await _frames(30)
+	_check(home.call() and played["feet"], "played to as he walks, it comes past both mules to his father's gate (x=%d, %d balks)" % [int(d.global_position.x), d.balks])
+	_check(lv.kid_task["on"], "and there the young goat can be tied on")
+	lv.do_task(lv.kid_task)
+	await _frames(20)
+	_check(lv.kid_tied and lv.leave_task["on"] and not d.led, "the load is whole: bread, wine and the young goat")
+	lv.do_task(lv.leave_task)
+	await _frames(30)
+	Game.save["gifts"] = had
+
+
+## Walks him onto every one of the flock that is not with him.
+func _gather_nine(lv) -> void:
+	for round in 3:
+		for sh in tree.get_nodes_in_group("sheep"):
+			if is_instance_valid(sh) and sh.level == lv and not sh.gathered:
+				await _goto(sh.global_position.x)
+				await _frames(10)
+		if lv.sheep_count >= lv.sheep_total:
+			return
+		await _frames(60)
+
+
+## Plays `n` phrases, each let go at the top of the breath. `held`: the key is already down.
+func _play_song(p, n: int, held: bool = false) -> void:
+	for k in n:
+		if not held:
+			Input.action_press("lyre")
+		held = false
+		for i in 300:
+			await tree.physics_frame
+			if p.breath_v >= 0.93:
+				break
+		Input.action_release("lyre")
+		await _frames(3)
 
 
 ## A journey saved before the psalm, the lyre and the named flock: it must load with everything it had, and with
@@ -1549,7 +1817,7 @@ func flow(m, dir: String) -> void:
 	_check(m.section_idx == 1 and m.state == "play", "finishing section 1 opens section 2")
 	_check(int(Game.save["unlocked"]) >= 1, "progress is saved")
 
-	m.start_section(Game.sections().size() - 1)
+	m.start_section(Game.chapter_start(1) - 1)      # the Anointing: the last of Chapter One
 	await _wait(7.0)
 	await _skip_story(15.0)
 	await _goto(m.level.SAMUEL_X - 50.0)
@@ -1564,5 +1832,42 @@ func flow(m, dir: String) -> void:
 		t += 0.35
 	_check(m.state == "menu", "chapter ends and returns to the menu")
 	_check(Game.save["finished"] == true, "chapter marked finished")
+	var first: int = Game.chapter_start(1)
+	_check(int(Game.save["unlocked"]) == first, "and Chapter Two's first section is unlocked (%d)" % int(Game.save["unlocked"]))
+	if not Game.section_lacks(first).is_empty():
+		_check(not Game.chapter_open(1), "with its pictures unpainted, Chapter Two stays shut and the game goes back to the menu")
+	# the same ending with Chapter Two there to walk into (its pictures stood in for, in this test alone)
+	Game.force_ready = true
+	m.start_section(first - 1)
+	await _wait(7.0)
+	await _skip_story(15.0)
+	await _goto(m.level.SAMUEL_X - 50.0)
+	await _wait(1.0)
+	t = 0.0
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first and not Game.cinematic and not m.overlay.busy):
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "play" and m.section_idx == first, "the end of Chapter One leads on into Chapter Two")
+	_check(int(Game.save["section"]) == first and Game.save["started"] == true and Game.save["finished"] == true, "and the journey is saved there")
+	_check(Game.has("lyre") and Game.flock().size() == 9 and m.level.sheep_total == 9 and m.level.flock_here.size() == 9, "he comes into it with the lyre and his own nine")
+	await _press("pause")
+	await _wait(0.2)
+	await m._on_menu("menu")
+	await _wait(2.5)
+	_check(m.state == "menu" and m.menu.items[0][0] == "continue", "left for the menu, Chapter Two can be continued")
+	await _press("accept")
+	await _wait(3.0)
+	await _skip_story(15.0)
+	_check(m.state == "play" and m.section_idx == first, "and Continue goes back into it")
+	m.level.kid_tied = true
+	m.level._leave()
+	t = 0.0
+	while t < 60.0 and m.state != "menu":
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 1, "the Summons done, what is built of Chapter Two ends and returns to the menu")
+	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

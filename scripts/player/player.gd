@@ -89,6 +89,7 @@ var breath_v := 0.0       # where the line stands now, 0..1
 var breath_noise := 0.0   # a beast near: the line will not hold still
 var phrases := 0          # phrases landed in this song, of three
 var lyre_flash := 0.0     # a phrase just landed (above zero) or was let go too soon (below)
+var lyre_feet := false    # this song is played on his feet (the Walking Song): he walks on, and what follows keeps following
 const BREATH := 2.4       # seconds a breath takes to rise and fall
 const BREATH_TOP := 0.8   # let go above this and the phrase lands
 const LYRE_SIT := 0.5
@@ -181,7 +182,10 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 		return
 	if act != "play":
 		lyre_t = 0.0
-		if free and Game.has("lyre") and Input.is_action_just_pressed("lyre") and absf(velocity.x) < 90.0:
+		# begun at a stand he sits to it, as he always has. With the Walking Song, begun while walking he plays on his feet
+		var walking: bool = Game.has("walksong") and absf(velocity.x) >= 40.0
+		if free and Game.has("lyre") and Input.is_action_just_pressed("lyre") and (walking or absf(velocity.x) < 90.0):
+			lyre_feet = walking
 			act = "play"
 			act_t = 0.0
 			lyre_t = 0.001
@@ -191,7 +195,8 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			breath_v = 0.0
 			phrases = 0
 			call_t = 0.0
-			velocity.x = 0.0
+			if not lyre_feet:
+				velocity.x = 0.0
 			Game.duck(true)
 		return
 	lyre_t += delta
@@ -203,6 +208,8 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 	for n in get_tree().get_nodes_in_group("enemies"):
 		if is_instance_valid(n) and absf(n.global_position.x - global_position.x) < 340.0 and absf(n.global_position.y - global_position.y) < 200.0:
 			breath_noise = 1.0
+	if level != null and level.has_method("song_noise"):       # or something else that will not let the line hold still
+		breath_noise = maxf(breath_noise, level.song_noise(global_position))
 	if Input.is_action_pressed("lyre"):
 		if not lyre_held:
 			lyre_held = true
@@ -218,16 +225,20 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			lyre_flash = 1.0
 			Game.buzz(14)
 			Game.sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][clampi(phrases - 1, 0, 2)])      # stand-in for the lyre: three rising notes
+			if level != null and level.has_method("phrase"):
+				level.phrase(global_position, lyre_feet)
 			if phrases >= 3:
 				phrases = 0
 				ring_t = 1.0
 				lyre_idle = 0.9          # he plays on a moment, then gets up
 				Game.sfx("anoint", -12.0, 0.0)
 				if level != null and level.has_method("song"):
-					level.song(global_position, Game.song_reach())
+					level.song(global_position, Game.song_reach(), lyre_feet)
 		else:
 			lyre_flash = -1.0
 			Game.sfx("ui_move", -9.0, 0.0, 0.7)
+			if level != null and level.has_method("phrase_lost"):
+				level.phrase_lost(global_position, lyre_feet)
 	else:
 		lyre_idle += delta
 		breath_v = move_toward(breath_v, 0.0, delta * 1.8)
@@ -238,7 +249,8 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 func stop_lyre(rising: bool) -> void:
 	if act != "play":
 		return
-	act = "play_up" if rising else ""
+	act = "play_up" if rising and not lyre_feet else ""      # on his feet there is nothing to rise from
+	lyre_feet = false
 	act_t = 0.0
 	lyre_t = 0.0
 	lyre_held = false
@@ -280,7 +292,7 @@ func _physics_process(delta: float) -> void:
 		dir *= 0.35
 	if act == "carry" and not dead:
 		dir = Input.get_axis("move_left", "move_right") if carry_free else 0.2          # the lamb on his shoulders: led by the player on the road home, by himself in a story scene
-	elif act != "":
+	elif act != "" and not (act == "play" and lyre_feet):
 		dir = 0.0
 
 	coyote = 0.12 if on_floor else coyote - delta
@@ -319,7 +331,10 @@ func _physics_process(delta: float) -> void:
 	call_cd = maxf(0.0, call_cd - delta)
 	ring_t = maxf(0.0, ring_t - delta * 1.1)
 	leap_t = maxf(0.0, leap_t - delta * 2.0)
-	if free and call_cd <= 0.0 and Input.is_action_just_pressed("call") and Game.has("voice"):
+	if act == "play" and can_act and call_cd <= 0.0 and Input.is_action_just_pressed("call") and Game.has("voice"):
+		stop_lyre(false)          # he need not wait to get up: his voice brings on those the song has stilled
+		_shepherd_call()
+	elif free and call_cd <= 0.0 and Input.is_action_just_pressed("call") and Game.has("voice"):
 		_shepherd_call()
 	_update_lyre(delta, free, can_act and on_floor)
 	if free and Input.is_action_just_pressed("grab"):
@@ -342,6 +357,8 @@ func _physics_process(delta: float) -> void:
 		Game.grow("feet", absf(velocity.x) * delta / 100.0)
 	if calm or Input.is_action_pressed("walk"):
 		top = WALK
+	if act == "play" and lyre_feet:
+		top = WALK * 0.8          # a man playing does not hurry
 	if roll_t > 0.0:
 		roll_t -= delta
 		velocity.x = facing * lerpf(190.0, 470.0, clampf(roll_t / ROLL_TIME, 0.0, 1.0))
@@ -895,7 +912,13 @@ func _current_frame() -> Texture2D:
 		if act_t < 1.3:
 			return ly[clampi(int(act_t / 1.3 * 9.0), 0, 8)]
 		return FA.pingpong(ly.slice(9, 34), act_t - 1.3, 6.0)
-	if act == "play" or act == "play_up":
+	if act == "play" and lyre_feet:
+		# on his feet with the kinnor against his chest: walking, or standing when he stops. (Until those are cut,
+		# only the automated tests come here, and they see him simply walk.)
+		var lf: Array = FA.frames("david", "lyre_walk" if absf(velocity.x) > 20.0 else "lyre_stand")
+		if not lf.is_empty():
+			return lf[int(act_t * 10.0) % lf.size()] if absf(velocity.x) > 20.0 else FA.pingpong(lf, act_t, 8.0)
+	if (act == "play" and not lyre_feet) or act == "play_up":
 		# the same seated playing as at the watchfire, quicker to sit and to rise; without those frames, he kneels
 		var ly: Array = FA.frames("david", "lyre")
 		if ly.size() < 34:

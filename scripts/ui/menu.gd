@@ -8,6 +8,7 @@ var items: Array = []    # [id, label, enabled]
 var index := 0
 var heading := ""
 var sub := ""
+var chapter := 0           # which chapter's sections are listed
 var back_to := "main"      # where Back leads from the settings: the title or the pause
 
 
@@ -25,7 +26,7 @@ func open(new_mode: String, at: int = -1) -> void:
 		"main":
 			heading = "DAVID"
 			sub = "The Shepherd King"
-			if Game.save.get("started", false) and not Game.save.get("finished", false):
+			if Game.save.get("started", false) and (not Game.save.get("finished", false) or Game.chapter_of(int(Game.save.get("section", 0))) > 0):
 				items.append(["continue", "Continue", true])
 			items.append(["new", "New Game", true])
 			items.append(["sections", "Sections", true])
@@ -48,11 +49,18 @@ func open(new_mode: String, at: int = -1) -> void:
 			items.append(["lang", "Language: English", true])      # shown in the language it is set to
 			items.append(["back", "Back", true])
 		"sections":
-			heading = "Chapter One"
-			sub = "The Shepherd"
-			var secs: Array = Game.sections()
+			# one chapter's sections at a time; a row for each other chapter he can walk into leads to its list
+			chapter = clampi(chapter, 0, Game.chapters.size() - 1)
+			var ch: Dictionary = Game.chapters[chapter]
+			heading = "Chapter %s" % str(ch["number"])
+			sub = str(ch["title"])
+			var first := Game.chapter_start(chapter)
+			var secs: Array = Game.chapter_sections(chapter)
 			for i in secs.size():
-				items.append(["section_%d" % i, secs[i]["title"], i <= int(Game.save.get("unlocked", 0))])
+				items.append(["section_%d" % (first + i), secs[i]["title"], Game.section_open(first + i)])
+			for c in Game.chapters.size():
+				if c != chapter and Game.chapter_open(c):
+					items.append(["chapter_%d" % c, Game.t("Chapter %s: %s") % [Game.t(Game.chapters[c]["number"]), Game.t(Game.chapters[c]["title"])], true])
 			items.append(["back", "Back", true])
 		"difficulty":
 			heading = "Choose your path"

@@ -68,7 +68,32 @@
       "number": "Two",
       "title": "The Lyre",
       "scripture": "1 Samuel 16:14–23",
-      "available": false
+      "available": true,
+      "more": true,
+      "narration": "res://data/narration/chapter2.json",
+      "sections": [
+        {
+          "title": "The Summons",
+          "script": "res://scripts/levels/summons.gd",
+          "aim": "Hand the flock to a keeper, and bring the loaded donkey to your father.",
+          "why": "The king has sent for him. But the flock is still his to answer for: he cannot leave until another man can keep it.",
+          "needs": [
+            "res://art/c2_home_backdrop.png",
+            "res://art/c2_home_mid.png",
+            "frames:david/lyre_walk",
+            "frames:david/lyre_stand",
+            "frames:messenger/idle",
+            "frames:keeper/idle",
+            "frames:keeper/count",
+            "frames:mule/idle",
+            "frames:kid/idle",
+            "frames:donkey/idle",
+            "frames:donkey/walk",
+            "frames:donkey/balk",
+            "frames:donkey/calm"
+          ]
+        }
+      ]
     },
     {
       "number": "Three",

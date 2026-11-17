@@ -54,7 +54,7 @@ func _ready() -> void:
 func open(playing: bool, at_section: int) -> void:
 	from_play = playing
 	view = "hills"
-	index = clampi(at_section, 0, Game.sections().size() - 1)
+	index = clampi(at_section, 0, Game.chapter_sections(0).size() - 1)
 	for v in ["hills", "land"]:
 		if not tex.has(v):
 			tex[v] = load("res://art/map_%s.png" % v)
@@ -101,7 +101,7 @@ func _process(delta: float) -> void:
 
 
 func _key(idx: int) -> String:
-	return str(Game.sections()[idx]["script"]).get_file().get_basename()
+	return str(Game.chapter_sections(0)[idx]["script"]).get_file().get_basename()
 
 
 func _open_to(idx: int) -> bool:
@@ -296,7 +296,7 @@ func tap(p: Vector2) -> bool:
 		return true
 	var best := -1
 	var best_d := 46.0
-	for i in Game.sections().size():
+	for i in Game.chapter_sections(0).size():
 		var pl: Dictionary = data["places"].get(_key(i), {})
 		if pl.is_empty():
 			continue
@@ -321,7 +321,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if walk >= 0.0:        # he is on his way
 		get_viewport().set_input_as_handled()
 		return
-	var n := Game.sections().size()
+	var n := Game.chapter_sections(0).size()
 	if event.is_action_pressed("move_right") or event.is_action_pressed("move_down"):
 		index = posmod(index + 1, n)
 		Game.sfx("ui_move", -8.0)
@@ -383,7 +383,7 @@ func _draw() -> void:
 			draw_rect(Rect2(p - Vector2(5, 5), Vector2(10, 10)), ink)
 			draw_rect(Rect2(p - Vector2(2.5, 2.5), Vector2(5, 5)), Color(0.93, 0.87, 0.72))
 			_text(p + Vector2(0, -12), Game.t(tw["name"]), 20, ink)
-	var secs: Array = Game.sections()
+	var secs: Array = Game.chapter_sections(0)
 	if view == "hills":
 		var last := int(Game.save.get("unlocked", 0))
 		# the way he has come, inked in; the way still ahead, only pricked out

@@ -40,7 +40,7 @@ func _on_grew(craft: String, rank: int) -> void:
 ## A gift given: the emblem, its name written large, and what it is.
 func _on_gift(id: String) -> void:
 	var g: Dictionary = Game.GIFTS[id]
-	notices.append([g["name"], g["line"], 7.0, g["craft"], 0])
+	notices.append([g["name"], g["line"], 7.0, g.get("emblem", g["craft"]), 0])
 	Game.sfx("anoint", -5.0, 0.0)
 	Game.sfx("gather", -3.0, 0.0)
 	Game.sfx("fire", -8.0, 0.0)
@@ -470,10 +470,24 @@ func _journal(a: float) -> void:
 	# --- the six gifts: given, or still to earn and where
 	x = 452.0
 	draw_string(f, Vector2(x, 142), Game.t("Gifts").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gold)
-	for i in Game.GIFT_ORDER.size():
-		var g: Dictionary = Game.GIFTS[Game.GIFT_ORDER[i]]
+	# the gifts of the chapter he is in, each given or still to earn; what earlier chapters gave him is named beneath
+	var chapter: int = Game.chapter_of(Game.main.section_idx)
+	var shown: Array = []
+	var before: Array = []
+	for id in Game.GIFT_ORDER:
+		var gc := int(Game.GIFTS[id].get("chapter", 0))
+		if gc == chapter:
+			shown.append(id)
+		elif gc < chapter and Game.has(id):
+			before.append(Game.t(Game.GIFTS[id]["name"]))
+	if not before.is_empty():
+		var by := 172.0 + shown.size() * 70.0
+		draw_string(f, Vector2(x, by), Game.t("Carried from the hills").to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.85, 0.5, 0.75 * a))
+		draw_multiline_string(f, Vector2(x, by + 20.0), "  ·  ".join(before), HORIZONTAL_ALIGNMENT_LEFT, 380.0, 14, 4, dim)
+	for i in shown.size():
+		var g: Dictionary = Game.GIFTS[shown[i]]
 		var y := 172.0 + i * 70.0
-		var his: bool = Game.has(Game.GIFT_ORDER[i])
+		var his: bool = Game.has(shown[i])
 		draw_circle(Vector2(x + 8, y - 7), 7.0, Color(1.0, 0.82, 0.45, a) if his else Color(1, 1, 1, 0.14 * a))
 		if not his:
 			draw_arc(Vector2(x + 8, y - 7), 7.0, 0.0, TAU, 20, Color(1, 1, 1, 0.4 * a), 1.2, true)

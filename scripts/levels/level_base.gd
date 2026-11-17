@@ -968,6 +968,23 @@ func actor_play(actor: Node2D, who: String, set_name: String, fps: float, facing
 	st["act_tall"] = tall
 
 
+## A person or a standing animal of the story at x, moving as add_actor's figures do, from its own "idle" frames
+## (art/<who>/anim/idle_NN.png). Like add_beast: unless those are painted nothing is drawn. The automated tests
+## get a bare point to stand for it, so what happens round it can still be checked; a player gets nothing, and
+## a section that cannot do without the figure names it in its "needs" and stays shut until it exists.
+func add_person(who: String, x: float, sc: float = 0.31, flip: bool = false, z: int = 3) -> Node2D:
+	var at := on_ground(x) + Vector2(0, 4)
+	if not FA._paths(who, "idle").is_empty():
+		return add_actor(who, at, sc, z, Color(1, 1, 1), flip)
+	if not (Game.fast or Game.force_ready):
+		return null
+	var mark := Node2D.new()
+	mark.position = at
+	mark.set_meta("st", {})
+	add_child(mark)
+	return mark
+
+
 func add_painter(pos: Vector2, z: int, fn: Callable, animated: bool = false) -> Node2D:
 	var p := Painter.new()
 	p.position = pos
@@ -1806,7 +1823,7 @@ func _way_on() -> void:
 	var secs: Array = Game.sections()
 	if Game.backdrop or not is_instance_valid(Game.main) or section_idx + 1 >= secs.size():
 		return
-	if int(Game.save.get("unlocked", 0)) <= section_idx:
+	if int(Game.save.get("unlocked", 0)) <= section_idx or not Game.section_open(section_idx + 1):
 		return
 	var nxt: String = Game.t(secs[section_idx + 1]["title"])
 	var tk := add_task(width - 46.0, Game.t("Go on to %s") % nxt, 0.7, func() -> void:
@@ -1825,13 +1842,14 @@ func add_song(x: float, fn: Callable, reach: float = 260.0) -> Dictionary:
 ## Three phrases have landed: every sheep that hears them settles. A beast at one is forgotten for a moment, a
 ## bolting one stops, a nervous one will stand for him, and those following him hold where they are until he
 ## calls or the quiet wears off.
-func song(from: Vector2, reach: float) -> void:
+## `walking`: played on his feet (the Walking Song): those following him are quieted but go on following.
+func song(from: Vector2, reach: float, walking: bool = false) -> void:
 	var n := 0
 	for s in get_tree().get_nodes_in_group("sheep"):
 		if not is_instance_valid(s) or s.carried or absf(s.global_position.x - from.x) > reach \
 				or absf(s.global_position.y - from.y) > 260.0:
 			continue
-		s.settle(SETTLE)
+		s.settle(SETTLE, not walking)
 		n += 1
 	if n > 0 and not Game.fast:
 		Game.sfx("sheep", -12.0, 0.2)
@@ -1846,6 +1864,20 @@ func song(from: Vector2, reach: float) -> void:
 
 func _on_song(_from: Vector2, _settled: int) -> void:
 	pass
+
+
+## One phrase has landed (`feet`: he is playing on his feet), or was let go too soon. For a section to answer.
+func phrase(_from: Vector2, _feet: bool) -> void:
+	pass
+
+
+func phrase_lost(_from: Vector2, _feet: bool) -> void:
+	pass
+
+
+## How much something at this spot unsettles his playing, 0 to 1: the breath line jumps by that much.
+func song_noise(_at: Vector2) -> float:
+	return 0.0
 
 
 ## The song place he is standing in, if any.

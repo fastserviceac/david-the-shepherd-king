@@ -8,6 +8,9 @@ const INK := Color(0.055, 0.05, 0.09)
 const CREAM := Color(0.98, 0.93, 0.82)
 
 var chapters: Array = []
+var _sections: Array = []      # every section of every chapter that has any, in the order they are played
+var _chapter_at: Array = []    # which chapter each of them belongs to
+var force_ready := false       # the automated tests alone: a section whose pictures are not yet painted may be entered
 var narration: Dictionary = {}
 var narration_pt: Dictionary = {}     # the same lines in Brazilian Portuguese
 var _ui_pt: Dictionary = {}
@@ -287,6 +290,10 @@ func _load_data() -> void:
 		if ch.has("narration"):
 			narration.merge(_read_json(ch["narration"]).get("lines", {}))
 			narration_pt.merge(_read_json(str(ch["narration"]).replace(".json", ".pt.json")).get("lines", {}))
+	for c in chapters.size():
+		for sec in chapters[c].get("sections", []):
+			_sections.append(sec)
+			_chapter_at.append(c)
 	_ui_pt = _read_json("res://data/ui.pt.json")
 	var places: Dictionary = _read_json("res://data/map.json").get("places", {})
 	for k in places:
@@ -294,13 +301,70 @@ func _load_data() -> void:
 		places_total += (places[k].get("finds", []) as Array).size()
 
 
-## Sections of the playable chapter.
+## Every section there is to play, chapter after chapter. A section's place in this list is the number the save
+## keeps ("section", "unlocked"), so Chapter One's sections keep the numbers they have always had and a later
+## chapter's simply follow them.
 func sections() -> Array:
-	return chapters[0].get("sections", [])
+	return _sections
+
+
+## Which chapter (0 for Chapter One) the section at this place in the list belongs to.
+func chapter_of(idx: int) -> int:
+	if _chapter_at.is_empty():
+		return 0
+	return int(_chapter_at[clampi(idx, 0, _chapter_at.size() - 1)])
+
+
+## Where a chapter's first section stands in the list (the length of the list for a chapter with none yet).
+func chapter_start(ch: int) -> int:
+	for i in _chapter_at.size():
+		if int(_chapter_at[i]) >= ch:
+			return i
+	return _chapter_at.size()
+
+
+func chapter_sections(ch: int) -> Array:
+	if ch < 0 or ch >= chapters.size():
+		return []
+	return chapters[ch].get("sections", [])
+
+
+## A section can be shown only when every picture it is made of has been painted: its "needs" in chapters.json
+## are files, or sets of frames written "frames:who/set". Until then no player is let into it, so that nothing
+## unpainted and no stand-in is ever seen. The automated tests go in regardless.
+func section_ready(idx: int) -> bool:
+	if idx < 0 or idx >= _sections.size():
+		return false
+	return fast or force_ready or section_lacks(idx).is_empty()
+
+
+## What a section still waits for, of the pictures it needs.
+func section_lacks(idx: int) -> Array:
+	var out: Array = []
+	if idx < 0 or idx >= _sections.size():
+		return out
+	for need in _sections[idx].get("needs", []):
+		var n := str(need)
+		if n.begins_with("frames:"):
+			var parts := n.trim_prefix("frames:").split("/")
+			if parts.size() != 2 or FA._paths(parts[0], parts[1]).is_empty():
+				out.append(n)
+		elif not ResourceLoader.exists(n):
+			out.append(n)
+	return out
+
+
+## He has come far enough to walk into this section, and it is there to walk into.
+func section_open(idx: int) -> bool:
+	return idx >= 0 and idx < _sections.size() and idx <= int(save.get("unlocked", 0)) and section_ready(idx)
+
+
+func chapter_open(ch: int) -> bool:
+	return not chapter_sections(ch).is_empty() and section_open(chapter_start(ch))
 
 
 func default_save() -> Dictionary:
-	return {"section": 0, "checkpoint": 0, "has_sling": false, "unlocked": 0, "started": false, "finished": false, "difficulty": 1,
+	return {"section": 0, "checkpoint": 0, "has_sling": false, "unlocked": 0, "started": false, "finished": false, "difficulty": 1, "v": 2,
 			"growth": {}, "stones": [], "gifts": [], "psalm": [], "flock": []}
 
 
@@ -343,8 +407,15 @@ func take_save(on_disk: Dictionary) -> void:
 	save["checkpoint"] = maxi(0, int(save["checkpoint"]))
 	save["unlocked"] = maxi(0, int(save["unlocked"]))
 	save["difficulty"] = clampi(int(save["difficulty"]), 0, DIFFICULTY.size() - 1)
-	if save.get("finished", false):      # whoever has finished the chapter may walk into any part of it, sections added since included
-		save["unlocked"] = maxi(save["unlocked"], 99)
+	# A journey saved when there was one chapter: "unlocked" counted only Chapter One's sections, and a finished
+	# chapter was written as 99. Now the count runs on through the chapters, so it is brought back inside Chapter One.
+	var first := chapter_sections(0).size()
+	if not on_disk.is_empty() and int(on_disk.get("v", 1)) < 2:
+		save["unlocked"] = mini(save["unlocked"], maxi(0, first - 1))
+	save["v"] = 2
+	if save.get("finished", false):      # whoever has finished Chapter One may walk into any part of it, sections added since included, and on into Chapter Two
+		save["unlocked"] = maxi(save["unlocked"], first)
+	save["unlocked"] = mini(save["unlocked"], sections().size())
 
 
 ## How loud the whole game is, as the player set it (1.0 when never set).
@@ -418,8 +489,9 @@ const GIFTS := {
 	"heart": {"name": "The Steady Heart", "line": "One more heart.", "key": "", "craft": "heart", "why": "He stood where he could have run. That is kept.", "how": "In the Bear's Den: drive off the bear.", "after": 4},
 	"feet": {"name": "The Swift Feet", "line": "The running leap: jump at a full run to go higher and farther.", "key": "Run, then Space", "craft": "feet", "why": "A lamb in a lion's mouth is lost in the time it takes to walk.", "how": "On the Ridge: reach the light at a run.", "after": 5},
 	"lyre": {"name": "The Lyre", "line": "Hold, and let each phrase go at the top of the breath. Three phrases settle the sheep that hear them.", "key": "R  hold, release at the top", "craft": "voice", "why": "A frightened flock cannot be driven quiet. It can be played quiet.", "how": "From his father's house.", "after": -1},
+	"walksong": {"name": "The Walking Song", "line": "He plays on his feet. Begin while walking and he keeps walking; what follows him keeps following, quieted, for as long as the phrases land.", "key": "R  while walking", "craft": "voice", "why": "A flock can be left standing while it is played quiet. A beast on a road cannot: it has to be brought along.", "how": "At his father's house: bring the nine past the king's mules to the keeper.", "after": 8, "chapter": 1, "emblem": "lyre"},
 }
-const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [
@@ -668,11 +740,9 @@ const DEEDS := ["gift_voice", "gift_hand", "gift_sling", "gift_eye", "gift_heart
 
 
 func _past(script_name: String) -> bool:
-	if save.get("finished", false):
-		return true
 	for i in sections().size():
 		if str(sections()[i]["script"]).get_file().get_basename() == script_name:
-			return int(save.get("unlocked", 0)) > i
+			return int(save.get("unlocked", 0)) > i or (chapter_of(i) == 0 and save.get("finished", false))
 	return false
 
 
@@ -725,7 +795,7 @@ func earned_hearts() -> int:
 	var n := 0
 	var reached := int(save.get("unlocked", 0))
 	for i in sections().size():
-		if (i < reached or save.get("finished", false)) and HEART_DEEDS.has(str(sections()[i]["script"]).get_file().get_basename()):
+		if (i < reached or (chapter_of(i) == 0 and save.get("finished", false))) and HEART_DEEDS.has(str(sections()[i]["script"]).get_file().get_basename()):
 			n += 1
 	return n
 

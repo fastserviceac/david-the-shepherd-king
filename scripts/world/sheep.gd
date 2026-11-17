@@ -56,14 +56,15 @@ func _ready() -> void:
 
 ## The song has reached it. A beast at it is forgotten for a moment; it stops bolting; it stands for his hand;
 ## and if it was following him it holds where it is until he calls or the quiet wears off.
-func settle(seconds: float) -> void:
+## `hold` false: played on his feet, so one that is following him goes on following, quieted.
+func settle(seconds: float, hold: bool = true) -> void:
 	calm = seconds
 	bolt = 0.0
 	called = 0.0
 	worried = 0.0
 	threat = maxf(0.0, threat - 0.5)
 	name_t = 3.0
-	if gathered and is_nan(stay) and leap < 0.0:
+	if hold and gathered and is_nan(stay) and leap < 0.0:
 		held_x = global_position.x
 		stay = held_x
 	if not Game.fast and not Game.backdrop:

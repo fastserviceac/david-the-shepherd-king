@@ -168,7 +168,7 @@ func start_section(idx: int, checkpoint: int = 0, seen_film: bool = false) -> vo
 	state = "play"
 	await overlay.fade_to(0.0, 0.7)
 	if checkpoint == 0:
-		var ch: Dictionary = Game.chapters[0]
+		var ch: Dictionary = Game.chapters[Game.chapter_of(idx)]
 		Game.cinematic = true
 		await overlay.title_card(Game.t("Chapter %s  ·  %s") % [Game.t(ch["number"]), Game.t(ch["title"])], Game.t(Game.sections()[idx]["title"]), Game.t(str(Game.sections()[idx].get("aim", ""))))
 		Game.cinematic = false
@@ -181,32 +181,50 @@ func complete_section() -> void:
 		return
 	state = "transition"
 	var next := section_idx + 1
-	if next < Game.sections().size():
+	var ch := Game.chapter_of(section_idx)
+	if next < Game.sections().size() and Game.chapter_of(next) == ch:
 		var hearts_before := Game.earned_hearts()
 		Game.save["unlocked"] = maxi(int(Game.save.get("unlocked", 0)), next)
 		if Game.earned_hearts() > hearts_before:
 			Game.heart_news = str(Game.HEART_DEEDS.get(str(Game.sections()[section_idx]["script"]).get_file().get_basename(), ""))
 		start_section(next)
 	else:
-		Game.save["finished"] = true
+		# the chapter's last section. What comes after it is open to him from now on; whether he walks straight
+		# into it depends on whether the next chapter is there to walk into
+		var go_on := next < Game.sections().size() and Game.section_ready(next)
+		if ch == 0:
+			Game.save["finished"] = true
+		Game.save["unlocked"] = maxi(int(Game.save.get("unlocked", 0)), next)
 		Game.save["started"] = false
-		Game.save["section"] = 0
+		Game.save["section"] = Game.chapter_start(ch)
 		Game.save["checkpoint"] = 0
 		Game.save_game()
 		# the film that closes the chapter and opens the next: the prophet gone, the boy back with the sheep,
 		# and a king who does not yet know
-		if intro.has_story("end") and not Game.fast and tester == null:
+		var here: Dictionary = Game.chapters[ch]
+		if here.get("more", false) and not go_on:
+			# a chapter still being made: this is as far as it goes for now, and it is not called finished
+			await overlay.end_card(Game.t("Chapter %s  ·  %s") % [Game.t(here["number"]), Game.t(here["title"])],
+				Game.t(Game.sections()[section_idx]["title"]), Game.t("More of this chapter is still to come"))
+			show_menu()
+			return
+		var film := "end" if ch == 0 else "end%d" % (ch + 1)
+		if intro.has_story(film) and not Game.fast and tester == null:
 			Game.cinematic = true
 			hud.visible = false
 			await overlay.fade_to(1.0, 0.6)
-			intro.play_story("end")
+			intro.play_story(film)
 			await intro.finished
 			Game.cinematic = false
-		var here: Dictionary = Game.chapters[0]
-		var coming: Dictionary = Game.chapters[1]
-		await overlay.end_card(Game.t("End of Chapter %s") % Game.t(here["number"]), Game.t(here["title"]),
-			Game.t("Chapter %s: %s  ·  coming next") % [Game.t(coming["number"]), Game.t(coming["title"])])
-		show_menu()
+		var after := ""
+		if ch + 1 < Game.chapters.size():
+			var coming: Dictionary = Game.chapters[ch + 1]
+			after = Game.t("Chapter %s: %s" if go_on else "Chapter %s: %s  ·  coming next") % [Game.t(coming["number"]), Game.t(coming["title"])]
+		await overlay.end_card(Game.t("End of Chapter %s") % Game.t(here["number"]), Game.t(here["title"]), after)
+		if go_on:
+			start_section(next)
+		else:
+			show_menu()
 
 
 func _on_menu(id: String) -> void:
@@ -216,6 +234,8 @@ func _on_menu(id: String) -> void:
 		"new":
 			menu.open("difficulty")
 		"sections":
+			var at_ch := Game.chapter_of(int(Game.save.get("section", 0)))
+			menu.chapter = at_ch if Game.chapter_open(at_ch) else 0
 			menu.open("sections")
 		"map":
 			map_from = menu.mode
@@ -268,6 +288,9 @@ func _on_menu(id: String) -> void:
 				Game.new_game()
 				await _prologue()
 				start_section(0)
+			elif id.begins_with("chapter_"):
+				menu.chapter = id.trim_prefix("chapter_").to_int()
+				menu.open("sections")
 			elif id.begins_with("section_"):
 				Game.gifts_for(id.trim_prefix("section_").to_int())
 				start_section(id.trim_prefix("section_").to_int())

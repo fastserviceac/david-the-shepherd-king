@@ -179,3 +179,33 @@ End every prompt with:
 | c2_brazier | A wide shallow bronze brazier on three short legs holding glowing charcoal. |
 
 If `c2_spear_stand` is refused, leave it; it can be painted in the project.
+
+---
+
+## Part 7: what Section 1, The Summons, waits for (added 17 November)
+
+The Summons is built and tested (`scripts/levels/summons.gd`) and is shut to players until every item below exists in the project. The game checks the files named in the last column (`needs` in `data/chapters.json`); nothing unpainted is ever shown.
+
+| From this sheet | Becomes | The game looks for |
+|---|---|---|
+| Part 5 `c2_home_backdrop` | far view of Jesse's farmstead, through `tools/scenery.py` | `art/c2_home_backdrop.png` |
+| Part 5 `c2_home_mid` | the yard wall, fold and trees behind the path | `art/c2_home_mid.png` |
+| Part 2 `c2_lyre_walk` | David playing as he walks | `art/david/anim/lyre_walk_NN.png` |
+| Part 2 `c2_lyre_stand` | David playing on his feet, standing | `art/david/anim/lyre_stand_NN.png` |
+| Part 1 `messenger_start`, Part 3 `messenger_arrive` | the king's man at the gate (the standing end of the clip) | `art/messenger/anim/idle_NN.png` |
+| Part 1 `keeper_start`, Part 3 `keeper_idle` | the keeper at the day fold | `art/keeper/anim/idle_NN.png` |
+| Part 3 `keeper_count` | the keeper counting the nine under the rod | `art/keeper/anim/count_NN.png` |
+| Part 1 `donkey_start`, Part 4 `donkey_idle`, `donkey_walk`, `donkey_balk`, `donkey_calm` | the loaded donkey | `art/donkey/anim/{idle,walk,balk,calm}_NN.png` |
+
+Two things the section needs are **not on this sheet yet**:
+
+| Name | Kind | Prompt | The game looks for |
+|---|---|---|---|
+| mule_start | image, as the animals in Part 1 (blue screen) | A riding mule of the hill country, dark brown with a pale muzzle and long ears, wearing a rope halter and a plain woven saddle cloth, standing still on all four legs. |  |
+| mule_idle | video, 5 s, as Part 4, start image mule_start | The mule stands tethered, flicks its long ears, swishes its tail, stamps one front hoof, throws its head up once and settles again. | `art/mule/anim/idle_NN.png` |
+| mule_bray (optional) | video, 5 s, as Part 4, start image mule_start | The mule throws its head up and back with its mouth open and its ears laid flat, braying, stamps twice, then drops its head and stands. | `art/mule/anim/bray_NN.png` (played when it scatters the flock; left out if missing) |
+| kid_idle | video, 5 s, as Part 4, start image the `c2_kid` prop from Part 6 on a blue screen | The young brown goat kid stands on a short rope, looks about, flicks its ears and tail, takes one small step and stands again. | `art/kid/anim/idle_NN.png` |
+
+Not needed by Section 1 after all: `c2_load` (the donkey's own picture carries the load) and `c2_lead` (he plays with both hands; the donkey follows the song).
+
+Sounds still to make: a mule's bray (a hoof stamp stands in for it, heard only in this locked section), and the lyre's own notes (the three rising tones are still the stand-in from Chapter One).
