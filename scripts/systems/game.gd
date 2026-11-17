@@ -71,7 +71,7 @@ func _ready() -> void:
 	if has("favour"):      # in the king's house he may be given the king's shield to bear
 		FA.warm("david", ["bear", "bear_idle", "block"])
 	FA.warm("jackal", ["walk", "run", "lunge"])
-	FA.warm("sheep", ["walk", "graze", "run", "lie", "rest", "rise", "uneasy"])
+	FA.warm("sheep", ["walk", "graze", "run", "lie", "rest", "uneasy"])
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -60.0

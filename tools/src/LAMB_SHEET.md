@@ -61,7 +61,7 @@ Every prompt ends with:
 ## After the clips arrive
 
 - Cut each into `art/sheep/anim/<name>_NN.png` or `art/david/anim/<name>_NN.png` with `tools/anim.py`: blue key for the animals with the same settings as the sheep walk in `tools/build_anims.sh` (`wide=1.5 tall=1.4 size=110 erode=9`), David's with `href=598`.
-- The four settle clips go in as `art/sheep/anim/lie_NN.png`, `rest_NN.png`, `rise_NN.png` and `uneasy_NN.png` (no `sheep_` prefix: the game asks for `sheep/lie` and so on). The code is already waiting for them in `scripts/world/sheep.gd`: lying down takes 1.6 s and rising 1.2 s whatever the frame count, rest and uneasy play forward and back. Until a set exists the sheep stand and graze as before. Cut `lie` and `rise` with `mode=range` so each holds one movement only, and `rest`/`uneasy` as loops.
+- Settle clips, made 17 November 2026 on Higgsfield seedance_2_0 (99 credits; Runway was out of credits), sources `tools/src/clips/sheep_{lie,rest,rise,uneasy}.mp4`. In the game: `lie` (frames 18-66, step 2, hframe=0) and `rest` (72-144, step 3, hframe=0), cut `key=blue wide=1.5 tall=1.4 size=110 erode=9`; rising plays `lie` backwards (`scripts/world/sheep.gd`). `rise` and `uneasy` were cut and rejected: the sheep is only about 200 px tall in those two clips and its legs come out ragged or ghostly (the dark-blue floor shadow keys half-way; `grow=14 erode=3` was the best and still failed). A re-roll of `uneasy` must keep the sheep as large in frame as in `lie` (about 540 px tall). Until an `uneasy` set exists, uneasy sheep keep grazing.
 - Check each sheep set for height against the sheep walk set, and each David set against his run frames, before it goes in.
 - Delete any leftover `.import` files when a set is re-cut with fewer frames.
 

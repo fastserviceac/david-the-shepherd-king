@@ -47,7 +47,7 @@ var held_x := NAN         # where the song stopped it while it was following him
 var rest_t := -1.0        # seconds since it lay down to the song (-1: on its feet)
 var rise_t := -1.0        # seconds since it began to get up again (-1: not getting up)
 const LIE_S := 1.6        # how long lying down takes, from its own frames (sheep_lie)
-const RISE_S := 1.2       # and getting up again (sheep_rise)
+const RISE_S := 1.2       # and getting up again (the lying-down frames, backwards)
 const TAKE := 4.0         # seconds with a beast at its side before it is carried off
 
 
@@ -80,7 +80,7 @@ func rouse() -> void:
 	calm = 0.0
 	if rest_t >= 0.0:
 		rest_t = -1.0
-		if not FA.frames("sheep", "rise").is_empty():
+		if not FA.frames("sheep", "lie").is_empty():
 			rise_t = 0.0          # it gets up the way a sheep does, hind legs first, before it goes anywhere
 	if not is_nan(held_x) and stay == held_x:
 		stay = NAN
@@ -232,9 +232,10 @@ func _draw() -> void:
 			arr = rn
 		gait += get_process_delta_time() * clampf(8.0 + pace * 0.16, 10.0, 46.0)      # legs keep time with the ground covered
 		tex = arr[int(gait) % arr.size()]
-	elif rise_t >= 0.0 and not FA.frames("sheep", "rise").is_empty():
-		var up: Array = FA.frames("sheep", "rise")
-		tex = up[clampi(int(rise_t / RISE_S * up.size()), 0, up.size() - 1)]
+	elif rise_t >= 0.0 and not FA.frames("sheep", "lie").is_empty():
+		# getting up: its own lying down played back (the same cut sheep, so it leaves the rest pose exactly)
+		var up: Array = FA.frames("sheep", "lie")
+		tex = up[clampi(up.size() - 1 - int(rise_t / RISE_S * up.size()), 0, up.size() - 1)]
 	elif calm > 0.0 and not FA.frames("sheep", "lie").is_empty() and not FA.frames("sheep", "rest").is_empty():
 		# quieted by the song and standing still: it lies down on its chest, then rests there, chewing
 		if rest_t < 0.0:
