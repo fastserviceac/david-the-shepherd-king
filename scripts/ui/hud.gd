@@ -158,7 +158,8 @@ func _process(delta: float) -> void:
 			toasts.pop_front()
 	panel = move_toward(panel, 1.0 if Input.is_action_pressed("growth") else 0.0, delta * 6.0)
 	if panel > 0.5 and (Input.is_action_just_pressed("move_right") or Input.is_action_just_pressed("move_left")):
-		page = 1 - page          # the journal has two pages: his growth, and the psalm
+		# the journal's pages: his growth, the psalm, and (with the King's Favour) the court
+		page = posmod(page + (1 if Input.is_action_just_pressed("move_right") else -1), _pages())
 		Game.sfx("ui_move", -10.0, 0.0)
 	elif panel <= 0.0:
 		page = 0
@@ -428,15 +429,56 @@ func _psalm_page(a: float, marks: bool = true) -> void:
 
 ## Which page is open, and that there is another: two small marks at the foot of the journal.
 func _page_mark(a: float) -> void:
-	for k in 2:
-		draw_circle(Vector2(632.0 + k * 16.0, 658.0), 3.6, Color(1.0, 0.85, 0.5, a) if k == page else Color(1, 1, 1, 0.25 * a))
+	var n := _pages()
+	for k in n:
+		draw_circle(Vector2(640.0 - (n - 1) * 8.0 + k * 16.0, 658.0), 3.6, Color(1.0, 0.85, 0.5, a) if k == page else Color(1, 1, 1, 0.25 * a))
 	draw_string(Game.serif, Vector2(590.0, 663.0), "‹", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.5 * a))
 	draw_string(Game.serif, Vector2(676.0, 663.0), "›", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.5 * a))
+
+
+func _pages() -> int:
+	return 3 if Game.has("favour") else 2
+
+
+## The third page, which the King's Favour adds: the court at Gibeah, and those he has met there. Each is told
+## plainly, with where scripture names him, or that it does not.
+const COURT := [
+	["Saul, the king", "Taller than any of the people, and troubled. When the lyre is played he rests.", "1 Samuel 9:2; 16:23"],
+	["The young man who spoke for him", "One of the king's servants. He had seen a son of Jesse play, and said so before the king. His name is not given.", "1 Samuel 16:18"],
+	["Jonathan, the king's son", "Seen up on the wall of the yard. They have not met: that comes after the Valley of Elah.", "1 Samuel 14:49; 18:1"],
+	["The steward", "Keeps the storehouse, and received what Jesse sent.", "Not in scripture"],
+	["The gatekeeper", "Bars the gate at dusk, and opens it on no boy's word.", "Not in scripture"],
+]
+
+
+func _court_page(a: float) -> void:
+	var f := Game.serif
+	var cream := Game.CREAM
+	var gold := Color(1.0, 0.85, 0.5, a)
+	var ink := Color(cream.r, cream.g, cream.b, a)
+	var dim := Color(cream.r, cream.g, cream.b, 0.62 * a)
+	draw_rect(Rect2(50, 46, 1180, 628), Color(0.03, 0.03, 0.07, 0.9 * a))
+	draw_rect(Rect2(50, 46, 1180, 628), Color(1.0, 0.85, 0.5, 0.25 * a), false, 1.5)
+	draw_string(f, Vector2(86, 94), Game.t("The shepherd's journal"), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, gold)
+	draw_line(Vector2(86, 108), Vector2(1194, 108), Color(1.0, 0.85, 0.5, 0.3 * a), 1.0)
+	draw_string(f, Vector2(0, 150), Game.t("The court at Gibeah").to_upper(), HORIZONTAL_ALIGNMENT_CENTER, 1280, 16, gold)
+	draw_string(f, Vector2(240, 176), Game.t("Those he has met in the king's house."), HORIZONTAL_ALIGNMENT_CENTER, 800, 15, dim)
+	var y := 232.0
+	for e in COURT:
+		draw_circle(Vector2(268, y - 7), 4.0, gold)
+		draw_string(f, Vector2(288, y), Game.t(e[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 21, ink)
+		draw_string(f, Vector2(700, y), Game.t(e[2]), HORIZONTAL_ALIGNMENT_RIGHT, 312, 13, Color(1.0, 0.85, 0.5, 0.75 * a))
+		draw_multiline_string(f, Vector2(288, y + 24), Game.t(e[1]), HORIZONTAL_ALIGNMENT_LEFT, 724.0, 15, 2, dim)
+		y += 84.0
+	_page_mark(a)
 
 
 func _journal(a: float) -> void:
 	if page == 1:
 		_psalm_page(a)
+		return
+	if page == 2:
+		_court_page(a)
 		return
 	var f := Game.serif
 	var cream := Game.CREAM

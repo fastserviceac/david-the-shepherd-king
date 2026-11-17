@@ -1892,6 +1892,11 @@ func song_noise(_at: Vector2) -> float:
 	return 0.0
 
 
+## How fast the breath line runs at this spot: 1 as it always does, above 1 hurried.
+func song_pace(_at: Vector2) -> float:
+	return 1.0
+
+
 ## The song place he is standing in, if any.
 func _song_here():
 	if songs.is_empty() or not Game.has("lyre") or Game.cinematic or respawning or not is_instance_valid(player):

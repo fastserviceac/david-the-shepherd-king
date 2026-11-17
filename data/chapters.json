@@ -134,6 +134,21 @@
             "frames:steward/idle",
             "frames:jonathan/idle"
           ]
+        },
+        {
+          "title": "The King's Hall",
+          "script": "res://scripts/levels/kings_hall.gd",
+          "aim": "Play before the king until the shadow on the wall is down.",
+          "why": "The king's servants asked for a man who could play. No one else in the house can do this for him.",
+          "needs": [
+            "res://art/c2_hall_backdrop.png",
+            "res://art/props/c2_hall_lamp.png",
+            "frames:david/lyre",
+            "frames:saul/idle",
+            "frames:saul/rest",
+            "frames:steward/idle",
+            "frames:youth/idle"
+          ]
         }
       ]
     },

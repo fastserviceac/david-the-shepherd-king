@@ -76,6 +76,7 @@ func smoke(m) -> void:
 			"summons": await _summons(lv)
 			"ridge_road": await _ridge_road(lv)
 			"gibeah_gate": await _gibeah_gate(lv)
+			"kings_hall": await _kings_hall(lv)
 		await _frames(10)
 		_check(m.level.done, "section completes")
 	await _beasts(m)
@@ -1954,6 +1955,104 @@ func _snap(dir: String, name: String) -> void:
 	main.get_viewport().get_texture().get_image().save_png("%s/%s.png" % [dir, name])
 
 
+## 2.4 The King's Hall: the shadow on the wall is the whole of it.
+func _kings_hall(lv) -> void:
+	var p = lv.player
+	var had: Array = Game.save.get("gifts", []).duplicate()
+	for g in ["lyre", "voice", "walksong", "steady"]:
+		Game.give(g, true)
+	for a in ["move_right", "jump", "attack", "sling", "lyre"]:
+		Input.action_release(a)
+	_check(not Game.has("favour") and int(Game.GIFTS["favour"]["after"]) == Game.chapter_start(1) + 3 and lv.section_idx == Game.chapter_start(1) + 3,
+			"he comes into the hall without the King's Favour, which this section gives")
+	_check(p.cam.limit_left == int(lv.VIEW_L) and p.cam.limit_right == int(lv.VIEW_R) and lv.VIEW_R - lv.VIEW_L < 1280.0 / p.cam.zoom.x + 2.0,
+			"the hall is one room: the camera is held still, and the shadow stays on its wall")
+	_check(not lv.hears(lv.DOOR_X) and lv.hears(lv.KING_X - 300.0) and not lv.hears(lv.LAMP_X + 10.0), "the king hears him from this side of the lamp, not from the door")
+	await _goto(lv.KING_X - 380.0)
+	await _frames(30)
+	_check(lv.trial and not lv.rested and is_instance_valid(lv.king), "come before the king, the playing begins")
+	_check(lv.lines.size() == Game.psalm().size() and (lv.lines.is_empty() or lv.lines[0] == "p23_shepherd"), "he has the lines of the psalm he found in the hills, in the psalm's order (%d)" % lv.lines.size())
+	lv._begin_trial()
+	lv.swell_wait = 99.0
+	_check(is_equal_approx(lv.shadow, lv.start_shadow) and lv.song_noise(p.global_position) == 0.0 and lv.song_pace(p.global_position) == 1.0,
+			"the shadow stands tall when he begins, and between swells the breath is his own")
+	var s0: float = lv.shadow
+	await _play_song(p, 1)
+	_check(lv.shadow < s0 - lv.down * 0.8 and lv.landed == 1 and (lv.lines.is_empty() or lv.line_id == lv.lines[0]),
+			"a phrase that lands brings the shadow down, and the first line of the psalm is written (%.2f to %.2f)" % [s0, lv.shadow])
+	await _play_song(p, 1)
+	_check(lv.lines.size() < 2 or lv.line_id == lv.lines[1], "the next phrase carries the next line")
+	s0 = lv.shadow
+	Input.action_press("lyre")
+	for i in 200:
+		await tree.physics_frame
+		if p.act == "play" and p.breath_v > 0.2 and p.breath_v < 0.7:
+			break
+	Input.action_release("lyre")
+	await _frames(3)
+	_check(lv.shadow > s0 + lv.up * 0.8 and lv.trial, "a phrase let go too soon lets it grow (%.2f to %.2f)" % [s0, lv.shadow])
+	Input.action_release("lyre")
+	s0 = lv.shadow
+	await _frames(90)
+	_check(lv.shadow > s0 and lv.shadow < s0 + 0.05, "left alone it creeps up, slowly")
+	lv.shadow = lv.TOP_CREEP - 0.001
+	await _frames(40)
+	_check(lv.shadow <= lv.TOP_CREEP and lv.trial and not lv.turning, "but by itself it never turns the king away")
+	# a swell
+	lv.shadow = 0.5
+	lv.swell_kind = 1
+	lv.swell_wait = 0.01
+	await _frames(60)
+	_check(lv.swell_on > 0.0 and lv.swell > 0.3 and lv.swell_kind == 0 and lv.song_noise(p.global_position) > 0.2 and lv.song_pace(p.global_position) == 1.0,
+			"the trouble comes in swells: this one shakes the breath line (%.2f)" % lv.swell)
+	lv.swell_on = 0.0
+	lv.swell_wait = 0.01
+	await _frames(60)
+	_check(lv.swell_kind == 1 and lv.song_pace(p.global_position) > 1.2 and lv.song_noise(p.global_position) == 0.0, "and the next one hurries it")
+	lv.swell = 1.0
+	lv.swell_on = 3.0
+	s0 = lv.shadow
+	lv.phrase(p.global_position, false)
+	_check(lv.shadow < s0 - lv.down * 1.3 and lv.swell_on <= lv.swell_long * 0.2 + 0.01, "a phrase landed inside a swell counts for more, and the swell breaks on it")
+	lv.swell_on = 0.0
+	lv.swell_wait = 99.0
+	s0 = lv.shadow
+	lv.phrase(lv.on_ground(lv.DOOR_X), false)
+	_check(lv.shadow == s0, "played from the door, the king does not hear it")
+	# too much lost: he turns away, and it begins again
+	var hp: int = p.hp
+	lv.shadow = 1.0 - lv.up * 0.5
+	lv.landed = 3
+	lv.phrase_lost(p.global_position, false)
+	_check((lv.turning or lv.turned_once) and not lv.done, "too much lost, and the king turns his face to the wall")
+	for i in 400:
+		await tree.physics_frame
+		if not lv.turning:
+			break
+	_check(lv.trial and not lv.turning and absf(lv.shadow - lv.start_shadow) < 0.02 and lv.landed == 0 and lv.line_i == 0 and p.hp == hp and not Game.cinematic and not lv.done,
+			"no one is hurt: he waits, and begins again from the first line")
+	# the shadow brought all the way down
+	await _goto(lv.KING_X - 300.0)
+	lv.swell_wait = 99.0
+	lv.shadow = lv.down * 0.5
+	await _play_song(p, 1)
+	_check(lv.rested and not lv.trial and lv.rest_t >= 0.0 and lv.shadow == 0.0, "the shadow brought all the way down, the king rests")
+	for i in 300:
+		await tree.physics_frame
+		if lv.done:
+			break
+	_check(Game.has("favour") and lv.done, "and the King's Favour is given")
+	_check(Game.main.hud._pages() == 3 and Game.main.hud.COURT.size() >= 4, "the journal gains the court: a third page")
+	var told := true
+	for e in Game.main.hud.COURT:
+		told = told and Game._ui_pt.has(e[0]) and Game._ui_pt.has(e[1])
+	_check(told and Game._ui_pt.has("Not in scripture") and Game._ui_pt.has(Game.GIFTS["favour"]["line"]) and str(Game.GIFTS["favour"]["line"]).contains("none yet"),
+			"the court is told in Portuguese too, and the gift does not promise doors that are not built")
+	Input.action_release("lyre")
+	Game.save["gifts"] = had
+	Game.main.hud.page = 0
+
+
 # ---- real-flow check: narration, pause, section change, chapter end ----
 
 func _press(action: String) -> void:
@@ -2088,11 +2187,18 @@ func flow(m, dir: String) -> void:
 	_check(m.state == "play" and m.section_idx == first + 2, "the Ridge Road done, the Gate of Gibeah follows it")
 	m.level._wait_called()
 	t = 0.0
-	while t < 60.0 and m.state != "menu":
+	while t < 90.0 and not (m.state == "play" and m.section_idx == first + 3 and not Game.cinematic and not m.overlay.busy):
 		await _press("accept")
 		await _wait(0.3)
 		t += 0.35
-	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 3, "the Gate of Gibeah done, what is built of Chapter Two ends and returns to the menu")
+	_check(m.state == "play" and m.section_idx == first + 3, "the Gate of Gibeah done, the King's Hall follows it")
+	m.level._rest()
+	t = 0.0
+	while t < 90.0 and m.state != "menu":
+		await _press("accept")
+		await _wait(0.3)
+		t += 0.35
+	_check(m.state == "menu" and int(Game.save["unlocked"]) == first + 4 and Game.has("favour"), "the king rested and the King's Favour given, what is built of Chapter Two ends and returns to the menu")
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)

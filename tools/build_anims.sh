@@ -111,3 +111,11 @@ run $V/gatekeeper_idle art/gatekeeper/anim idle key=green halo=4 wide=1.2 tall=1
 run $V/jonathan_idle art/jonathan/anim idle key=green halo=4 wide=1.2 tall=1.3 size=160 erode=3 mode=range a=0 b=120 step=5     # seen up on the wall, drawn at 0.62
 # paintings: cp tools/src/art_in/c2/c2_{gibeah_backdrop,gibeah_mid,court_backdrop}.png tools/src/art_in/ ; python3 tools/scenery.py c2_gibeah c2_court c2_gate c2_gate_open
 # (scenery.py fades c2_court's foot and feathers the two ends of the gate props so they melt into the wall band)
+
+# Chapter Two, the King's Hall (Higgsfield seedance_2_0 clips tools/src/clips/c2/saul_{idle,rest}.mp4, frames extracted with
+# ffmpeg -vf fps=24 into <dir>/saul_{idle,rest}/f%03d.png, black bar rows fixed as above). The screen is a true green here (66,137,88).
+# Both sets share href=597 so the king and his seat are the same size and stand on the same spot; he is seated, so size is his seated height.
+run $V/saul_idle art/saul/anim idle key=green halo=3 wide=1.3 tall=1.3 size=136 erode=3 href=597 mode=range a=0 b=120 step=4     # troubled: played to and fro
+run $V/saul_rest art/saul/anim rest key=green halo=3 wide=1.3 tall=1.3 size=136 erode=3 href=597 mode=range a=0 b=120 step=3 steady=999     # he eases: played once and held
+# paintings: cp tools/src/art_in/c2/c2_hall_backdrop_2.png tools/src/art_in/c2_hall_backdrop.png ; python3 tools/scenery.py c2_hall
+# props: python3 tools/hall_props.py ; python3 tools/scenery.py c2_hall_lamp

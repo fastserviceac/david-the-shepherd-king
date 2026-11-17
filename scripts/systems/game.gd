@@ -491,8 +491,11 @@ const GIFTS := {
 	"lyre": {"name": "The Lyre", "line": "Hold, and let each phrase go at the top of the breath. Three phrases settle the sheep that hear them.", "key": "R  hold, release at the top", "craft": "voice", "why": "A frightened flock cannot be driven quiet. It can be played quiet.", "how": "From his father's house.", "after": -1},
 	"walksong": {"name": "The Walking Song", "line": "He plays on his feet. Begin while walking and he keeps walking; what follows him keeps following, quieted, for as long as the phrases land.", "key": "R  while walking", "craft": "voice", "why": "A flock can be left standing while it is played quiet. A beast on a road cannot: it has to be brought along.", "how": "At his father's house: bring the nine past the king's mules to the keeper.", "after": 8, "chapter": 1, "emblem": "lyre"},
 	"steady": {"name": "The Steady Hand", "line": "His playing holds through a fright: what shakes the breath shakes it less.", "key": "", "craft": "voice", "why": "A hand that only plays in quiet is no use to a frightened beast, or to a troubled man.", "how": "On the Ridge Road: bring the loaded donkey through the wolves.", "after": 9, "chapter": 1, "emblem": "lyre"},
+	# "after" is Chapter Two's fourth section (Game.chapter_start(1) + 3). The proposal gives this gift two things: the journal gains
+	# the court (built: its third page), and doors in the fortress open to him (not built: there are no such doors yet, and the gift says so).
+	"favour": {"name": "The King's Favour", "line": "The king has asked that he stay. The journal gains a page: the court at Gibeah, and those he has met there. The inner doors of the fortress will open to him when they are built; there are none yet.", "key": "Tab  the journal, then ← →", "craft": "voice", "why": "A boy sent for once is a visitor. One the king asks to keep belongs to the house.", "how": "In the king's hall: play until the shadow on the wall is down.", "after": 11, "chapter": 1, "emblem": "lyre"},
 }
-const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady"]
+const GIFT_ORDER := ["lyre", "voice", "hand", "sling", "eye", "heart", "feet", "walksong", "steady", "favour"]
 
 const CRAFTS := {
 	"feet": {"name": "Swift Feet", "by": "ground covered", "marks": [120, 420, 1500], "gift": "feet", "gifts": [
