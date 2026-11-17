@@ -14,7 +14,7 @@ const EMBERS := 2080.0
 const GRASS_X := 3020.0       # dry grass, kept from the frost under a rock shelf
 const BIRTH_X := 3420.0       # where she has gone to lamb, in the lee of the rocks
 const LABOUR_S := 30.0        # seconds of quiet, with him by her, that the birth takes
-const GATHER_S := 2.4
+const GATHER_S := 4.0
 
 var flock: Array = []          # the seven in the fold
 var rachel                     # the ewe that went off alone: Shai's mother
@@ -309,10 +309,10 @@ func _gather() -> void:
 	player.act = "gather"
 	player.act_t = 0.0
 	if not Game.fast:
-		await get_tree().create_timer(GATHER_S * 0.55).timeout
+		await get_tree().create_timer(GATHER_S * 0.35).timeout
 	lamb.visible = false
 	if not Game.fast:
-		await get_tree().create_timer(GATHER_S * 0.45).timeout
+		await get_tree().create_timer(GATHER_S * 0.65).timeout
 	_lift()
 	rachel.pose = ""
 	rachel.stay = NAN
@@ -382,7 +382,7 @@ func _home() -> void:
 	lamb.pose = "lamb_stand"
 	lamb.pose_once = true
 	lamb.pose_t = 0.0
-	lamb.pose_fps = 6.0
+	lamb.pose_fps = 8.0
 	rachel.stay = FOLD + 40.0
 	Game.music("anointing", 4.0)
 	if not Game.fast:

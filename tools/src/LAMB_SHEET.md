@@ -70,3 +70,15 @@ Every prompt ends with:
 
 - Rubbing a newborn dry with grass and bringing it to its mother is ordinary shepherd practice, not scripture.
 - Lambing in the Judean hills falls from winter into early spring. The plan's "spring" should read "late winter to spring".
+
+## Lambing night, made 17 November 2026 (owner's yes in the tranche 3 session)
+
+Higgsfield, 213.5 credits: `tools/src/lamb_start.png` (nano_banana_pro 2K) and the eight clips in `tools/src/clips/`, all `seedance_2_0` 720p, no re-rolls. Cut settings are at the end of `tools/build_anims.sh`; frames are checked for rims, ragged legs and scale against `lie`, `walk` and `kneel_hold`. What was judged:
+
+- `ewe_labour` shows her on her chest, not her side, straining and lifting her head. It was kept.
+- `lamb_stand` is one slow rise, with no fall back, and the camera creeps in. Each frame is set on its own feet.
+- `lamb_totter` is a brisk trot rather than a wobble. One loop is cut, frames 49 to 97.
+- `david_rub` shows little grass in his hands. His feet carry faint dark smudges from the floor shadow.
+- `david_gather` and `david_cradle` are clean, and the lamb is in his arms throughout.
+
+Voice: ElevenLabs eleven_v4, 1,353 credits, the eight group C lines in `audio/narration/` and `audio/narration/pt/`, loudness matched to `n_watch_fold`.

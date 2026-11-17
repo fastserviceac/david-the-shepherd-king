@@ -47,7 +47,7 @@ var throw_t := 0.0
 var hurt_t := 0.0
 var act := ""             # story pose: "kneel", "kneel_up", "carry", "rub", "gather"
 var carry_set := "carry"  # what he carries in "carry": a grown lamb on his shoulders, or ("cradle") a newborn held to his chest
-const GATHER_S := 2.4     # seconds to gather a newborn up and stand
+const GATHER_S := 4.0     # seconds to gather a newborn up and stand (the clip's own pace)
 var move_t := 0.0         # how long he has kept moving: he sets off at a walk and breaks into a run
 var carry_free := false   # while he carries the lamb, the player still chooses where he walks
 var calm := false         # a level can ask him to walk, not run (the road home, a house of mourning)
@@ -872,7 +872,7 @@ func _update_pose(delta: float) -> void:
 	var on_floor := is_on_floor()
 	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
 	var idle := 1.0 - run
-	var stride := 95.0 if act == "carry" else (WALK_CYCLE_PX if absf(velocity.x) < WALK + 30.0 else CYCLE_PX)
+	var stride := (WALK_CYCLE_PX if carry_set == "cradle" else 95.0) if act == "carry" else (WALK_CYCLE_PX if absf(velocity.x) < WALK + 30.0 else CYCLE_PX)
 	ph = fposmod(ph + absf(velocity.x) * delta / stride, 1.0)
 	land = move_toward(land, 0.0, delta * 4.5)
 

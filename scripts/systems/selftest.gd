@@ -160,6 +160,10 @@ func _chapters() -> void:
 	main.menu.chapter = 0
 	main.menu.open("sections")
 	var rows: Array = main.menu.items.map(func(it): return it[0])
+	var night: bool = Game.interlude_ready(0)      # the lambing night is listed before the Pastures once it is painted
+	_check(rows[0] == ("interlude_0" if night else "section_0"), "the lambing night is listed before the Pastures once its pictures exist (%s)" % str(night))
+	if night:
+		rows.remove_at(0)
 	_check(rows.slice(0, first) == range(first).map(func(i): return "section_%d" % i) and ("chapter_1" in rows) == lacks.is_empty(),
 			"the menu lists Chapter One's sections, and Chapter Two only when it can be walked into")
 	Game.force_ready = true
