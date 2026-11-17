@@ -71,7 +71,7 @@ func _ready() -> void:
 	if has("favour"):      # in the king's house he may be given the king's shield to bear
 		FA.warm("david", ["bear", "bear_idle", "block"])
 	FA.warm("jackal", ["walk", "run", "lunge"])
-	FA.warm("sheep", ["walk", "graze", "run"])
+	FA.warm("sheep", ["walk", "graze", "run", "lie", "rest", "rise", "uneasy"])
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -60.0
@@ -88,6 +88,9 @@ func _ready() -> void:
 		_beds.append(bed)
 	_loop_player = AudioStreamPlayer.new()
 	add_child(_loop_player)
+	_voice = AudioStreamPlayer.new()
+	add_child(_voice)
+	_voice.finished.connect(func(): duck(false))
 	_load_data()
 	load_game()
 
@@ -644,6 +647,32 @@ func find_line(id: String, quiet: bool = false) -> void:
 		line_found.emit(id)
 
 
+## A line of the psalm spoken aloud, in the player's language, over the music (audio/narration[/pt]/<id>.mp3).
+## Returns how long it takes, or 0 when there is no recording (or nothing is to be heard).
+var _voice: AudioStreamPlayer
+
+func voice_line(id: String) -> float:
+	if fast or backdrop or _voice == null:
+		return 0.0
+	var path := "res://audio/narration/%s.mp3" % id
+	if lang() != "en" and ResourceLoader.exists("res://audio/narration/%s/%s.mp3" % [lang(), id]):
+		path = "res://audio/narration/%s/%s.mp3" % [lang(), id]
+	if not ResourceLoader.exists(path):
+		return 0.0
+	var stream: AudioStream = load(path)
+	_voice.stream = stream
+	_voice.play()
+	duck(true)
+	return stream.get_length()
+
+
+## Seconds still to run of the line being spoken (0: none).
+func voice_left() -> float:
+	if _voice == null or not _voice.playing or _voice.stream == null:
+		return 0.0
+	return maxf(0.0, _voice.stream.get_length() - _voice.get_playback_position())
+
+
 ## Whoever walks into a later section has the lines the earlier ones would have given him.
 func lines_for(section_idx: int) -> void:
 	for e in PSALM:
@@ -969,6 +998,39 @@ func sfx(sound: String, volume_db: float = 0.0, pitch_vary: float = 0.07, pitch:
 	p.volume_db = volume_db - 5.0
 	p.pitch_scale = pitch + randf_range(-pitch_vary, pitch_vary)
 	p.play()
+
+
+## The lyre's own sounds, from audio/sfx/lyre_*.mp3 once they are recorded:
+## "sit" he takes it up; "phrase" a phrase lands (`n` = which of three; the recorded phrases are played in turn);
+## "lost" a phrase let go too soon; "song" the third phrase, the song going out.
+## Until a recording exists the stand-in is played: three rising tones.
+var _lyre_next := 0
+
+func lyre(kind: String, n: int = 0) -> void:
+	if fast:
+		return
+	match kind:
+		"phrase":
+			var have: Array = []
+			while ResourceLoader.exists("res://audio/sfx/lyre_phrase_%02d.mp3" % have.size()):
+				have.append("lyre_phrase_%02d" % have.size())
+			if have.is_empty():
+				sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][clampi(n, 0, 2)])      # stand-in: three rising notes
+			else:
+				sfx(have[_lyre_next % have.size()], -2.0, 0.0)
+				_lyre_next += 1
+		"song":
+			if ResourceLoader.exists("res://audio/sfx/lyre_song.mp3"):
+				sfx("lyre_song", -4.0, 0.0)
+			else:
+				sfx("anoint", -12.0, 0.0)
+		"lost":
+			if ResourceLoader.exists("res://audio/sfx/lyre_lost.mp3"):
+				sfx("lyre_lost", -6.0, 0.03)
+			else:
+				sfx("ui_move", -9.0, 0.0, 0.7)
+		"sit":
+			sfx("lyre_sit", -6.0, 0.03)      # nothing until it is recorded
 
 
 ## A sound that holds while something continues, like the sling whirling.

@@ -48,11 +48,14 @@ func _on_gift(id: String) -> void:
 
 ## A line of the psalm has come to him: the lyre, the psalm named, and the line itself.
 func _on_line(id: String) -> void:
-	notices.append(["Psalm 23", id, 7.0, "lyre", 0, true])
+	var said := Game.voice_line(id)      # and spoken, in his own language
+	var stay := maxf(7.0, said + 1.5)
+	notices.append(["Psalm 23", id, stay, "lyre", 0, true, stay])
 	Game.sfx("gather", -8.0, 0.0)
 
 
 var psalm_t := 0.0           # seconds the whole psalm stays on the screen, at the chapter's end
+var psalm_len := 11.0        # and how long it was put up for
 
 
 ## One heart of his life: a deep red stone with the light on its shoulder and a thin gold edge, like the
@@ -177,7 +180,7 @@ func _draw() -> void:
 		return
 	if Game.cinematic and not Game.gifting:      # a story scene: nothing of the game on the screen, but the psalm may be written over it
 		if psalm_t > 0.0:
-			_psalm_page(clampf(minf(11.0 - psalm_t, psalm_t) * 1.2, 0.0, 1.0), false)
+			_psalm_page(clampf(minf(psalm_len - psalm_t, psalm_t) * 1.2, 0.0, 1.0), false)
 		elif not notices.is_empty() and notices[0].size() > 5:
 			_notice()
 		return
@@ -267,7 +270,7 @@ func _notice() -> void:
 	var cream := Game.CREAM
 	if true:
 		var n: Array = notices[0]
-		var age: float = 7.0 - n[2]
+		var age: float = (float(n[6]) if n.size() > 6 else 7.0) - n[2]
 		var na := clampf(minf(age * 2.5, n[2] * 1.4), 0.0, 1.0)
 		var open := clampf(age / 0.6, 0.0, 1.0)
 		open = 1.0 - pow(1.0 - open, 3.0)

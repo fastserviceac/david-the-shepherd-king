@@ -44,6 +44,10 @@ var name_t := 0.0         # seconds its name stays written over it
 var restless := false     # will not stand: it paces, and trots off from his hand, until the lyre quiets it
 var calm := 0.0           # seconds it stays settled by the song
 var held_x := NAN         # where the song stopped it while it was following him
+var rest_t := -1.0        # seconds since it lay down to the song (-1: on its feet)
+var rise_t := -1.0        # seconds since it began to get up again (-1: not getting up)
+const LIE_S := 1.6        # how long lying down takes, from its own frames (sheep_lie)
+const RISE_S := 1.2       # and getting up again (sheep_rise)
 const TAKE := 4.0         # seconds with a beast at its side before it is carried off
 
 
@@ -74,6 +78,10 @@ func settle(seconds: float, hold: bool = true) -> void:
 ## The quiet is over: it follows him again.
 func rouse() -> void:
 	calm = 0.0
+	if rest_t >= 0.0:
+		rest_t = -1.0
+		if not FA.frames("sheep", "rise").is_empty():
+			rise_t = 0.0          # it gets up the way a sheep does, hind legs first, before it goes anywhere
 	if not is_nan(held_x) and stay == held_x:
 		stay = NAN
 		hop = 0.6
@@ -104,6 +112,15 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
 	moving = false
+	if carried or worried > 0.0 or bolt > 0.0:
+		rest_t = -1.0             # a fright: it is up at once, no slow rising
+		rise_t = -1.0
+	if rise_t >= 0.0:
+		rise_t += delta
+		if rise_t < RISE_S:
+			queue_redraw()
+			return                # still getting to its feet
+		rise_t = -1.0
 	if carried:
 		queue_redraw()
 		return
@@ -208,12 +225,28 @@ func _draw() -> void:
 		FA.draw(self, tex, face, 0.46 * size, wool, 2.7, 0.0, Vector2.ZERO, Vector2.ONE, lift)
 		return
 	if moving:
+		rest_t = -1.0
 		var arr: Array = FA.frames("sheep", "walk")
 		var rn: Array = FA.frames("sheep", "run")
 		if (bolt > 0.0 or pace > 185.0) and not rn.is_empty():      # bolting, or hurrying to keep up: a real run
 			arr = rn
 		gait += get_process_delta_time() * clampf(8.0 + pace * 0.16, 10.0, 46.0)      # legs keep time with the ground covered
 		tex = arr[int(gait) % arr.size()]
+	elif rise_t >= 0.0 and not FA.frames("sheep", "rise").is_empty():
+		var up: Array = FA.frames("sheep", "rise")
+		tex = up[clampi(int(rise_t / RISE_S * up.size()), 0, up.size() - 1)]
+	elif calm > 0.0 and not FA.frames("sheep", "lie").is_empty() and not FA.frames("sheep", "rest").is_empty():
+		# quieted by the song and standing still: it lies down on its chest, then rests there, chewing
+		if rest_t < 0.0:
+			rest_t = 0.0
+		rest_t += get_process_delta_time()
+		var down: Array = FA.frames("sheep", "lie")
+		if rest_t < LIE_S:
+			tex = down[clampi(int(rest_t / LIE_S * down.size()), 0, down.size() - 1)]
+		else:
+			tex = FA.pingpong(FA.frames("sheep", "rest"), rest_t - LIE_S, 6.0)
+	elif (worried > 0.0 or (restless and calm <= 0.0)) and not FA.frames("sheep", "uneasy").is_empty():
+		tex = FA.pingpong(FA.frames("sheep", "uneasy"), t, 9.0)      # head high, a stamp, a look behind
 	else:
 		# standing: graze, look up, graze again (played forward then back)
 		var g: Array = FA.frames("sheep", "graze")

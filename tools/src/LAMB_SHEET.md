@@ -61,6 +61,7 @@ Every prompt ends with:
 ## After the clips arrive
 
 - Cut each into `art/sheep/anim/<name>_NN.png` or `art/david/anim/<name>_NN.png` with `tools/anim.py`: blue key for the animals with the same settings as the sheep walk in `tools/build_anims.sh` (`wide=1.5 tall=1.4 size=110 erode=9`), David's with `href=598`.
+- The four settle clips go in as `art/sheep/anim/lie_NN.png`, `rest_NN.png`, `rise_NN.png` and `uneasy_NN.png` (no `sheep_` prefix: the game asks for `sheep/lie` and so on). The code is already waiting for them in `scripts/world/sheep.gd`: lying down takes 1.6 s and rising 1.2 s whatever the frame count, rest and uneasy play forward and back. Until a set exists the sheep stand and graze as before. Cut `lie` and `rise` with `mode=range` so each holds one movement only, and `rest`/`uneasy` as loops.
 - Check each sheep set for height against the sheep walk set, and each David set against his run frames, before it goes in.
 - Delete any leftover `.import` files when a set is re-cut with fewer frames.
 

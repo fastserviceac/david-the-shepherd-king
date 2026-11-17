@@ -106,6 +106,12 @@ func smoke(m) -> void:
 		if not Game.narration_pt.has(id):
 			untold += 1
 	_check(untold == 0 and Game._ui_pt.size() > 100, "every line of the story has its Portuguese (%d missing)" % untold)
+	var unvoiced: Array = []
+	for e in Game.PSALM + [{"id": "p23_whole"}]:
+		for at in ["res://audio/narration/%s.mp3", "res://audio/narration/pt/%s.mp3"]:
+			if not ResourceLoader.exists(at % str(e["id"])):
+				unvoiced.append(at % str(e["id"]))
+	_check(unvoiced.is_empty(), "every line of the psalm, and the whole psalm, is spoken in both languages %s" % str(unvoiced))
 	Game.save["lang"] = "pt"
 	_check(Game.t("The Well") == "O Poço" and str(Game.line("ps23_1")["text"]).begins_with("O SENHOR"), "Portuguese is shown when it is chosen")
 	Game.save["lang"] = "en"
