@@ -1228,7 +1228,7 @@ func _give(id: String, x: float, node: Node2D, psalm_line: bool = false) -> void
 	else:
 		Game.give(id)
 	if not Game.fast:
-		await get_tree().create_timer(4.6).timeout
+		await get_tree().create_timer(maxf(4.6, Game.voice_left() + 0.5) if psalm_line else 4.6).timeout      # he stays down while the line is spoken
 		player.act = "kneel_up"
 		player.act_t = 0.0
 		await get_tree().create_timer(1.6).timeout
@@ -1864,7 +1864,10 @@ func song(from: Vector2, reach: float, walking: bool = false) -> void:
 		s.settle(SETTLE * Game.song_hold(), not walking)
 		n += 1
 	if n > 0 and not Game.fast:
-		Game.sfx("sheep", -12.0, 0.2)
+		if ResourceLoader.exists("res://audio/sfx/sheep_settle.mp3"):
+			Game.sfx("sheep_settle", -8.0, 0.1)      # a low, contented murmur as they go down
+		else:
+			Game.sfx("sheep", -12.0, 0.2)
 	Game.grow("voice", 1.0)
 	for sg in songs:
 		if sg["on"] and absf(from.x - float(sg["x"])) < float(sg["reach"]):

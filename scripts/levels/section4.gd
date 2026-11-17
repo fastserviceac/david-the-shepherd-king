@@ -284,8 +284,10 @@ func _anointing() -> void:
 		await get_tree().create_timer(7.2).timeout
 	Game.psalm_whole()
 	if not Game.fast and is_instance_valid(Game.main) and is_instance_valid(Game.main.hud):
-		Game.main.hud.psalm_t = 11.0
-		await get_tree().create_timer(11.0).timeout
+		var whole := maxf(11.0, Game.voice_line("p23_whole") + 2.0)      # the whole psalm, written and heard once
+		Game.main.hud.psalm_len = whole
+		Game.main.hud.psalm_t = whole
+		await get_tree().create_timer(whole).timeout
 	complete()
 
 ## What he is to do now, from where things stand. Polled, so it is right at any checkpoint too.

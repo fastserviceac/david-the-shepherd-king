@@ -230,6 +230,7 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			if not lyre_feet:
 				velocity.x = 0.0
 			Game.duck(true)
+			Game.lyre("sit")
 		return
 	lyre_t += delta
 	if not able or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("attack") \
@@ -259,19 +260,19 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			phrases += 1
 			lyre_flash = 1.0
 			Game.buzz(14)
-			Game.sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][clampi(phrases - 1, 0, 2)])      # stand-in for the lyre: three rising notes
+			Game.lyre("phrase", phrases - 1)
 			if level != null and level.has_method("phrase"):
 				level.phrase(global_position, lyre_feet)
 			if phrases >= 3:
 				phrases = 0
 				ring_t = 1.0
 				lyre_idle = 0.9          # he plays on a moment, then gets up
-				Game.sfx("anoint", -12.0, 0.0)
+				Game.lyre("song")
 				if level != null and level.has_method("song"):
 					level.song(global_position, Game.song_reach(), lyre_feet)
 		else:
 			lyre_flash = -1.0
-			Game.sfx("ui_move", -9.0, 0.0, 0.7)
+			Game.lyre("lost")
 			if level != null and level.has_method("phrase_lost"):
 				level.phrase_lost(global_position, lyre_feet)
 	else:
