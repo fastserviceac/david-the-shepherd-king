@@ -332,7 +332,7 @@ func _physics_process(delta: float) -> void:
 		pick_near = _nearest_penned()
 		if pick_near != null:
 			pick_task["x"] = pick_near.global_position.x
-			pick_task["text"] = Game.t("This is %s") % _asked_name()
+			pick_task["text"] = Game.t("Show him this one as %s") % _asked_name()
 		else:
 			pick_task["x"] = -9999.0
 	if is_instance_valid(donkey) and donkey.led and not kid_tied:

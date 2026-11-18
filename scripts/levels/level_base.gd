@@ -2013,19 +2013,34 @@ func add_task(x: float, text: String, hold: float, fn: Callable, reach: float = 
 	return tk
 
 
+var task_mute := 0.0     # seconds the hold-prompt steps aside so that what the task has just told him can be read
+
+var _in_task := false
+var tasks_done := 0      # how many tasks have been carried out (the tests watch it)
+
 func do_task(tk: Dictionary) -> void:
+	tasks_done += 1
 	tk["t"] = 0.0
 	if not tk["again"]:
 		tk["on"] = false
 	Game.grow("hand", 2.0)
+	var told := tip
+	var told_t := tip_t
+	_in_task = true
 	tk["fn"].call()
+	_in_task = false
+	if tk["on"] and (tip != told or tip_t > told_t):
+		# a task that can be done again answered him with a tip (the wrong sheep, the wrong jar): the prompt
+		# would stand over it, and all he would see is the same prompt and nothing happening
+		task_mute = minf(tip_t, 2.5)
 
 
 func _update_tasks(delta: float) -> void:
 	if tasks.is_empty():
 		return
 	var best = null
-	if not Game.cinematic and not respawning:
+	task_mute = maxf(0.0, task_mute - delta)
+	if not Game.cinematic and not respawning and task_mute <= 0.0:
 		for tk in tasks:
 			if tk["on"] and absf(player.global_position.x - tk["x"]) < tk["reach"] \
 					and absf(player.global_position.y - on_ground(tk["x"]).y) < 90.0:
@@ -2374,9 +2389,15 @@ func set_goal(text: String) -> void:
 		Game.sfx("gather", -12.0, 0.0)
 
 
+var tips_covered: Array = []      # tips given while a prompt stood where they are shown (the tests list them)
+
 func show_tip(text: String, seconds: float = 4.5) -> void:
 	tip = text
 	tip_t = seconds
+	if task_now != null and not _in_task:
+		tips_covered.append("%s  [under: %s]" % [text, str(task_now["text"])])
+	elif task_now == null and is_instance_valid(player) and _song_here() != null:
+		tips_covered.append("%s  [under: play]" % text)
 
 
 func _draw_prompt(ci: CanvasItem) -> void:

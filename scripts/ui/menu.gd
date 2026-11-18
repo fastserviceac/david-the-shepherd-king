@@ -46,7 +46,6 @@ func open(new_mode: String, at: int = -1) -> void:
 			items.append(["set_subs", "%s: %s" % [Game.t("Film subtitles"), on_off.call(Game.save.get("film_subs", false))], true])
 			if Game.touch:
 				items.append(["set_haptic", "%s: %s" % [Game.t("Vibration"), on_off.call(Game.save.get("haptics", true))], true])
-			items.append(["lang", "Language: English", true])      # shown in the language it is set to
 			items.append(["back", "Back", true])
 		"sections":
 			# one chapter's sections at a time; a row for each other chapter he can walk into leads to its list

@@ -20,6 +20,52 @@ func _goto(x: float) -> void:
 	await _frames(8)
 
 
+## A task done the way he does it: standing at it, the prompt for it showing over his head, the Grab button
+## held until it is done. Calling the task directly passes even when a player could never see or reach it.
+## Whatever stops the hold is a failure, and the task is then carried out directly so the rest can be tested.
+func _hold(lv, tk: Dictionary) -> void:
+	var p = lv.player
+	var what := str(tk["text"])
+	if not tk["on"]:
+		_check(false, "HOLD '%s': the task is not open" % what)
+		lv.do_task(tk)
+		return
+	if absf(p.global_position.x - float(tk["x"])) >= float(tk["reach"]) - 4.0 or absf(p.global_position.y - lv.on_ground(float(tk["x"])).y) >= 80.0:
+		await _goto(float(tk["x"]))
+	for a in ["move_left", "move_right", "walk", "grab"]:
+		Input.action_release(a)
+	var seen := false
+	for i in 200:
+		await _frames(1)
+		if lv.task_now == tk and lv.prompt_a > 0.5 and lv.prompt_words == Game.t(what):
+			seen = true
+			break
+	if not seen:
+		var why := "prompt shows '%s'" % lv.prompt_words
+		if Game.cinematic:
+			why = "a scene is still running"
+		elif lv.respawning:
+			why = "he is being set back"
+		elif lv.task_now != null and lv.task_now != tk:
+			why = "another task stands in front of it: '%s'" % str(lv.task_now["text"])
+		elif lv.task_now == null:
+			why = "he is not in reach of it (he %d,%d  task %d,%d  reach %d)" % [int(p.global_position.x), int(p.global_position.y), int(tk["x"]), int(lv.on_ground(float(tk["x"])).y), int(tk["reach"])]
+		_check(false, "HOLD '%s': its prompt never shows: %s" % [what, why])
+		lv.do_task(tk)
+		return
+	var n0: int = lv.tasks_done
+	Input.action_press("grab")
+	for i in int(float(tk["hold"]) * 60.0) + 150:
+		await _frames(1)
+		if lv.tasks_done != n0:
+			break
+	Input.action_release("grab")
+	if lv.tasks_done == n0:
+		_check(false, "HOLD '%s': held, it is never done (on floor %s, speed %d, act '%s', bar %.2f)" % [what, str(p.is_on_floor()), int(p.velocity.x), str(p.act), float(tk["t"])])
+		lv.do_task(tk)
+	await _frames(2)
+
+
 func _check(ok: bool, what: String) -> void:
 	print(("  ok    " if ok else "  FAIL  ") + what)
 	if not ok:
@@ -87,6 +133,9 @@ func smoke(m) -> void:
 			"night_fit": await _night_fit(lv)
 			"back_and_forth": await _back_and_forth(lv)
 		await _frames(10)
+		if is_instance_valid(m.level):
+			for c in m.level.tips_covered:
+				print("  COVERED  " + str(c))
 		_check(m.level.done, "section completes")
 	if not OS.has_environment("SMOKE_ONLY") or "lambing" in OS.get_environment("SMOKE_ONLY"):
 		await _lambing(m)
@@ -214,7 +263,7 @@ func _summons(lv) -> void:
 	await _goto(lv.NIGHT_FOLD_X)
 	await _frames(20)
 	_check(lv.sheep_count == 0, "and do not come out until the bar is lifted")
-	lv.do_task(lv.bar_task)
+	await _hold(lv, lv.bar_task)
 	await _gather_nine(lv)
 	_check(lv.sheep_count == 9, "the bar lifted, they come to him (%d)" % lv.sheep_count)
 	_check(not Game.has("walksong"), "the Walking Song is not his before the trial")
@@ -306,23 +355,40 @@ func _summons(lv) -> void:
 			not_lamb = sh
 	await _goto(not_lamb.global_position.x)
 	await _frames(6)
-	lv.do_task(lv.pick_task)
+	Input.action_press("grab")          # by hand, as he plays it: held on the wrong sheep
+	await _frames(40)
+	Input.action_release("grab")
+	await _frames(4)
 	_check(lv.ask_i == 0 and lv.wrong == 1, "shown the wrong sheep, the keeper is not satisfied")
+	_check("Not that one" in lv.prompt_words or Game.t("Not that one.") in lv.prompt_words, "and he is told so where he can see it (%s)" % lv.prompt_words)
+	var the_lamb = null
+	for sh in lv.followers:
+		if sh.who == "lamb":
+			the_lamb = sh
+	await _goto(the_lamb.global_position.x)
+	await _frames(200)          # the answer has been read: he may show another
+	Input.action_press("grab")
+	await _frames(40)
+	Input.action_release("grab")
+	await _frames(4)
+	_check(lv.ask_i == 1, "held by hand on the lamb, Shai is known")
+	lv.ask_i = 0
+	lv.wrong = 1
 	for id in lv.ASK:
 		for sh in lv.followers:
 			if sh.who == id:
 				await _goto(sh.global_position.x)
 				await _frames(6)
-				lv.do_task(lv.pick_task)
+				await _hold(lv, lv.pick_task)
 	_check(lv.ask_i == lv.ASK.size() and not lv.pick_task["on"] and lv.count_task["on"], "shown the lamb and the three named ewes, he knows them (%d of 4)" % lv.ask_i)
-	lv.do_task(lv.count_task)
+	await _hold(lv, lv.count_task)
 	await _frames(20)
-	lv.do_task(lv.well_task)
+	await _hold(lv, lv.well_task)
 	await _frames(20)
 	_check(lv.counted and lv.handed and lv.halter_task["on"], "counted in and shown the well, the flock is the keeper's")
 	# the donkey: it will not pass a mule unplayed, and passes when he plays as he walks
 	var d = lv.donkey
-	lv.do_task(lv.halter_task)
+	await _hold(lv, lv.halter_task)
 	await _goto(lv.MULES[1] + 420.0)
 	p.facing = -1
 	d.global_position = lv.on_ground(p.global_position.x + 92.0)
@@ -369,10 +435,10 @@ func _summons(lv) -> void:
 	await _frames(30)
 	_check(home.call() and played["feet"], "played to as he walks, it comes past both mules to his father's gate (x=%d, %d balks)" % [int(d.global_position.x), d.balks])
 	_check(lv.kid_task["on"], "and there the young goat can be tied on")
-	lv.do_task(lv.kid_task)
+	await _hold(lv, lv.kid_task)
 	await _frames(20)
 	_check(lv.kid_tied and lv.leave_task["on"] and not d.led, "the load is whole: bread, wine and the young goat")
-	lv.do_task(lv.leave_task)
+	await _hold(lv, lv.leave_task)
 	await _frames(30)
 	Game.save["gifts"] = had
 
@@ -410,7 +476,7 @@ func _ridge_road(lv) -> void:
 	_check(lv.song_noise(Vector2(lv.SLIDE_X - 100.0, 0)) > 0.0, "the slipping stones unsettle his playing")
 	await _lead_playing(p, d, func() -> bool: return d.global_position.x > lv.SLIDE_X + lv.SLIDE_REACH, 900)
 	_check(d.global_position.x < lv.SLIDE_X and not lv.cleared, "the road blocked, playing does not bring it over the stones (x=%d)" % int(d.global_position.x))
-	lv.do_task(lv.slide_task)
+	await _hold(lv, lv.slide_task)
 	await _frames(5)
 	_check(lv.cleared and lv.song_noise(Vector2(lv.SLIDE_X - 100.0, 0)) == 0.0 and not lv.slide_task["on"], "the stones rolled off, the road is open and quiet")
 	await _goto(d.global_position.x + 92.0)
@@ -449,7 +515,7 @@ func _ridge_road(lv) -> void:
 	await _goto(lv.GATE_X)
 	await _frames(10)
 	_check(lv.gate_task["on"], "with the load whole at the foot of Gibeah, he can go up")
-	lv.do_task(lv.gate_task)
+	await _hold(lv, lv.gate_task)
 	await _frames(30)
 	Game.save["gifts"] = had
 
@@ -495,12 +561,12 @@ func _gibeah_gate(lv) -> void:
 	await _play_song(p, lv.AGAIN)
 	await _frames(3)
 	_check(ge["calm"] > 0.0 and lv.ask_task["on"], "played to again, he listens again")
-	lv.do_task(lv.ask_task)
+	await _hold(lv, lv.ask_task)
 	await _frames(10)
 	_check(lv.asked and lv.enter_task["on"] and not ge["on"], "the young man answers for him and the gate is opened")
 	Input.action_release("lyre")
 	await _frames(120)
-	lv.do_task(lv.enter_task)
+	await _hold(lv, lv.enter_task)
 	await _frames(20)
 	_check(lv.inside and p.global_position.x > lv.YARD_X and absf(d.global_position.x - p.global_position.x) < 200.0 and p.cam.limit_left == int(lv.YARD_X),
 			"through the gate he is in the yard, the donkey with him (he at %d)" % int(p.global_position.x))
@@ -513,7 +579,7 @@ func _gibeah_gate(lv) -> void:
 	d.global_position = lv.on_ground(p.global_position.x - 92.0)
 	await _frames(10)
 	_check(lv.offer_task["on"] and not se["on"], "with the load at the storehouse, the gift can be offered")
-	lv.do_task(lv.offer_task)
+	await _hold(lv, lv.offer_task)
 	await _frames(10)
 	_check(lv.turned and se["on"] and not lv.give_task["on"], "the steward would leave it till morning")
 	se["heard"] = 0
@@ -523,7 +589,7 @@ func _gibeah_gate(lv) -> void:
 	await _frames(3)
 	_check(se["calm"] > 0.0 and lv.give_task["on"], "the fifth phrase quiets him: the gift can be handed over")
 	var before: float = se["calm"]
-	lv.do_task(lv.give_task)
+	await _hold(lv, lv.give_task)
 	await _frames(3)
 	_check(lv.given == 1 and se["calm"] < before - 1.0 and lv.give_task["on"], "each thing he receives costs some of his quiet (%.1f to %.1f)" % [before, se["calm"]])
 	se["calm"] = 0.03
@@ -531,16 +597,16 @@ func _gibeah_gate(lv) -> void:
 	_check(not lv.give_task["on"] and lv.given == 1, "and when it is gone he turns back to his tally")
 	await _play_song(p, lv.AGAIN)
 	await _frames(3)
-	lv.do_task(lv.give_task)
+	await _hold(lv, lv.give_task)
 	await _frames(3)
 	_check(lv.given == 2 and not lv.wait_task["on"], "played to again, he takes the wine")
-	lv.do_task(lv.give_task)
+	await _hold(lv, lv.give_task)
 	await _frames(10)
 	_check(lv.given == 3 and lv.wait_task["on"] and not d.led and not se["on"], "and the young goat: the gift is delivered whole, and the donkey is the stable's")
 	Input.action_release("lyre")
 	await _frames(120)
 	await _goto(lv.HALL_X)
-	lv.do_task(lv.wait_task)
+	await _hold(lv, lv.wait_task)
 	await _frames(30)
 	Game.save["gifts"] = had
 
@@ -751,25 +817,29 @@ func _lambing(m) -> void:
 	lv.labour = 0.999
 	await _frames(30)
 	_check(lv.part == 3 and lv.lamb.visible and lv.rub_task["on"], "the wolf gone and the labour done, the lamb lies still")
-	lv._rub()
+	await _hold(lv, lv.rub_task)
 	await _frames(5)
 	_check(lv.part == 3, "it cannot be rubbed dry with bare hands")
 	await _goto(lv.GRASS_X)
-	lv.do_task(lv.grass_task)
+	await _hold(lv, lv.grass_task)
 	_check(lv.has_grass, "dry grass is pulled from under the rock shelf")
 	await _goto(lv.BIRTH_X - 52.0)
-	await lv._rub()
+	await _frames(200)
+	await _hold(lv, lv.rub_task)
+	await _until(func() -> bool: return lv.part == 4 and lv.lay_head_task["on"], 900)
 	_check(lv.part == 4 and lv.lay_head_task["on"], "rubbed with grass it breathes")
-	await lv._to_mother()
+	await _hold(lv, lv.lay_head_task)
+	await _until(func() -> bool: return lv.part == 5, 900)
 	_check(lv.part == 5 and Game.save["lamb_born"] == true and lv.rachel.pose == "ewe_tend" and lv.lamb.named == "Shai", "laid at its mother's head, she knows it, and he calls it Shai")
-	await lv._gather()
+	await _hold(lv, lv.gather_task)
+	await _until(func() -> bool: return lv.part == 6 and lv.carrying, 900)
 	await _frames(5)
 	_check(lv.part == 6 and lv.carrying and lv.player.act == "carry" and lv.player.carry_set == "cradle" and lv.rachel in lv.followers and lv.rachel.max_speed < 270.0,
 			"he carries it in his arms, and she follows at a pace slower than his run")
-	lv._lay()
+	await _hold(lv, lv.lay_task)
 	_check(not lv.carrying and lv.lamb.visible and lv.lamb.safe, "he can lay it down to have his hands free")
 	await _frames(3)
-	lv._lift_again()
+	await _hold(lv, lv.lift_task)
 	_check(lv.carrying, "and take it up again")
 	lv.rachel.global_position = lv.on_ground(lv.FOLD + 200.0)
 	await _goto(lv.FOLD + 120.0)
@@ -1251,7 +1321,7 @@ func _well(lv) -> void:
 	_check(lv.fulcrum["body"].position.x > x0 + 20.0, "he can push the block toward the stone")
 	lv._fulcrum_moved(2230.0)
 	_check(lv.lever_task["on"], "with the block set, the staff can lever the stone")
-	lv.do_task(lv.lever_task)
+	await _hold(lv, lv.lever_task)
 	await _frames(5)
 	_check(lv.opened and lv.draw_task["on"], "the well is open")
 	var came := 0
@@ -1272,8 +1342,8 @@ func _well(lv) -> void:
 		if lv.watered:
 			break
 		if lv.draw_task["on"] and lv.drinks[0] <= 0:
-			lv.do_task(lv.draw_task)
-			lv.do_task(lv.pour_tasks[0])
+			await _hold(lv, lv.draw_task)
+			await _hold(lv, lv.pour_tasks[0])
 		for o in lv.others:
 			if o["state"] == "drinking":
 				stolen = true
@@ -1283,7 +1353,7 @@ func _well(lv) -> void:
 	_check(lv.watered, "every one of his flock has drunk")
 	print("  other men's sheep reached the water unchecked: %s" % stolen)
 	_check(lv.own[lv.LAMB]["state"] == "gone", "the lamb slips away while he deals with the jackal")
-	lv.do_task(lv.back_task)
+	await _hold(lv, lv.back_task)
 	await _frames(5)
 	_check(lv.closed, "the stone goes back over the well")
 	await _goto(3720.0)
@@ -1345,7 +1415,7 @@ func _wadi(lv) -> void:
 func _den(lv) -> void:
 	_check(lv.dark != null and lv.torch_t == 0.0, "the cave is dark and he has no light")
 	await _goto(430.0)
-	lv.do_task(lv.tasks[0])
+	await _hold(lv, lv.tasks[0])
 	_check(lv.torch_t > 40.0, "the embers light a torch")
 	await _frames(30)
 	_check(lv.torch_t < lv.torch_max and lv.player_light > 200.0, "the torch burns down as he goes")
@@ -1449,9 +1519,9 @@ func _watch(lv) -> void:
 			for st in lv.out.duplicate():
 				lv.bring_back(st)
 		if lv.fire_task["on"]:
-			lv.do_task(lv.fire_task)
+			await _hold(lv, lv.fire_task)
 		if lv.rest_task["on"]:
-			lv.do_task(lv.rest_task)
+			await _hold(lv, lv.rest_task)
 		if lv.done:
 			break
 	_check(saw_stir and lv.fed and lv.rested, "the flock broke and was brought back, the fire was fed, he rested")
@@ -1570,7 +1640,7 @@ func _s3(lv) -> void:
 	_check(lv.player.position.x < lv.WATER_X + 250.0 and lv._goal_now().begins_with("Wash"), "he does not go on down with the lamb bleeding")
 	await _goto(lv.WATER_X)
 	Input.action_release("move_right")
-	lv.do_task(lv.tend_task)
+	await _hold(lv, lv.tend_task)
 	_check(lv.tended, "he washes and binds its wound at the pool")
 	_check(lv.pool_at(lv.player.global_position) != null and lv.pool_at(lv.on_ground(lv.WATER_X + 300.0)) == null, "his feet are in the water there, and nowhere else")
 	await _goto(lv.ROCK_X - 80.0)
@@ -1585,7 +1655,7 @@ func _s3(lv) -> void:
 	_check(not lv.rock["on"] and lv.player.position.x > 5400.0, "a fallen rock bars the path, and he shoulders it over the step and goes on")
 	await _goto(lv.CLEFT_X)
 	_check(lv._goal_now() == "Lay the lamb in the cleft of the rock", "jackals wait below, and he cannot fight with the lamb")
-	lv.do_task(lv.lay_task)
+	await _hold(lv, lv.lay_task)
 	await _frames(5)
 	_check(not lv.carrying and lv.lamb.visible and lv.player.act == "", "he lays it in the cleft and his hands are free")
 	for k in 12:
@@ -1594,7 +1664,7 @@ func _s3(lv) -> void:
 			n.hit(9, 1, "staff")
 	_check(lv._pack_left() == 0 and lv._goal_now() == "Lift the lamb", "the jackals are driven off the path")
 	await _goto(lv.CLEFT_X)
-	lv.do_task(lv.lift_task)
+	await _hold(lv, lv.lift_task)
 	await _frames(5)
 	_check(lv.carrying and lv.spoken, "he takes the lamb up again for the last of the way")
 	await _goto(lv.end_x)
@@ -1627,7 +1697,7 @@ func _s4(lv) -> void:
 	await _goto(lv.LAMB_X - 60.0)
 	await _frames(20)
 	_check(not is_nan(lv.lamb.stay), "the lamb lies down at the washout")
-	lv.do_task(lv.lift_task)
+	await _hold(lv, lv.lift_task)
 	await _frames(5)
 	_check(lv.player.act == "carry" and lv.carrying, "he lifts it and carries it")
 	Input.action_press("move_right")
@@ -1635,7 +1705,8 @@ func _s4(lv) -> void:
 	await _frames(240)
 	Input.action_release("jump")
 	_check(lv.player.position.x < lv.WASH_X0 and lv.player.position.y < 600.0, "with the lamb he cannot leap the washout, and does not walk into it")
-	lv.do_task(lv.bridge_task)
+	await _hold(lv, lv.bridge_task)
+	Input.action_press("move_right")
 	await _frames(400)
 	Input.action_release("move_right")
 	_check(lv.bridged and lv.player.position.x > lv.WASH_X1 and lv.player.position.y < 600.0, "he drags the footbridge across and carries the lamb over it")
@@ -1947,15 +2018,15 @@ func newshots(m, dir: String) -> void:
 	await _frames(50)
 	await _snap(dir, "well_2_stone")
 	lv._fulcrum_moved(2230.0)
-	lv.do_task(lv.lever_task)
+	await _hold(lv, lv.lever_task)
 	lv.shepherd_call(lv.on_ground(2560.0), 600.0, false)
-	lv.do_task(lv.draw_task)
+	await _hold(lv, lv.draw_task)
 	lv.fulcrum["body"].position.x = 2233.0
 	await _goto(2200.0)
 	await _frames(40)
 	await _snap(dir, "well_2b_bucket")
 	await _goto(1960.0)
-	lv.do_task(lv.pour_tasks[0])
+	await _hold(lv, lv.pour_tasks[0])
 	await _frames(170)
 	await _snap(dir, "well_3_troughs")
 	lv.watered = true
@@ -2371,14 +2442,16 @@ func _armour_bearer(lv) -> void:
 	Game.save["gifts"] = had.duplicate()
 	await _frames(40)
 	# the first two days, by their tasks
-	lv._water()
-	lv._pour()
-	lv._oil()
+	await _hold(lv, lv.water_task)
+	await _hold(lv, lv.pour_task)
+	await _hold(lv, lv.oil_task)
 	_check(lv.step == 3 and lv.lamps_task["on"], "water drawn and poured, oil asked for: the lamps are next")
-	await lv._lamps()
+	await _hold(lv, lv.lamps_task)
+	await _until(func() -> bool: return lv.day == 2 and lv.step == 4 and lv.word_task["on"], 1200)
 	_check(lv.day == 2 and lv.step == 4 and lv.word_task["on"] and absf(p.global_position.x - lv.HALL_X) < 120.0, "the day ends, and the next finds him at the door of the hall")
-	lv._word()
-	await lv._arms()
+	await _hold(lv, lv.word_task)
+	await _hold(lv, lv.steward_task)
+	await _until(func() -> bool: return lv.step == 6 and lv.door_task["on"], 1200)
 	_check(p.shield and lv.step == 6 and lv.door_task["on"], "the steward puts the king's shield and spear into his hands")
 	# bearing them he walks, does not leap, and neither staff nor sling is in his hands
 	await _goto(lv.STORE_X)
@@ -2396,11 +2469,12 @@ func _armour_bearer(lv) -> void:
 	await _frames(14)
 	_check(not p.blocking and p.attack_t <= 0.0, "before the drill he carries the shield and cannot yet raise it, and he does not strike")
 	Input.action_release("attack")
-	await lv._stand()
+	await _hold(lv, lv.door_task)
+	await _until(func() -> bool: return lv.step == 7 and lv.mark_task["on"], 1200)
 	_check(lv.day == 3 and lv.step == 7 and lv.mark_task["on"], "the third morning: the shield-man calls him")
 	# the drill
 	await _goto(lv.MARK_X)
-	lv._begin_drill()
+	await _hold(lv, lv.mark_task)
 	_check(lv.drilling and p.shield_learn and lv.in_place(), "he takes his place, and is let raise the shield")
 	Input.action_press("attack")
 	await _frames(12)
@@ -2448,7 +2522,8 @@ func _armour_bearer(lv) -> void:
 		if Game.has("shieldarm") and lv.end_task["on"]:
 			break
 	_check(Game.has("shieldarm") and lv.end_task["on"] and p.shield, "and the Shield Arm is given, the king's shield still on his arm")
-	await lv._end()
+	await _hold(lv, lv.end_task)
+	await _until(func() -> bool: return lv.done, 1200)
 	_check(lv.done and not p.shield, "he carries them back to the king's door; they were never his")
 	var told := Game._ui_pt.has(Game.GIFTS["shieldarm"]["line"]) and Game._ui_pt.has(Game.GIFTS["shieldarm"]["key"]) and Game._ui_pt.has(Game.GIFTS["shieldarm"]["why"]) \
 			and Game.narration.has("1sam16_21b") and Game.narration_pt.has("1sam16_21b") and Game._ui_pt.has(lv._goal_now())
@@ -2486,7 +2561,7 @@ func _back_and_forth(lv) -> void:
 				w.hit(1, -1, "staff")
 	await _until(func() -> bool: return lv.wolves_gone and lv.down_task["on"], 200)
 	_check(lv.wolves_gone and lv.down_task["on"] and not lv.red_a[0].prey, "the wolves driven off, the road down to Bethlehem is open")
-	lv.do_task(lv.down_task)
+	await _hold(lv, lv.down_task)
 	await _until(func() -> bool: return lv.part == 1 and not Game.cinematic, 400)
 	# Bethlehem
 	_check(lv.part == 1 and lv.fars[1].visible and not lv.fars[0].visible and p.cam.limit_left == int(lv.H) and p.global_position.x > lv.H, "he comes down to Bethlehem: its own far view, and the road is behind him")
@@ -2497,28 +2572,28 @@ func _back_and_forth(lv) -> void:
 	await _goto(lv.KEEPER_X)
 	await _frames(20)
 	_check(lv.step == lv.COUNT and lv.count_task["on"], "at the day fold the keeper has nine to show him")
-	lv.do_task(lv.count_task)
+	await _hold(lv, lv.count_task)
 	await _frames(10)
 	_check(lv.step == lv.CALL and lv.call_task["on"], "nine go under the rod, and then he calls them by name")
 	await _goto(lv.COUNT_X)
 	for k in 3:
-		lv.do_task(lv.call_task)
+		await _hold(lv, lv.call_task)
 		await _frames(20)
 	_check(lv.call_i == 3 and lv.step == lv.CALL and lv.pen["noga"].name_t > 0.0, "the lamb, Rachel and Noga answer to their names")
-	lv.do_task(lv.call_task)
+	await _hold(lv, lv.call_task)
 	await _frames(10)
 	_check(lv.step == lv.PICK and lv.pick_task["on"] and not lv.call_task["on"], "Devorah is called and nothing answers: nine by the rod, eight by name")
 	await _goto(lv.pen["rachel"].global_position.x)
 	await _frames(6)
-	lv.do_task(lv.pick_task)
+	await _hold(lv, lv.pick_task)
 	_check(lv.wrong == 1 and lv.step == lv.PICK, "shown one of his father's, he is not satisfied")
 	await _goto(lv.stranger.global_position.x)
 	await _frames(6)
-	lv.do_task(lv.pick_task)
+	await _hold(lv, lv.pick_task)
 	await _frames(10)
 	_check(lv.step == lv.FIND and lv.bar_task["on"] and not lv.pick_task["on"], "the ewe with the worn daub of red is found out")
 	await _goto(lv.BAR_X)
-	lv.do_task(lv.bar_task)
+	await _hold(lv, lv.bar_task)
 	await _frames(5)
 	_check(dv.gatherable and dv.restless, "the bar of the night fold lifted, Devorah is there, and shy of him")
 	await _goto(dv.global_position.x - 130.0)
@@ -2539,7 +2614,7 @@ func _back_and_forth(lv) -> void:
 	dv.global_position = lv.on_ground(p.global_position.x - 50.0)
 	await _until(func() -> bool: return lv.step == lv.WATER, 300)
 	_check(lv.step == lv.WATER and lv.pen.size() == 9 and lv.followers.is_empty() and lv.well_task["on"], "brought to the day fold she goes to her own place: nine of his father's, and one that is not")
-	lv.do_task(lv.well_task)
+	await _hold(lv, lv.well_task)
 	await _frames(10)
 	_check(lv.step == lv.REST and lv.rest_song["on"], "watered, they are to be played to rest")
 	await _goto(lv.FOLD_X - 60.0)
@@ -2550,7 +2625,7 @@ func _back_and_forth(lv) -> void:
 	await _frames(20)
 	var e = lv.stranger
 	await _goto(e.global_position.x)
-	lv.do_task(lv.ewe_task)
+	await _hold(lv, lv.ewe_task)
 	await _frames(10)
 	_check(lv.led and lv.step == lv.LEAD and lv.quiet == 0.0, "in the morning the red ewe is his to take home")
 	var ex0: float = e.global_position.x
@@ -2577,7 +2652,7 @@ func _back_and_forth(lv) -> void:
 	e.stay = e.global_position.x
 	await _frames(10)
 	_check(lv.leave_task["on"], "with her at his father's gate, he can set out again")
-	lv.do_task(lv.leave_task)
+	await _hold(lv, lv.leave_task)
 	await _until(func() -> bool: return lv.part == 2 and not Game.cinematic, 400)
 	# the road north
 	_check(lv.part == 2 and lv.fars[2].visible and not lv.fars[1].visible and p.cam.limit_left == int(lv.N) and lv.led
@@ -2619,7 +2694,7 @@ func _back_and_forth(lv) -> void:
 	lv.quiet = 5.0
 	await _frames(10)
 	_check(lv.give_task["on"], "at the fold above the ford she can be put in with her own")
-	lv.do_task(lv.give_task)
+	await _hold(lv, lv.give_task)
 	await _frames(10)
 	_check(lv.given and not lv.led and not lv.news and not lv.end_task["on"], "the ford man's ewe is home, and the road is his own again")
 	await _goto(lv.N_JEBUS)
@@ -2628,7 +2703,7 @@ func _back_and_forth(lv) -> void:
 	await _goto(lv.N_HEIGHT)
 	await _frames(90)
 	_check(lv.elah == null or lv.elah.modulate.a > 0.9, "on the height the far view opens westward")
-	lv.do_task(lv.end_task)
+	await _hold(lv, lv.end_task)
 	await _frames(30)
 	Game.save["gifts"] = had
 
