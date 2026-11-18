@@ -37,6 +37,7 @@ const DARK_CREEP := 0.022                 # what each lamp that is out adds to t
 const REACH := 30.0                       # he stands this far short of a lamp to put the taper to it
 const TEND := 1.3                         # seconds at a lamp stand to trim it and light it
 const GRACE_AT := 0.93                    # where the shadow is held when the king waits for him (the Favour)
+const NIGHT_ART := "res://art/c2_night_hall_backdrop.png"
 const GOALS := ["The first wave: play (R), and bring the shadow down", "The second wave: play (R), and bring the shadow down",
 	"The last wave: play (R), and bring the shadow down"]
 
@@ -54,6 +55,8 @@ var pose_hold := 0
 
 func _tune() -> void:
 	ambience = "night"
+	if ResourceLoader.exists(NIGHT_ART):          # the hall's own night painting, when it has been made
+		backdrop_art = NIGHT_ART
 	up = 0.16
 	down = 0.08
 	turn_say = ["n_c2s6_turn"]
@@ -76,7 +79,7 @@ func _set_wave(k: int) -> void:
 
 func _ready() -> void:
 	super._ready()
-	if is_instance_valid(room):          # the same painting, in the dark: cooler, and the lamps do the rest
+	if is_instance_valid(room) and backdrop_art != NIGHT_ART:          # without it, the evening's painting darkened: cooler, and the lamps do the rest
 		room.modulate = Color(0.62, 0.64, 0.8)
 	set_dark(0.8)
 	if dark != null:          # under the line of the psalm, which is written on the screen and not in the room

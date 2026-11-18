@@ -90,6 +90,7 @@ var torch_t := 0.0
 var draught := 1.0            # how fast the torch burns just now
 var torch_node: Node2D
 var player_light := 0.0       # the pool of light he carries, set each frame
+var indoors := false          # a hall or house: he sits on a stool to play, not on a stone
 var barren := false           # a cave or bare rock: no flowers or grass along the path
 
 

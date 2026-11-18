@@ -971,9 +971,9 @@ func _current_frame() -> Texture2D:
 		if FA.frames("david", "gather").is_empty():
 			return _one_shot("kneel_up", act_t / 1.6)
 		return _one_shot("gather", act_t / GATHER_S)
-	if act.begins_with("lyre") and not FA.frames("david", "lyre").is_empty():
+	if act.begins_with("lyre") and not FA.frames("david", _lyre_set()).is_empty():
 		# seated with the kinnor: he sits down, plays with his head bowed, then lifts his face and plays on
-		var ly: Array = FA.frames("david", "lyre")
+		var ly: Array = FA.frames("david", _lyre_set())
 		if act == "lyre_rise":
 			return ly[clampi(8 - int(act_t / 1.0 * 8.0), 0, 8)]
 		if act == "lyre_up":
@@ -989,7 +989,7 @@ func _current_frame() -> Texture2D:
 			return lf[int(act_t * 10.0) % lf.size()] if absf(velocity.x) > 20.0 else FA.pingpong(lf, act_t, 8.0)
 	if (act == "play" and not lyre_feet) or act == "play_up":
 		# the same seated playing as at the watchfire, quicker to sit and to rise; without those frames, he kneels
-		var ly: Array = FA.frames("david", "lyre")
+		var ly: Array = FA.frames("david", _lyre_set())
 		if ly.size() < 34:
 			return _one_shot("kneel", clampf(act_t / LYRE_SIT, 0.0, 1.0) if act == "play" else 1.0 - clampf(act_t / LYRE_RISE, 0.0, 1.0))
 		if act == "play_up":
@@ -1203,3 +1203,10 @@ func _draw_aim() -> void:
 		v.y += STONE_GRAVITY * 0.06
 		p += v * 0.06
 		draw_circle(p, 2.4, Color(1.0, 0.95, 0.8, 0.75 * (1.0 - float(i) / float(n))))
+
+
+## The seated playing: on a stone out of doors, on a stool in a hall (when those frames have been cut).
+func _lyre_set() -> String:
+	if level != null and level.get("indoors") and not FA.frames("david", "lyre_in").is_empty():
+		return "lyre_in"
+	return "lyre"

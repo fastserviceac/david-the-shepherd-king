@@ -159,3 +159,11 @@ run $V/lamb_totter art/sheep/anim lamb_totter mode=range a=48 b=96 step=2 href=6
 run $V/david_rub $D rub mode=range a=72 b=144 step=2 ${=G}
 run $V/david_gather $D gather mode=range a=32 b=144 step=2 wide=2.0 ${=G}
 run $V/david_cradle $D cradle mode=range a=8 b=47 step=1 ${=G} steady=40
+
+# Play-test fixes (17 Nov): the shield sets re-made with his full cloak (tools/src/clips/c2/c2_bearer_2.mp4, c2_shield_block_2.mp4,
+# start picture tools/src/art_in/c2/bearer_start_2.png); the old c2_bearer / c2_shield_block lines above are superseded
+run $V/c2_bearer_2 $D bear mode=loop double=0 href=605 step=1 soft=1 steady=40
+#   bear_idle = c2_shield_block_2 clip frames 56-80 step 2 (rest stance); block = clip frames 8-32 step 4 (the shield comes up, braced)
+# indoors he sits on a stool, not a stone (tools/src/clips/c2/lyre_stool.mp4, start tools/src/art_in/c2/david_stool_start.png)
+run $V/lyre_stool $D lyre_in mode=range a=8 b=196 step=4 href=603 soft=1 steady=999 wide=1.6
+# the Night Fit's own painting: cp tools/src/art_in/c2/c2_night_hall_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_night_hall

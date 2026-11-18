@@ -85,6 +85,7 @@ func _setup() -> void:
 	backdrop_art = "res://art/c2_hall_backdrop.png"
 	width = 1280.0
 	barren = true
+	indoors = true
 	birds = false
 	flutters = 0
 	pal.merge({
