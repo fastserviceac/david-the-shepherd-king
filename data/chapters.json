@@ -173,6 +173,7 @@
         {
           "title": "The Armour-Bearer",
           "script": "res://scripts/levels/armour_bearer.gd",
+          "film": "c2_bearer",
           "aim": "Serve in the king's house: water, oil, a word carried, the king's shield and spear borne to his door, and the shield-man's drill.",
           "why": "He was anointed to be king, and he is given another man's shield to carry. Service comes first, and no one is watching.",
           "needs": [

@@ -14,6 +14,7 @@ python3 tools/build_story.py c2_summons /tmp/story_c2_summons --chapter 2 --shot
 python3 tools/build_story.py c2_road /tmp/story_c2_road --chapter 2 --shots tools/src/films/c2/c2_donkey_2.mp4@top tools/src/films/c2/c2_leaving.mp4@top --lines n_c2s2_intro --music audio/music/theme_tender.mp3
 python3 tools/build_story.py c2_gate /tmp/story_c2_gate --chapter 2 --shots tools/src/films/c2/c2_road.mp4 tools/src/films/c2/c2_gibeah.mp4@0.7 --lines n_c2s3_intro --music audio/music/theme_still.mp3
 python3 tools/build_story.py c2_hall /tmp/story_c2_hall --chapter 2 --shots tools/src/films/c2/c2_enter_2.mp4 --lines n_c2s4_intro --music audio/music/theme_still.mp3
-# no film before the Armour-Bearer: c2_play has a modern mandolin and c2_play_2 tilts down off his face
+# before the Armour-Bearer: he plays and the king comes to rest (c2_play has a modern mandolin and c2_play_2 tilts off his face, so this shot was made for it)
+python3 tools/build_story.py c2_bearer /tmp/story_c2_bearer --chapter 2 --shots tools/src/films/c2/c2_play_3.mp4 --lines n_c2s5_intro --music audio/music/theme_tender.mp3
 # the film that closes Chapter Two: back up the road, and at Gibeah the king's hand closing on his spear
 python3 tools/build_story.py end2 /tmp/story_end2 --chapter 2 --shots tools/src/films/c2/c2_road.mp4 tools/src/films/c2/c2_spear.mp4 --lines n_c2s7_end 1sam17_15@2 --music audio/music/theme_uneasy.mp3

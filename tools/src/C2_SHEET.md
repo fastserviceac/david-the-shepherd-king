@@ -208,7 +208,9 @@ Two things the section needs are **not on this sheet yet**:
 
 Not needed by Section 1 after all: `c2_load` (the donkey's own picture carries the load) and `c2_lead` (he plays with both hands; the donkey follows the song).
 
-Sounds still to make: a mule's bray (a hoof stamp stands in for it, heard only in this locked section), and the lyre's own notes (the three rising tones are still the stand-in from Chapter One).
+Sounds: the mules' bray is `audio/sfx/mule_bray.mp3`, the donkey's bray taken down to 0.84 pitch (18 November). The lyre's notes were made for Chapter One (`tools/src/LYRE_SOUND.md`).
+
+Film shot made 18 November for the film before Section 5: `tools/src/films/c2/c2_play_3.mp4` (Higgsfield `seedance_2_0` 720p 8 s, job 202386c6-b8d7-45a9-a4b1-9943e651e91f, from the `nano_banana_pro` 2K key image `tools/src/films/c2/ref/c2_play_3_start.png`, job 3966a1f1-3c26-45ad-a0af-57cac5372eef, made with frames of `c2_enter_2`, `c2_leaving` and `c2_play_2` as references). David plays a lyre of the old shape and the king comes to rest. The picture carries black bars, which the film's cinema crop removes.
 
 ---
 

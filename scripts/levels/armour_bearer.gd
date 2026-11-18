@@ -159,7 +159,10 @@ func _later(x: float, text: String, hold: float, fn: Callable, reach: float) -> 
 
 
 func begin() -> void:
-	await say(["n_c2s5_intro", "n_c2s5_serve"])
+	if Game.main.intro.has_story("c2_bearer"):      # the film before this section speaks the first line itself
+		await say(["n_c2s5_serve"])
+	else:
+		await say(["n_c2s5_intro", "n_c2s5_serve"])
 
 
 # ------------------------------------------------------------------ the first day: water and oil
