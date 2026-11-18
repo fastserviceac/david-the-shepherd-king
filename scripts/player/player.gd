@@ -711,7 +711,7 @@ func hurt(amount: int, from_x: float, kind: String = "body") -> bool:
 		shake = 3.0
 		velocity.x = -facing * 70.0
 		Game.buzz(20)
-		Game.sfx("logs", -9.0, 0.12, 1.3)
+		Game.sfx("shield_block", -6.0, 0.1)
 		if level != null and level.has_method("blocked"):
 			level.blocked(from_x)
 		return false

@@ -43,6 +43,8 @@ const AMBIENT_EVENTS := {
 	"dusk": [["cricket", -17.0], ["cricket", -20.0], ["gust", -16.0], ["owl", -18.0]],
 	"night": [["gust", -13.0], ["owl", -17.0], ["cricket", -22.0], ["gust", -17.0]],
 	"dawn": [["bird1", -14.0], ["bird2", -15.0], ["rooster", -19.0], ["bird2", -19.0]],
+	"town": [["dog_far", -20.0], ["goat", -24.0], ["voices_far", -19.0], ["gust", -18.0], ["bird2", -21.0]],
+	"hall": [["lamp_sputter", -20.0], ["robe", -22.0], ["lamp_sputter", -23.0], ["voices_far", -26.0]],
 }
 var _sfx_pool: Array = []
 var _sfx_next := 0

@@ -203,7 +203,7 @@ func donkey_balked(d) -> void:
 func _bray(mx: float) -> void:
 	bray_cd = 2.5
 	brays += 1
-	Game.sfx("land", -4.0, 0.1, 0.7)      # a stamp of the hoof: the bray itself is a sound still to be made
+	Game.sfx("donkey_bray", -4.0, 0.08)
 	var k := MULES.find(mx)
 	if k >= 0 and is_instance_valid(mules[k]):
 		actor_play(mules[k], "mule", "bray", 10.0, -1.0, 1.0, 1.4, true)

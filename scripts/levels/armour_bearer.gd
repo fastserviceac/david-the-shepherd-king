@@ -57,7 +57,7 @@ var end_task: Dictionary
 
 func _setup() -> void:
 	mood = "theme_tender"
-	ambience = "pastures"
+	ambience = "town"
 	backdrop_art = "res://art/c2_yard_backdrop.png"
 	midground_art = "res://art/c2_yard_mid.png"      # the Gate's wall band, re-lit for day by tools/yard_day.py
 	width = 2650.0
@@ -229,6 +229,7 @@ func _arms() -> void:
 ## The king's shield and spear are put into his hands, or taken back.
 func bear(on: bool) -> void:
 	player.shield = on
+	Game.sfx("armour", -6.0, 0.05, 1.0 if on else 0.9)
 	if on:
 		player.stop_lyre(false)
 		player.charging = false

@@ -64,7 +64,7 @@ var wait_task: Dictionary
 
 func _setup() -> void:
 	mood = "theme_tender"
-	ambience = "dusk"
+	ambience = "town"
 	backdrop_art = "res://art/c2_gibeah_backdrop.png"
 	midground_art = "res://art/c2_gibeah_mid.png"
 	width = 4850.0
@@ -276,7 +276,7 @@ func _ask() -> void:
 		youth.position = on_ground(GATE_X + 70.0) + Vector2(0, 4)
 		youth.visible = true
 	await say(["n_c2s3_ask", "1sam16_18", "n_c2s3_open"])
-	Game.sfx("logs", -6.0, 0.05, 0.8)
+	Game.sfx("gate_open", -4.0, 0.03)
 	enter_task["on"] = true
 
 
@@ -331,7 +331,8 @@ func _hand_over() -> void:
 	if given >= LOAD.size():
 		return
 	given += 1
-	Game.sfx("gather", -8.0, 0.05)
+	if given < LOAD.size():
+		Game.sfx("parcel", -6.0, 0.05)
 	ears["store"]["calm"] = maxf(0.0, float(ears["store"]["calm"]) - TAKE)
 	if given < LOAD.size():
 		give_task["text"] = LOAD[given]
@@ -339,7 +340,7 @@ func _hand_over() -> void:
 	give_task["on"] = false
 	ears["store"]["on"] = false
 	donkey.led = false
-	Game.sfx("lamb", -10.0, 0.1)
+	Game.sfx("goat", -8.0, 0.08)
 	if is_instance_valid(kid):
 		kid.visible = false          # the steward's boy has taken it to the pens
 	wait_task["on"] = true

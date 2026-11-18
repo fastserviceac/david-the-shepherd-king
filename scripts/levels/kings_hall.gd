@@ -81,7 +81,7 @@ func _tune() -> void:
 
 func _setup() -> void:
 	mood = "theme_tender"
-	ambience = "dusk"
+	ambience = "hall"
 	backdrop_art = "res://art/c2_hall_backdrop.png"
 	width = 1280.0
 	barren = true
@@ -425,6 +425,7 @@ func _physics_process(delta: float) -> void:
 				swell_wait = swell_every * gentle
 				swell_on = swell_long
 				swell_kind = 1 - swell_kind
+				Game.sfx("shadow_rise", -8.0, 0.05)
 				_swell_begins()
 		if shadow < TOP_CREEP:
 			shadow = minf(TOP_CREEP, shadow + (creep + swell_creep * swell) * delta / gentle)

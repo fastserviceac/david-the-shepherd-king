@@ -54,7 +54,7 @@ var pose_hold := 0
 
 
 func _tune() -> void:
-	ambience = "night"
+	ambience = "hall"
 	if ResourceLoader.exists(NIGHT_ART):          # the hall's own night painting, when it has been made
 		backdrop_art = NIGHT_ART
 	up = 0.16
@@ -192,12 +192,12 @@ func _gutter(i: int) -> void:
 	if L["task"] != null:
 		L["task"]["on"] = true
 	if not Game.fast:
-		Game.sfx("gust", -14.0, 0.1)
+		Game.sfx("lamp_gutter", -8.0, 0.1)
 
 
 func _tend(i: int) -> void:
 	_light(i)
-	Game.sfx("ui_move", -8.0, 0.0, 1.3)
+	Game.sfx("lamp_light", -6.0, 0.08)
 
 
 func lamps_out() -> int:
@@ -298,7 +298,7 @@ func _next_wave() -> void:
 	swell_wait = swell_every * 0.4
 	shadow = maxf(shadow, start_shadow)
 	if not Game.fast:
-		Game.sfx("gust", -10.0, 0.0, 0.7)
+		Game.sfx("shadow_rise", -5.0, 0.0, 0.85)
 	show_tip("It comes again, and stronger.  Sit and play (R)" if wave < WAVES.size() - 1 else "The last of it, and the worst.  Sit and play (R)", 6.0)
 
 
