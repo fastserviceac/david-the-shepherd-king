@@ -167,3 +167,16 @@ run $V/c2_bearer_2 $D bear mode=loop double=0 href=605 step=1 soft=1 steady=40
 # indoors he sits on a stool, not a stone (tools/src/clips/c2/lyre_stool.mp4, start tools/src/art_in/c2/david_stool_start.png)
 run $V/lyre_stool $D lyre_in mode=range a=8 b=196 step=4 href=603 soft=1 steady=999 wide=1.6
 # the Night Fit's own painting: cp tools/src/art_in/c2/c2_night_hall_backdrop.png tools/src/art_in/ ; python3 tools/scenery.py c2_night_hall
+
+# Chapter One, going back: the wild goat and the jackal's pups (Higgsfield seedance_2_0 clips tools/src/beasts/{goat_walk,
+# goat_run,goat_graze,goat_leap,pup_walk,pup_idle}.mp4 from tools/src/goat_start.png and pup_start.png; frames extracted with
+# ffmpeg -vf fps=24 into <dir>/<clip>/f%03d.png). Each set is cut at its walk's standing height, so a pose keeps its true size.
+run $V/goat_walk art/goat/anim walk key=blue mode=loop double=1 wide=1.5 tall=1.4 size=110 erode=3
+run $V/goat_run art/goat/anim run key=blue mode=loop double=1 wide=1.5 tall=1.4 size=110 erode=3 href=601
+run $V/goat_graze art/goat/anim graze key=blue mode=range a=0 b=120 step=3 hframe=0 wide=1.5 tall=1.4 size=110 erode=3 href=601
+run $V/goat_leap art/goat/anim leap key=blue mode=range a=0 b=120 step=2 hframe=0 wide=1.5 tall=2.7 size=110 erode=3 href=601
+run $V/pup_walk art/pup/anim walk key=blue mode=loop double=1 wide=1.8 tall=1.4 size=110 erode=3 grow=2
+run $V/pup_idle art/pup/anim idle key=blue mode=range a=0 b=120 step=3 hframe=0 wide=1.8 tall=1.4 size=110 erode=3 grow=2 href=371
+# the graze clip has a grass tuft at its feet and the leap a puff of dust on landing: clear the ground under them
+python3 tools/ground_clean.py art/goat/anim graze
+python3 tools/ground_clean.py art/goat/anim leap

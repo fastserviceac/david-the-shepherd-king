@@ -680,7 +680,7 @@ func _card(secs: Array) -> void:
 	# what waits here for a gift given later: the reason to come back
 	var later: Dictionary = pl.get("later", {})
 	for sid in later:
-		if sid in Game.stones():
+		if sid in Game.stones() or sid in Game.places():
 			continue
 		var gname: String = Game.t(Game.GIFTS[later[sid]]["name"])
 		var can: bool = Game.has(later[sid])
@@ -928,7 +928,7 @@ func _build_fort() -> Dictionary:
 func _reach_now(pl: Dictionary) -> bool:
 	var later: Dictionary = pl.get("later", {})
 	for sid in later:
-		if not sid in Game.stones() and Game.has(later[sid]):
+		if not sid in Game.stones() and not sid in Game.places() and Game.has(later[sid]):
 			return true
 	return false
 

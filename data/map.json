@@ -256,10 +256,15 @@
     [
      "cistern",
      "The Hewn Cistern"
+    ],
+    [
+     "twin",
+     "The Lost Twin"
     ]
    ],
    "later": {
-    "s2_leap": "feet"
+    "s2_leap": "feet",
+    "twin": "walksong"
    }
   },
   "wadi": {
@@ -280,10 +285,15 @@
     [
      "refuge",
      "The Refuge"
+    ],
+    [
+     "goats",
+     "The Wild Goats"
     ]
    ],
    "later": {
-    "wadi_leap": "feet"
+    "wadi_leap": "feet",
+    "goats": "walksong"
    }
   },
   "den": {
@@ -293,7 +303,16 @@
    "stones": [
     "den_pocket",
     "den_roof"
-   ]
+   ],
+   "finds": [
+    [
+     "pups",
+     "The Jackal's Pups"
+    ]
+   ],
+   "later": {
+    "pups": "nightsong"
+   }
   },
   "section3": {
    "lat": 31.649,

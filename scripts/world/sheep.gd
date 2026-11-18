@@ -11,6 +11,7 @@ var gathered := false
 var gatherable := true
 var follow_index := 0
 var size := 1.0
+var kind := "sheep"       # whose pictures it wears (art/<kind>/anim): a wild goat is a sheep in everything but its looks
 var wool := Color(1, 1, 1)
 var face := 1.0
 var t := 0.0
@@ -86,7 +87,7 @@ func rouse() -> void:
 	calm = 0.0
 	if rest_t >= 0.0:
 		rest_t = -1.0
-		if not FA.frames("sheep", "lie").is_empty():
+		if not FA.frames(kind, "lie").is_empty():
 			rise_t = 0.0          # it gets up the way a sheep does, hind legs first, before it goes anywhere
 	if not is_nan(held_x) and stay == held_x:
 		stay = NAN
@@ -225,44 +226,44 @@ func _walk(vx: float, delta: float) -> void:
 func _draw() -> void:
 	var lift := -absf(sin(hop * PI)) * 9.0 * hop      # one small start, not a bounce
 	var tex: Texture2D
-	var jump: Array = FA.frames("sheep", "leap")
+	var jump: Array = FA.frames(kind, "leap")
 	if leap >= 0.0 and not jump.is_empty():
 		tex = jump[clampi(int(clampf(leap, 0.0, 1.0) * (jump.size() - 1)), 0, jump.size() - 1)]
 		FA.draw(self, tex, face, 0.46 * size, wool, 2.7, 0.0, Vector2.ZERO, Vector2.ONE, lift)
 		return
 	var tall := 1.4
-	if pose != "" and not FA.frames("sheep", pose).is_empty():
-		var pf: Array = FA.frames("sheep", pose)
+	if pose != "" and not FA.frames(kind, pose).is_empty():
+		var pf: Array = FA.frames(kind, pose)
 		pose_t += get_process_delta_time()
 		tex = pf[mini(int(pose_t * pose_fps), pf.size() - 1)] if pose_once else FA.pingpong(pf, pose_t, pose_fps)
 		tall = pose_tall
 	elif moving:
 		rest_t = -1.0
-		var arr: Array = FA.frames("sheep", "walk")
-		var rn: Array = FA.frames("sheep", "run")
+		var arr: Array = FA.frames(kind, "walk")
+		var rn: Array = FA.frames(kind, "run")
 		if (bolt > 0.0 or pace > 185.0) and not rn.is_empty():      # bolting, or hurrying to keep up: a real run
 			arr = rn
 		gait += get_process_delta_time() * clampf(8.0 + pace * 0.16, 10.0, 46.0)      # legs keep time with the ground covered
 		tex = arr[int(gait) % arr.size()]
-	elif rise_t >= 0.0 and not FA.frames("sheep", "lie").is_empty():
+	elif rise_t >= 0.0 and not FA.frames(kind, "lie").is_empty():
 		# getting up: its own lying down played back (the same cut sheep, so it leaves the rest pose exactly)
-		var up: Array = FA.frames("sheep", "lie")
+		var up: Array = FA.frames(kind, "lie")
 		tex = up[clampi(up.size() - 1 - int(rise_t / RISE_S * up.size()), 0, up.size() - 1)]
-	elif calm > 0.0 and not FA.frames("sheep", "lie").is_empty() and not FA.frames("sheep", "rest").is_empty():
+	elif calm > 0.0 and not FA.frames(kind, "lie").is_empty() and not FA.frames(kind, "rest").is_empty():
 		# quieted by the song and standing still: it lies down on its chest, then rests there, chewing
 		if rest_t < 0.0:
 			rest_t = 0.0
 		rest_t += get_process_delta_time()
-		var down: Array = FA.frames("sheep", "lie")
+		var down: Array = FA.frames(kind, "lie")
 		if rest_t < LIE_S:
 			tex = down[clampi(int(rest_t / LIE_S * down.size()), 0, down.size() - 1)]
 		else:
-			tex = FA.pingpong(FA.frames("sheep", "rest"), rest_t - LIE_S, 6.0)
-	elif (worried > 0.0 or (restless and calm <= 0.0)) and not FA.frames("sheep", "uneasy").is_empty():
-		tex = FA.pingpong(FA.frames("sheep", "uneasy"), t, 9.0)      # head high, a stamp, a look behind
+			tex = FA.pingpong(FA.frames(kind, "rest"), rest_t - LIE_S, 6.0)
+	elif (worried > 0.0 or (restless and calm <= 0.0)) and not FA.frames(kind, "uneasy").is_empty():
+		tex = FA.pingpong(FA.frames(kind, "uneasy"), t, 9.0)      # head high, a stamp, a look behind
 	else:
 		# standing: graze, look up, graze again (played forward then back)
-		var g: Array = FA.frames("sheep", "graze")
+		var g: Array = FA.frames(kind, "graze")
 		var n := g.size()
 		var k := int(t * (5.0 if calm > 0.0 else 12.0)) % maxi(1, 2 * n - 2)      # settled, it grazes slowly
 		tex = g[k if k < n else 2 * n - 2 - k]

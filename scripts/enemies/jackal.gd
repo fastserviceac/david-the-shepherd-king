@@ -7,6 +7,10 @@ var worrying := 0.0      # seconds since it was last at a sheep's side
 var home_y := INF        # the height of the ground it was set down on
 var alert := 0.0         # seconds it will keep hunting after it has lost sight of him
 var last_seen := 0.0     # where it last had him
+var size := 1.0          # how large it is drawn: a pup is small
+var dam = null           # a pup: the bitch it keeps beside, and goes wherever she goes
+var lag := 0.0           # where a pup keeps to, measured from her
+var going_to := NAN      # leaving quietly, the song still in its ears: where it walks to, and is gone
 const DROP := 64.0       # it will go down a step this deep after him, and spring up one as high
 
 
@@ -65,7 +69,33 @@ func _footing() -> void:
 		velocity.y = -470.0
 
 
+## One that has no quarrel with him: a pup keeping by its dam, or a beast the song has sent on its way.
+func meek() -> bool:
+	return dam != null or not is_nan(going_to)
+
+
+func _meek(delta: float) -> void:
+	touch_on = false
+	var to := global_position.x
+	if not is_nan(going_to):
+		to = going_to
+	elif is_instance_valid(dam):
+		to = dam.global_position.x + lag
+	var dx := to - global_position.x
+	var want := 0.0 if absf(dx) < 12.0 else signf(dx) * minf(absf(dx) * 3.0 + 20.0, 120.0)
+	velocity.x = move_toward(velocity.x, want, 600.0 * delta)
+	if absf(velocity.x) > 6.0:
+		dir = 1 if velocity.x > 0.0 else -1
+	if not is_nan(going_to) and absf(dx) < 40.0:      # into the dark, and gone
+		modulate.a -= delta * 1.2
+		if modulate.a <= 0.0:
+			queue_free()
+
+
 func _ai(delta: float) -> void:
+	if meek():
+		_meek(delta)
+		return
 	if is_on_floor() and home_y == INF:
 		home_y = global_position.y
 	if global_position.y > home_y + 600.0:      # knocked into a pit: that is the end of its hunting
@@ -163,6 +193,13 @@ func _worry(_delta: float, dx: float, dy: float) -> bool:
 
 
 func _draw() -> void:
+	if meek():
+		var idle: Array = FA.frames(anim, "idle")
+		if absf(velocity.x) < 8.0 and not idle.is_empty():
+			show_frame(FA.pingpong(idle, t, 8.0), 0.5 * size, 1.4)
+		else:
+			show_frame(walk_frame(), 0.5 * size, 1.4)
+		return
 	var wr: Array = FA.frames("jackal", "worry")
 	var rn: Array = FA.frames("jackal", "run")
 	if not is_on_floor() and not fleeing:

@@ -1795,6 +1795,8 @@ func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(player) or Game.backdrop or done:
 		return
 	var px: float = player.global_position.x
+	_update_led(_delta)
+	_update_dams(_delta)
 
 	if player.global_position.y > 800.0 and not respawning:
 		respawn()
@@ -1967,6 +1969,7 @@ func song(from: Vector2, reach: float, walking: bool = false) -> void:
 			if not sg["again"]:
 				sg["on"] = false
 			sg["fn"].call()
+	_dam_song(from, reach)
 	_on_song(from, n)
 
 
@@ -1976,7 +1979,7 @@ func _on_song(_from: Vector2, _settled: int) -> void:
 
 ## One phrase has landed (`feet`: he is playing on his feet), or was let go too soon. For a section to answer.
 func phrase(_from: Vector2, _feet: bool) -> void:
-	pass
+	led_hear(_from, _feet)
 
 
 func phrase_lost(_from: Vector2, _feet: bool) -> void:
@@ -2403,3 +2406,230 @@ func _draw_prompt(ci: CanvasItem) -> void:
 	if prompt_bar > 0.0:
 		ci.draw_rect(Rect2(-40.0, 12.0, 80.0, 4.0), Color(0, 0, 0, 0.45 * a))
 		ci.draw_rect(Rect2(-40.0, 12.0, 80.0 * prompt_bar, 4.0), Color(1.0, 0.88, 0.6, 0.95 * a))
+
+
+# ------------------------------------------------------------ going back: what would not come to him before
+
+const LED_HEARS := 340.0     # how near a phrase must land for a wild thing to hear it
+const LED_QUIET := 5.0       # seconds it goes on following after a phrase has landed
+const LED_SHY := 150.0       # nearer than this with no song in its ears, and it is off
+var wilds: Array = []          # wild things the song can lead: {id, name, craft, herd, home, lo, hi, quiet, shy, told, perch}
+var dams: Array = []         # a bitch with her pups, lying in the way: {id, name, craft, x, x0, x1, out, bitch, pups, back, gone}
+
+
+## Something that will not come to his hand or to his call: it keeps its distance on its own ground (`lo`..`hi`),
+## and only the lyre played on his feet (the Walking Song) brings it after him, for as long as the phrases keep
+## landing. Brought to `home` (a place, or a creature it belongs with) it is his find: "n_place_<id>" is its story.
+## `herd` is a list of [x, size] to stand there; `kind` whose pictures they wear, `lamb` the lamb's own colouring.
+## `perch`: they stand up on this rock (its top) until the song first reaches them, and come down to it.
+## Nothing is made unless that animal's own pictures are painted (the automated tests alone get the sheep's).
+func add_led(id: String, name: String, craft: String, herd: Array, home, lo: float, hi: float,
+		kind: String = "sheep", perch = null) -> Dictionary:
+	if Game.backdrop or id in Game.places():
+		return {}
+	var real: bool = not FA._paths(kind, "walk").is_empty() and not FA._paths(kind, "graze").is_empty()
+	if not real and not Game.fast:
+		return {}
+	var e := {"id": id, "name": name, "craft": craft, "herd": [], "home": home, "lo": lo, "hi": hi,
+		"quiet": 0.0, "shy": 0.0, "told": false, "perch": perch}
+	for h in herd:
+		var s = Sheep.new()
+		s.level = self
+		s.wool = pal["wool"]
+		s.kind = kind if real else "sheep"
+		s.size = float(h[1])
+		s.gathered = true            # it goes where it is sent: to its spot, or after him while the song holds
+		s.gatherable = false
+		s.safe = true
+		s.follow_index = e["herd"].size()
+		s.position = Vector2(float(h[0]), (perch as Vector2).y) if perch != null else on_ground(float(h[0]))
+		s.stay = s.position.x
+		s.max_speed = 0.0 if perch != null else 150.0
+		add_child(s)
+		e["herd"].append(s)
+	wilds.append(e)
+	return e
+
+
+## A phrase has landed: a wild thing near enough to hear it will follow, if he is playing on his feet.
+func led_hear(from: Vector2, feet: bool) -> void:
+	for e in wilds:
+		if e["herd"].is_empty() or not is_instance_valid(e["herd"][0]):
+			continue
+		if absf(from.x - e["herd"][0].global_position.x) > LED_HEARS:
+			continue
+		if not feet:
+			if not e["told"]:
+				e["told"] = true
+				show_tip("A head lifts to the lyre, but nothing stirs.  A song that walked might be followed", 7.0)
+			continue
+		e["quiet"] = LED_QUIET * float(Game.diff()["warning"]) * Game.song_hold()
+		if e["perch"] != null:
+			_led_down(e)
+
+
+## Down off the rock they stood on, to the ground beside him.
+func _led_down(e: Dictionary) -> void:
+	e["perch"] = null
+	var n := 0
+	for s in e["herd"]:
+		s.max_speed = 150.0
+		s.leap_a = s.global_position
+		s.leap_b = on_ground(clampf(player.global_position.x - player.facing * (60.0 + n * 40.0), e["lo"], e["hi"]))
+		s.leap_dur = 0.7
+		s.leap = 0.0
+		s.face = signf(s.leap_b.x - s.leap_a.x)
+		n += 1
+	Game.sfx("sheep", -8.0, 0.2)
+
+
+func _update_led(delta: float) -> void:
+	for e in wilds.duplicate():
+		var first = e["herd"][0] if not e["herd"].is_empty() else null
+		if not is_instance_valid(first):
+			wilds.erase(e)
+			continue
+		e["quiet"] = maxf(0.0, float(e["quiet"]) - delta)
+		e["shy"] = maxf(0.0, float(e["shy"]) - delta)
+		var to: Vector2 = player.global_position - first.global_position
+		var near: bool = absf(to.x) < LED_SHY and absf(to.y) < 90.0
+		if e["perch"] != null:          # up on their rock: they watch him come, and will not be called down
+			if near and not e["told"]:
+				e["told"] = true
+				_led_tip()
+			continue
+		if float(e["quiet"]) > 0.0:
+			var home = e["home"]
+			if home is Object and not is_instance_valid(home):
+				home = null
+			var hx: float = home.global_position.x if home is Object else (float(home) if home != null else INF)
+			for s in e["herd"]:
+				s.stay = NAN
+				s.max_speed = 150.0
+			if absf(first.global_position.x - hx) < 80.0:
+				_led_home(e)
+			continue
+		for s in e["herd"]:
+			if is_nan(s.stay):
+				s.stay = s.global_position.x          # the song has worn off: it stops where it is
+		if near and float(e["shy"]) <= 0.0 and first.leap < 0.0:
+			e["shy"] = 1.4
+			var sx: float = first.global_position.x
+			var away := clampf(sx - signf(to.x) * 280.0, e["lo"], e["hi"])
+			if absf(away - sx) < 80.0:          # cornered at the end of its ground: it breaks back past him
+				away = e["lo"] if sx > (float(e["lo"]) + float(e["hi"])) * 0.5 else e["hi"]
+			var n := 0
+			for s in e["herd"]:
+				s.stay = clampf(away - signf(away - sx) * n * 36.0, e["lo"], e["hi"])
+				s.max_speed = 300.0
+				s.hop = 1.0
+				n += 1
+			Game.sfx("lamb" if first.size < 0.9 else "sheep", -8.0, 0.2)
+			if not e["told"]:
+				e["told"] = true
+				_led_tip()
+
+
+func _led_tip() -> void:
+	if Game.has("walksong"):
+		show_tip("What is wild follows the lyre and nothing else.  Play as you walk (R), and keep the phrases landing", 8.0)
+	else:
+		show_tip("Too wild for his hand or his call.  Something to come back for", 7.0)
+
+
+func _led_home(e: Dictionary) -> void:
+	wilds.erase(e)
+	var home = e["home"]
+	for s in e["herd"]:
+		s.safe = true
+		s.hop = 1.0
+		if home is Object:          # it belongs with her now, and goes where she goes
+			s.stay = NAN if home.gathered else home.global_position.x + 34.0
+		else:
+			s.stay = s.global_position.x
+		s.settle(6.0, false)
+	_find_led(e["id"], e["name"], e["craft"], e["herd"][0].global_position)
+
+
+func _find_led(id: String, name: String, craft: String, at: Vector2) -> void:
+	Game.sfx("anoint", -9.0, 0.0)
+	Game.sfx("gather", -6.0, 0.0)
+	Game.burst(self, at + Vector2(0, -40), Color(1.0, 0.9, 0.65, 0.8), 18, 110.0)
+	player.hp = player.max_hp
+	Game.find_place(id, name, craft)
+	say(["n_place_" + id])
+
+
+## A jackal bitch lying across the way with her pups about her (`pups`: how many). She will not be driven from
+## them: beaten off, she is back. A song leaves her standing only as long as it lasts; the Night Song, whose quiet
+## holds, is long enough for her to take them up and go (`out`: where she goes). Then the way is his find.
+## Nothing is made unless the pups' own pictures are painted (the automated tests alone get the jackal's).
+func add_dam(id: String, name: String, craft: String, x: float, x0: float, x1: float, out: float, pups: int = 3) -> Dictionary:
+	if Game.backdrop or id in Game.places():
+		return {}
+	var real: bool = not FA._paths("pup", "walk").is_empty()
+	if not real and not Game.fast:
+		return {}
+	var d := {"id": id, "name": name, "craft": craft, "x": x, "x0": x0, "x1": x1, "out": out, "bitch": null,
+		"pups": [], "back": 0.0, "gone": false, "told": false}
+	d["bitch"] = add_jackal(x, x0, x1)
+	for i in pups:
+		var p = add_jackal(x + 26.0 + i * 22.0, x0, x1)
+		p.anim = "pup" if real else "jackal"
+		p.size = 0.42 + 0.05 * (i % 2)
+		p.stride = 70.0
+		p.dam = d["bitch"]
+		p.lag = 26.0 + i * 22.0
+		p.touch_on = false
+		p.remove_from_group("hittable")      # no blow of his lands on a pup
+		p.remove_from_group("enemies")
+		p.collision_layer = 0
+		d["pups"].append(p)
+	dams.append(d)
+	return d
+
+
+func _dam_song(from: Vector2, reach: float) -> void:
+	for d in dams:
+		var b = d["bitch"]
+		if d["gone"] or not is_instance_valid(b) or b.fleeing or absf(from.x - b.global_position.x) > reach:
+			continue
+		if not Game.has("nightsong"):
+			b.startle()
+			if not d["told"]:
+				d["told"] = true
+				show_tip("She stills while the song lasts, and no longer.  A quiet that held would be time enough for her to move them", 8.0)
+			continue
+		d["gone"] = true
+		b.going_to = float(d["out"])
+		b.remove_from_group("hittable")
+		b.remove_from_group("enemies")
+		for p in d["pups"]:
+			if is_instance_valid(p):
+				p.going_to = float(d["out"])
+
+
+func _update_dams(delta: float) -> void:
+	for d in dams.duplicate():
+		var b = d["bitch"]
+		var here: bool = is_instance_valid(b) and not b.fleeing
+		if d["gone"]:
+			if not is_instance_valid(b):          # she is away into the dark: the pups go in after her
+				for p in d["pups"]:
+					if is_instance_valid(p):
+						p.queue_free()
+				dams.erase(d)
+				_find_led(d["id"], d["name"], d["craft"], on_ground(float(d["x"])))
+			continue
+		if here:
+			continue
+		d["back"] = float(d["back"]) + delta          # driven off: she does not stay away from them
+		if float(d["back"]) > 4.0 and not is_instance_valid(b):
+			d["back"] = 0.0
+			d["bitch"] = add_jackal(float(d["out"]), float(d["x0"]), float(d["x1"]))
+			for p in d["pups"]:
+				if is_instance_valid(p):
+					p.dam = d["bitch"]
+			if not d["told"]:
+				d["told"] = true
+				show_tip("She is back.  She will not be driven from her pups", 6.0)

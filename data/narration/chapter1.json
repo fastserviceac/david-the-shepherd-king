@@ -326,6 +326,16 @@
   },
   "n_lamb_dawn": {
    "text": "By morning it stood and followed her. From that day it followed him too."
+  },
+  "n_place_twin": {
+   "text": "The ewe had dropped two lambs, and one had been lost to her up the ravine. It came down behind the lyre, and she knew it by its smell, and let it suck."
+  },
+  "n_place_goats": {
+   "text": "The wild goats came down off their crag and went at his heel, as if they were his own. The high mountains are for the wild goats; no man feeds them there.",
+   "ref": "Psalm 104:18"
+  },
+  "n_place_pups": {
+   "text": "She rose, and her pups after her, and they went away into the dark. He had not lifted his staff, and the way was open."
   }
  }
 }

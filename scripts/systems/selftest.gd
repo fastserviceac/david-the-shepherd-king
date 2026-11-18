@@ -67,9 +67,15 @@ func smoke(m) -> void:
 		match str(Game.sections()[i]["script"]).get_file().get_basename():
 			"section1": await _s1(lv)
 			"well": await _well(lv)
-			"section2": await _s2(lv)
-			"wadi": await _wadi(lv)
-			"den": await _den(lv)
+			"section2":
+				await _led(lv, "twin")
+				await _s2(lv)
+			"wadi":
+				await _led(lv, "goats")
+				await _wadi(lv)
+			"den":
+				await _dam(lv)
+				await _den(lv)
 			"section3": await _s3(lv)
 			"watch": await _watch(lv)
 			"section4": await _s4(lv)
@@ -1068,7 +1074,7 @@ func _s1(lv) -> void:
 		for e in mapd["places"][key].get("finds", []):
 			if Game.narration.has("n_place_" + e[0]) and Game.narration_pt.has("n_place_" + e[0]) and Game._ui_pt.has(e[1]):
 				told += 1
-	_check(told == 8, "each place off the path has its story in both languages (%d)" % told)
+	_check(told == 11, "each place off the path has its story in both languages (%d)" % told)
 	var kept: float = Game.craft_xp("hand")       # the player's own progress is put back afterwards
 	Game.save["growth"] = Game.save.get("growth", {})
 	Game.save["growth"]["hand"] = 0.0
@@ -2811,3 +2817,75 @@ func flow(m, dir: String) -> void:
 	Game.force_ready = false
 	print("FLOW %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	tree.quit(0 if failures == 0 else 1)
+
+
+## Going back: a wild thing keeps off him, hears only the lyre played walking, follows while the phrases land, and
+## brought home is his find.
+func _led(lv, id: String) -> void:
+	var e := {}
+	for x in lv.wilds:
+		if x["id"] == id:
+			e = x
+	_check(not e.is_empty(), "going back: there is something here to lead (%s)" % id)
+	if e.is_empty():
+		return
+	var p = lv.player
+	var was: Vector2 = p.global_position
+	var had: Array = Game.places().duplicate()
+	var s = e["herd"][0]
+	var x0: float = s.global_position.x
+	var up: bool = e["perch"] != null
+	p.global_position = s.global_position + Vector2(-90.0, 0.0)
+	p.velocity = Vector2.ZERO
+	await _frames(30)
+	if up:
+		_check(absf(s.global_position.x - x0) < 2.0 and e["perch"] != null, "up on their rock they only watch him come")
+	else:
+		_check(absf(s.stay - x0) > 60.0, "it runs from him when he comes near")
+	p.global_position = s.global_position + Vector2(-200.0, 0.0)
+	lv.led_hear(p.global_position, false)
+	_check(float(e["quiet"]) <= 0.0, "a song played standing does not move it")
+	lv.led_hear(p.global_position, true)
+	await _frames(70)
+	_check(float(e["quiet"]) > 0.0 and is_nan(s.stay) and e["perch"] == null and absf(s.global_position.y - lv.on_ground(s.global_position.x).y) < 30.0,
+			"the lyre played walking brings it down and after him")
+	e["home"] = s.global_position.x + 20.0
+	lv.led_hear(p.global_position, true)
+	await _frames(5)
+	_check(id in Game.places() and lv.wilds.is_empty(), "brought home, it is his find")
+	Game.save["places"] = had
+	p.global_position = was
+	p.velocity = Vector2.ZERO
+	p.hp = p.max_hp
+	await _frames(5)
+
+
+## Going back: the jackal bitch will not leave her pups for a blow or a short song; the Night Song moves them all.
+func _dam(lv) -> void:
+	var p = lv.player
+	var was: Vector2 = p.global_position
+	var had: Array = Game.places().duplicate()
+	var gifts: Array = Game.save.get("gifts", []).duplicate()
+	var g: Array = gifts.duplicate()
+	g.erase("nightsong")
+	Game.save["gifts"] = g
+	var d: Dictionary = lv.add_dam("pups", "The Jackal's Pups", "heart", was.x + 260.0, was.x + 180.0, was.x + 420.0, was.x + 520.0)
+	_check(not d.is_empty() and d["pups"].size() == 3 and d["pups"][0].meek() and not d["bitch"].meek(), "going back: a bitch lies in the way with her pups")
+	await _frames(20)
+	lv._dam_song(p.global_position, 600.0)
+	_check(not d["gone"], "a song whose quiet does not hold leaves her where she is")
+	d["bitch"].drive_off()
+	await _frames(400)
+	_check(is_instance_valid(d["bitch"]) and not d["bitch"].fleeing and is_instance_valid(d["pups"][0]), "driven off, she comes back to them")
+	g.append("nightsong")
+	Game.save["gifts"] = g
+	lv._dam_song(d["bitch"].global_position, 600.0)
+	_check(d["gone"] and d["bitch"].meek(), "the Night Song gives her time to take them away")
+	await _frames(600)
+	_check("pups" in Game.places() and lv.dams.is_empty() and not is_instance_valid(d["pups"][0]), "and when they are gone the way is his find")
+	Game.save["places"] = had
+	Game.save["gifts"] = gifts
+	p.global_position = was
+	p.velocity = Vector2.ZERO
+	p.hp = p.max_hp
+	await _frames(5)

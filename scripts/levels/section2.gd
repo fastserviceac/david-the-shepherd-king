@@ -93,6 +93,11 @@ func _populate() -> void:
 		ewe.gatherable = true
 		add_glow(ewe.position + Vector2(0, -16), Color(1.0, 0.9, 0.7, 0.5), 180.0)
 		say(["n_s2_ewe_safe"]))
+	# going back: she dropped two lambs, and one is still up the ravine. It runs from him as it runs from everything,
+	# until he can play on his feet; then it can be brought down the whole ravine to her
+	# (not on his first way up: a lamb crying in this ravine then would be taken for the one he is after)
+	if Game._past("section2") or Game.fast:
+		add_led("twin", "The Lost Twin", "voice", [[6720.0, 0.6]], ewe, 5860.0, 6870.0)
 	_trial()
 	add_jackal(3450.0, 3300.0, 3660.0)
 	add_jackal(4600.0, 4300.0, 4950.0)

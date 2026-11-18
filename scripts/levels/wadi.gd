@@ -71,6 +71,9 @@ func _populate() -> void:
 	# off the path: beyond the leap, the bare crag where the wild goats go
 	var crag := add_perch(4650.0, 182.0, 220.0)
 	add_place("crag", crag, "The Goats' Crag", "feet")
+	# going back: the goats themselves, up on it. No call brings them down; the lyre played walking does, and they
+	# can be led down the bed of the wadi to the shelter of the refuge
+	add_led("goats", "The Wild Goats", "feet", [[crag.x - 50.0, 1.0], [crag.x + 44.0, 0.82]], c3["x0"] + 280.0, 2800.0, 5650.0, "goat", crag)
 	add_stone("wadi_start", on_ground(46.0))
 	add_stone("wadi_shelf", Vector2(2420.0, shelf.position.y))
 	add_stone("wadi_leap", Vector2(4540.0, platforms[6].position.y))

@@ -83,6 +83,9 @@ func _populate() -> void:
 	add_jackal(1560.0, 900.0, 1680.0)
 	add_jackal(2700.0, 2630.0, 2800.0)
 	add_trigger(2180.0, 2300.0, func() -> void: say(["n_den_draught"]))
+	# going back: the bear is gone, and a jackal bitch has whelped in the gallery it kept the others out of
+	if Game._past("den"):
+		add_dam("pups", "The Jackal's Pups", "heart", 1990.0, 1900.0, 2170.0, 2420.0)
 
 	# the heart of the cave: a shaft in the roof lets the moon in
 	add_light(Vector2(3900.0, 400.0), 360.0)
