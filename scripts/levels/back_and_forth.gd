@@ -220,9 +220,10 @@ func _populate() -> void:
 	add_sprite("res://art/props/fold.png", on_ground(NIGHT_FOLD_X) + Vector2(0, 14), 1.5, 1)
 	devorah = add_sheep(NIGHT_FOLD_X - 40.0, null, false, "devorah")
 	devorah.gatherable = false
-	add_sprite("res://art/props/threshing.png", on_ground(FLOOR_X) + Vector2(0, 16), 1.0, 1, tint)
-	add_sprite("res://art/props/well.png", on_ground(WELL_X) + Vector2(0, 8), 1.0, 1, tint)
-	add_sprite("res://art/props/trough.png", on_ground(WELL_X + 150.0) + Vector2(0, 8), 1.0, 2, tint)
+	# the same yard as the Summons, at the Summons' sizes (at 1.0 the painted props stand giant beside David)
+	add_seated("res://art/props/threshing.png", on_ground(FLOOR_X), 400.0, 1, tint, 30.0)
+	_prop_wide("res://art/props/well.png", on_ground(WELL_X) + Vector2(0, 8), 170.0, 1, tint)
+	_prop_wide("res://art/props/trough.png", on_ground(WELL_X + 150.0) + Vector2(0, 10), 128.0, 2, tint)
 	keeper = add_person("keeper", KEEPER_X, 1.0, true)
 	add_sprite("res://art/props/fold.png", on_ground(FOLD_X) + Vector2(0, 14), 1.5, 1)
 	for i in PEN.size():
@@ -702,7 +703,10 @@ func _news() -> void:
 
 
 func _end() -> void:
-	await say(["n_c2s7_west", "n_c2s7_end", "1sam17_15"])
+	if Game.main.intro.has_story("end2"):      # the film that closes the chapter speaks the last two lines itself
+		await say(["n_c2s7_west"])
+	else:
+		await say(["n_c2s7_west", "n_c2s7_end", "1sam17_15"])
 	complete()
 
 
@@ -854,3 +858,9 @@ func pose(p: String) -> int:
 			if elah != null:
 				elah.modulate.a = 1.0
 	return 0
+
+
+func _prop_wide(path: String, at: Vector2, w: float, z: int, tint: Color) -> Sprite2D:
+	var sp := add_sprite(path, at, 1.0, z, tint)
+	sp.scale = Vector2.ONE * (w / sp.texture.get_width())
+	return sp

@@ -171,7 +171,10 @@ func _build_court() -> void:
 func begin() -> void:
 	if inside:
 		return
-	await say(["n_c2s3_intro", "n_c2s3_shut"])
+	if Game.main.intro.has_story("c2_gate"):      # the film before this section speaks the first line itself
+		await say(["n_c2s3_shut"])
+	else:
+		await say(["n_c2s3_intro", "n_c2s3_shut"])
 
 
 # ------------------------------------------------------------------ playing to a man

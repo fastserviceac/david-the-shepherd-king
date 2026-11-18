@@ -963,6 +963,23 @@ func add_sprite(path: String, at: Vector2, sc: float, z: int = 3, tint: Color = 
 	return sp
 
 
+## A wide flat prop (a threshing floor, a well) sized to `w` game units across and seated on the ground: sunk a little
+## so its rim goes behind the grass, with a soft shadow under it, so it does not seem to hover over the earth.
+func add_seated(path: String, at: Vector2, w: float, z: int = 1, tint: Color = Color(1, 1, 1), sink: float = 0.0) -> Sprite2D:
+	var sp := add_sprite(path, at + Vector2(0, sink), 1.0, z, tint)
+	sp.scale = Vector2.ONE * (w / sp.texture.get_width())
+	var shade := Painter.new()
+	shade.position = at + Vector2(0, sink - 6.0)
+	shade.z_index = z - 1
+	shade.paint = func(ci: CanvasItem) -> void:
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.16))
+		for k in 4:
+			ci.draw_circle(Vector2.ZERO, w * (0.56 - k * 0.07), Color(0.03, 0.02, 0.04, 0.16))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	add_child(shade)
+	return sp
+
+
 ## A living painted figure standing on the ground, gently moving. `at` is at its feet.
 ## `tall` above zero: the frames were cut with tools/anim.py (the figure standing in a wider canvas), so they are
 ## drawn as David's are, with `sc` 1.0 meaning the size they were cut for.

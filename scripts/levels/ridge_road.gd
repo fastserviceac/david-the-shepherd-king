@@ -86,7 +86,10 @@ func _populate() -> void:
 
 
 func begin() -> void:
-	await say(["n_c2s2_intro", "n_c2s2_load"])
+	if Game.main.intro.has_story("c2_road"):      # the film before this section speaks the first line itself
+		await say(["n_c2s2_load"])
+	else:
+		await say(["n_c2s2_intro", "n_c2s2_load"])
 
 
 # ------------------------------------------------------------------ what it will not pass

@@ -1,7 +1,7 @@
 """Cuts a story film (the short films between sections) together from its shots, narration and music.
-usage: build_story.py <id> <work_dir> --shots a.mp4 b.mp4 ... --lines n_x n_y ... [--music audio/music/theme_still.mp3]
+usage: build_story.py <id> <work_dir> --shots a.mp4 b.mp4 ... --lines n_x n_y ... [--music audio/music/theme_still.mp3] [--chapter 2]
 Narration comes from audio/narration/<line>.mp3 (English) and audio/narration/pt/<line>.mp3; the words from
-data/narration/chapter1(.pt).json. The picture is the same for both languages and is stretched a little if the
+data/narration/chapter<N>(.pt).json (--chapter, 1 by default). The picture is the same for both languages and is stretched a little if the
 narration needs longer than the shots run. Writes video/story_<id>.ogv, video/story_<id>.pt.ogv and their cue
 files data/story_<id>.json and data/story_<id>.pt.json. The Ogg Theora files are written by Godot's movie writer
 (tools/enc), because this Mac's ffmpeg has no Theora encoder."""
@@ -36,8 +36,9 @@ os.makedirs(work, exist_ok=True)
 def dur(path):
     return float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path]).decode().strip())
 
-LANGS = {'en': ('audio/narration/%s.mp3', 'data/narration/chapter1.json', ''),
-         'pt': ('audio/narration/pt/%s.mp3', 'data/narration/chapter1.pt.json', '.pt')}
+book = (opt('--chapter') or ['1'])[0]          # whose narration file holds the words: chapter1, chapter2 ...
+LANGS = {'en': ('audio/narration/%s.mp3', 'data/narration/chapter%s.json' % book, ''),
+         'pt': ('audio/narration/pt/%s.mp3', 'data/narration/chapter%s.pt.json' % book, '.pt')}
 plan = {}
 for lang, (pat, words, _) in LANGS.items():
     text = json.load(open(words))['lines']

@@ -91,6 +91,7 @@
         {
           "title": "The Summons",
           "script": "res://scripts/levels/summons.gd",
+          "film": "c2_summons",
           "aim": "Hand the flock to a keeper, and bring the loaded donkey to your father.",
           "why": "The king has sent for him. But the flock is still his to answer for: he cannot leave until another man can keep it.",
           "needs": [
@@ -112,6 +113,7 @@
         {
           "title": "The Ridge Road",
           "script": "res://scripts/levels/ridge_road.gd",
+          "film": "c2_road",
           "aim": "Lead the loaded donkey north along the ridge to Gibeah.",
           "why": "What his father sent is the family's word to the king. It has to arrive whole.",
           "needs": [
@@ -129,6 +131,7 @@
         {
           "title": "The Gate of Gibeah",
           "script": "res://scripts/levels/gibeah_gate.gd",
+          "film": "c2_gate",
           "aim": "Get in at the barred gate, hand your father's gift to the steward, and wait to be called.",
           "why": "A shepherd boy does not walk into a king's hall. Someone has to bring him.",
           "needs": [
@@ -154,6 +157,7 @@
         {
           "title": "The King's Hall",
           "script": "res://scripts/levels/kings_hall.gd",
+          "film": "c2_hall",
           "aim": "Play before the king until the shadow on the wall is down.",
           "why": "The king's servants asked for a man who could play. No one else in the house can do this for him.",
           "needs": [

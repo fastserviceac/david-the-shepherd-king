@@ -258,7 +258,10 @@ func _draw_line(ci: CanvasItem) -> void:
 
 
 func begin() -> void:
-	await say(["n_c2s4_intro", "n_c2s4_servants", "1sam16_16"])
+	if Game.main.intro.has_story("c2_hall"):      # the film before this section speaks the first line itself
+		await say(["n_c2s4_servants", "1sam16_16"])
+	else:
+		await say(["n_c2s4_intro", "n_c2s4_servants", "1sam16_16"])
 
 
 func _come_before() -> void:

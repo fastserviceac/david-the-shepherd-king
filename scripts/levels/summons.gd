@@ -102,7 +102,7 @@ func _populate() -> void:
 	# east of the lane: the threshing floor where the donkey was loaded before light, the well, and the day fold
 	# sized in game units as in the well level (art/props are painted at many times these sizes): a 1.0 scale made
 	# the floor, its fork and jars, the well and the trough giants beside David and the donkey
-	_prop_wide("res://art/props/threshing.png", on_ground(FLOOR_X) + Vector2(0, 16), 400.0, 1, tint)
+	add_seated("res://art/props/threshing.png", on_ground(FLOOR_X), 400.0, 1, tint, 30.0)
 	donkey = Donkey.new()
 	donkey.level = self
 	donkey.position = on_ground(FLOOR_X + 20.0)
@@ -141,7 +141,10 @@ func _prop_wide(path: String, at: Vector2, w: float, z: int, tint: Color) -> Spr
 
 
 func begin() -> void:
-	await say(["n_c2s1_intro", "1sam16_19", "n_c2s1_flock"])
+	if Game.main.intro.has_story("c2_summons"):      # the film before this section speaks the first two lines itself
+		await say(["n_c2s1_flock"])
+	else:
+		await say(["n_c2s1_intro", "1sam16_19", "n_c2s1_flock"])
 
 
 # ------------------------------------------------------------------ the night fold
