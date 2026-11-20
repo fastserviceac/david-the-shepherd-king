@@ -70,6 +70,8 @@ const CLINCH_TIME := 0.95
 const WALK := 132.0
 const WALK_CYCLE_PX := 150.0      # ground covered by one full walking cycle of two steps
 const ROLL_TIME := 0.66
+var torch_phase := 0.0   # where his arm is in its swing, as he walks: the torch swings with it
+const STRIKE_STOP := 2400.0   # how hard his feet plant for a blow on the ground (px/s each second)
 const CALL_TIME := 1.3
 var act_t := 0.0
 var call_cd := 0.0
@@ -487,6 +489,14 @@ func _physics_process(delta: float) -> void:
 	if hop_t > 0.0:
 		dir = 0.0
 		velocity.x = move_toward(velocity.x, 0.0, 500.0 * delta)
+	# a blow struck on the ground is struck from planted feet: the run carries him one short step into it, no more
+	# (the strike pictures do not walk, so going on at a run slid him along the ground)
+	if on_floor:
+		torch_phase = fmod(torch_phase + absf(velocity.x) * delta * TAU / 130.0, TAU)
+	var striking: bool = on_floor and attack_t > 0.0 and plunge == 0
+	if striking:
+		dir = 0.0
+		velocity.x = move_toward(velocity.x, 0.0, STRIKE_STOP * delta)
 	# He sets off at a walk and breaks into a run if he keeps going. Shift holds him to a walk.
 	if absf(dir) > 0.1:
 		move_t += delta
@@ -773,6 +783,21 @@ func _update_sling(delta: float, can_act: bool) -> void:
 			charging = false
 			sling_cd = 0.3
 			_fire()
+
+
+## Where he grips a torch he carries, from his feet: the hand of his hanging arm, a little before him at the
+## hip, swinging with his stride (his pictures hold nothing, so the torch is put in that hand, not in the air).
+func torch_grip() -> Vector2:
+	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
+	var sw := sin(torch_phase) * (5.0 - 1.5 * run) if is_on_floor() else 0.0      # running, his arms fly about: the torch is held steadier than they swing
+	var ahead := 10.0 if facing > 0 else 2.0      # his pictures are not even: facing left the hand hangs nearer his body (judged from shots)
+	return Vector2(facing * (ahead + sw), -51.0 - 3.0 * run)
+
+
+## How far the torch leans forward from upright, signed by the way he faces: more as he hurries.
+func torch_tilt() -> float:
+	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
+	return facing * (0.3 + 0.18 * run + 0.06 * sin(torch_phase) * run)
 
 
 func _hand() -> Vector2:

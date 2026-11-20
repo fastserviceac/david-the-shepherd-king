@@ -575,7 +575,8 @@ func _process(delta: float) -> void:
 		match o["state"]:
 			"mixed":
 				left += 1
-				if s.global_position.distance_to(player.global_position) < 58.0:
+				# only once it is in among the others: running past him on its way there, it is not yet his to lead
+				if s.global_position.distance_to(player.global_position) < 58.0 and (is_nan(s.stay) or absf(s.global_position.x - s.stay) < 40.0):
 					lead(o)
 			"led":
 				left += 1

@@ -1357,7 +1357,7 @@ func _well(lv) -> void:
 				n.hit(9, 1, "staff")
 	await _frames(20)
 	_check(came >= 3 and Game.has("hand"), "a pack comes for the water, and the strong hand is given when it is driven off")
-	_check(lv.own[0]["state"] == "mixed", "his sheep have run in among the other flocks")
+	_check(lv.own[0]["state"] == "mixed", "his sheep have run in among the other flocks (%s, calm %.1f, mixed_up %s)" % [lv.own[0]["state"], lv.own[0]["s"].calm, lv.mixed_up])
 	lv.shepherd_call(lv.on_ground(2560.0), 600.0, false)
 	_check(lv.own[0]["state"] == "led" and lv.others[0]["state"] == "idle", "his own come to his voice; the others do not")
 	await _goto(2100.0)
@@ -2241,6 +2241,45 @@ func shots(m, dir: String) -> void:
 				seen[st2] = n2 + 1
 				await _snap(dir, "bear_%s%d" % [st2, n2])
 	tree.quit()
+
+
+## The torch as he carries it in the Bear's Den: standing, walking and running, each way, a few frames apart.
+func torchshots(m, dir: String) -> void:
+	main = m
+	tree = m.get_tree()
+	DirAccess.make_dir_recursive_absolute(dir)
+	m.menu.close()
+	m.hud.visible = false
+	Game.backdrop = false
+	Game.cinematic = false
+	m.get_window().size = Vector2i(1280, 720)
+	await m.load_level(_index("den"), 0)
+	var lv = m.level
+	var p = lv.player
+	await _goto(lv.EMBERS[0] + 200.0)
+	lv.light_torch()
+	await _frames(40)
+	await _snap(dir, "idle_r")
+	for way in [["move_right", "r"], ["move_left", "l"]]:
+		Input.action_press(way[0])
+		Input.action_press("walk")
+		for k in 4:
+			await _frames(9)
+			await _snap(dir, "walk_%s_%d" % [way[1], k])
+		Input.action_release("walk")
+		await _frames(50)
+		for k in 4:
+			await _frames(7)
+			await _snap(dir, "run_%s_%d" % [way[1], k])
+		Input.action_release(way[0])
+		await _frames(40)
+		await _snap(dir, "idle_%s" % way[1])
+	Input.action_press("attack")
+	await _frames(8)
+	await _snap(dir, "strike")
+	Input.action_release("attack")
+	await _frames(30)
+	m.get_tree().quit()
 
 
 func _snap(dir: String, name: String) -> void:

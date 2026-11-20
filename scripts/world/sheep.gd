@@ -73,7 +73,7 @@ func _ready() -> void:
 ## `hold` false: played on his feet, so one that is following him goes on following, quieted.
 func settle(seconds: float, hold: bool = true, delay: float = 0.0) -> void:
 	settle_in = delay
-	calm = seconds + settle_in
+	calm = seconds          # the wait for the chord only holds back how it looks, not how long it is quiet
 	bolt = 0.0
 	called = 0.0
 	worried = 0.0

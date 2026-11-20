@@ -2194,7 +2194,7 @@ func add_light(pos: Vector2, r: float) -> Dictionary:
 func light_torch() -> void:
 	torch_t = torch_max
 	Game.sfx("fire", -2.0)
-	Game.burst(self, player.global_position + Vector2(player.facing * 20.0, -78), Color(1.0, 0.7, 0.3, 0.9), 12, 120.0)
+	Game.burst(self, player.global_position + player.torch_grip() + Vector2(0, -40), Color(1.0, 0.7, 0.3, 0.9), 12, 120.0)
 
 
 func _update_dark(delta: float) -> void:
@@ -2220,7 +2220,11 @@ func _update_dark(delta: float) -> void:
 			stick.position = Vector2(0, 16)
 			stick.show_behind_parent = true
 			torch_node.add_child(stick)
-		torch_node.position = player.global_position + Vector2(player.facing * 22.0, -92.0)
+		# held in his hand, the handle's foot in his grip and the head leaning forward (the flame is 38 above the grip)
+		var tilt: float = player.torch_tilt()
+		torch_node.rotation = tilt
+		torch_node.get_node("fire").rotation = -tilt          # the flame still burns upward
+		torch_node.position = player.global_position + player.torch_grip() - Vector2(0.0, 38.0).rotated(tilt)
 		torch_node.get_node("g").visible = torch_t > 0.0
 		torch_node.get_node("stick").visible = torch_t > 0.0
 		var low := clampf(torch_t / (torch_max * 0.3), 0.3, 1.0) * (0.7 if draught > 1.5 else 1.0)

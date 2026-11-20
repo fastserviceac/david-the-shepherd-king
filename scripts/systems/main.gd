@@ -91,6 +91,12 @@ func _ready() -> void:
 			set_meta("tester", t3)
 			t3.placeshots(self, a.trim_prefix("--placeshots="))
 			return
+		if a.begins_with("--torchshots="):      # the torch in his hand, standing, walking and running, for checking
+			Game.fast = true
+			var t5 = load("res://scripts/systems/selftest.gd").new()
+			set_meta("tester", t5)
+			t5.torchshots(self, a.trim_prefix("--torchshots="))
+			return
 		if a.begins_with("--newshots="):
 			Game.fast = true
 			var t2 = load("res://scripts/systems/selftest.gd").new()
