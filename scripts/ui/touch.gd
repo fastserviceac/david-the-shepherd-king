@@ -38,7 +38,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	visible = Game.touch
+	visible = Game.touch_shown()
 	for b in buttons:
 		OVER[b["id"]] = [b["pos"], b["r"]]
 	_place()
@@ -60,8 +60,8 @@ func _place() -> void:
 func _process(_delta: float) -> void:
 	if _placed_for != Game.deck:
 		_place()
-	if visible != Game.touch:
-		visible = Game.touch
+	if visible != Game.touch_shown():
+		visible = Game.touch_shown()
 		if not visible:
 			_release_all()
 	if visible:
@@ -70,7 +70,7 @@ func _process(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		if not Game.touch:
+		if not Game.touch and Game.touch_mode() != "off":      # with the buttons switched off a tap only moves things on
 			Game.touch = true
 			Game.pad = false
 		if event.pressed:
@@ -79,6 +79,8 @@ func _input(event: InputEvent) -> void:
 			_touch_up(event.index)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
+		if event.index == _ui_touch:
+			_ui_at = event.position
 		if event.index == _stick_touch:
 			_stick_at = event.position
 			_update_stick()
@@ -104,13 +106,20 @@ func _shown(b: Dictionary) -> bool:
 	return true
 
 
+var _ui_touch := -1       # the finger on a menu or the map: it chooses when it is lifted where it landed
+var _ui_from := Vector2.ZERO
+var _ui_at := Vector2.ZERO
+const SWIPE := 28.0       # a finger that moves further than this before it is lifted was a swipe, not a tap
+
+
 func _touch_down(finger: int, p: Vector2) -> void:
+	var bare := Game.touch_mode() == "off"      # no buttons on the screen: a tap is only a tap
 	# Each button owns the ground nearest to it, measured against its size, out to almost twice its radius:
 	# a thumb that lands between two buttons or just off one still gets the one it was reaching for.
 	var best := ""
 	var best_d := INF
 	for b in buttons:
-		if not _shown(b):
+		if bare or not _shown(b):
 			continue
 		var reach := 1.35 if b["id"] in TOP else 1.9
 		var d: float = p.distance_to(b["pos"]) / float(b["r"])
@@ -128,25 +137,33 @@ func _touch_down(finger: int, p: Vector2) -> void:
 		# a film or a spoken line: there is nowhere to walk, so a tap anywhere moves the story on
 		_held_by[finger] = "_tap"
 		_press("accept")
-	elif p.x < 640.0 and _stick_touch < 0 and not _ui_open():
+	elif p.x < 640.0 and _stick_touch < 0 and not _ui_open() and not bare:
 		_stick_touch = finger
 		_stick_from = p
 		_stick_at = p
 		_update_stick()
 	elif _ui_open():
-		# a menu or the map takes the tap itself: a choice, or a place
-		var m = Game.main
-		if m.menu.visible:
-			m.menu.tap(p)
-		elif m.map.visible:
-			m.map.tap(p)
-	elif p.x >= 640.0:
+		# a menu or the map takes the tap itself, a choice or a place, once the finger is lifted without sliding:
+		# a thumb swept across a list to scroll or by accident chooses nothing
+		_ui_touch = finger
+		_ui_from = p
+		_ui_at = p
+	elif p.x >= 640.0 or bare:
 		# a tap anywhere else stands for the accept button: it moves the story on
 		_held_by[finger] = "_tap"
 		_press("accept")
 
 
 func _touch_up(finger: int) -> void:
+	if finger == _ui_touch:
+		_ui_touch = -1
+		var m = Game.main
+		if _ui_at.distance_to(_ui_from) <= SWIPE and m != null:
+			if m.menu.visible:
+				m.menu.tap(_ui_from)
+			elif m.map.visible:
+				m.map.tap(_ui_from)
+		return
 	if finger == _stick_touch:
 		_stick_touch = -1
 		_stick_at = _stick_from

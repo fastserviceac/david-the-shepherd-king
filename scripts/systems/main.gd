@@ -322,8 +322,44 @@ func _on_menu(id: String) -> void:
 			Game.save_game()
 			Game.buzz(30)
 			menu.open("settings", menu.index)
+		"set_touch":
+			var modes: Array = Game.TOUCH_MODES
+			Game.save["touch_ctl"] = modes[(modes.find(Game.touch_mode()) + 1) % modes.size()]
+			Game.apply_settings()
+			Game.save_game()
+			menu.open("settings", menu.index)
+		"set_pad":
+			var styles: Array = Game.PAD_STYLES
+			Game.save["pad_style"] = styles[(styles.find(str(Game.save.get("pad_style", "auto"))) + 1) % styles.size()]
+			Game.apply_pad()
+			Game.save_game()
+			menu.open("settings", menu.index)
+		"pad_buttons":
+			menu.open("remap")
+		"pad_test":
+			menu.last_button = ""
+			menu.open("pad_test")
+		"pad_reset":
+			Game.reset_pad()
+			Game.save_game()
+			menu.open("remap", menu.index)
+		"pad_dead":
+			var zones: Array = Game.DEAD_ZONES
+			var at := zones.find(Game.dead_zone())
+			Game.save["dead_zone"] = zones[(at + 1) % zones.size()]
+			Game.apply_pad()
+			Game.save_game()
+			menu.open("pad_test", menu.index)
 		"back":
-			menu.open(menu.back_to if menu.mode == "settings" else "main")
+			if menu.mode == "remap" or menu.mode == "pad_test":
+				var came_from := "pad_buttons" if menu.mode == "remap" else "pad_test"      # back on the row it was opened from
+				menu.open("settings")
+				for i in menu.items.size():
+					if menu.items[i][0] == came_from:
+						menu.index = i
+				menu.queue_redraw()
+			else:
+				menu.open(menu.back_to if menu.mode == "settings" else "main")
 		"prologue":
 			await _prologue()
 			show_menu()
@@ -348,6 +384,8 @@ func _on_menu(id: String) -> void:
 				menu.open("sections")
 			elif id.begins_with("interlude_"):      # the night before a section, played again from the list
 				start_interlude(id.trim_prefix("interlude_").to_int())
+			elif id.begins_with("rm_"):
+				menu.listen_for(id.trim_prefix("rm_"))
 			elif id.begins_with("section_"):
 				Game.gifts_for(id.trim_prefix("section_").to_int())
 				start_section(id.trim_prefix("section_").to_int())

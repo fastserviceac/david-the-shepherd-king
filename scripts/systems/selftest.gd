@@ -1130,6 +1130,7 @@ func _s1(lv) -> void:
 	await _frames(2)
 	_check(jump_held and runs and not Input.is_action_pressed("jump") and not Input.is_action_pressed("move_right") and lv_paused == tree.paused,
 			"the on-screen buttons and stick press and let go of the game's actions")
+	await _controls_settings(tap)
 	Game.touch = false
 	var had_places: Array = Game.places().duplicate()
 	Game.save["places"] = []
@@ -1197,8 +1198,8 @@ func _s1(lv) -> void:
 	jb.hp = 50
 	ja.held = 5.0
 	jb.held = 5.0
-	await _frames(20)
 	lv.player.facing = 1          # jb is the one in front: which way he faced last depends on the save the test began from
+	await _frames(20)
 	Input.action_press("attack")
 	await _frames(45)
 	Input.action_release("attack")
@@ -1804,7 +1805,6 @@ func placeshots(m, dir: String) -> void:
 		for spot in OS.get_environment("SPOTS").split(","):
 			var nm := spot.get_slice(":", 0)
 			var sx := float(spot.get_slice(":", 1))
-			if nm == "menu":      # SPOTS=menu:0 : the main menu as it opens
 			if nm == "film":      # SPOTS=film:c2_summons : a story film, a few seconds in
 				m.intro.play_story(spot.get_slice(":", 1))
 				await _frames(240)
@@ -1819,6 +1819,7 @@ func placeshots(m, dir: String) -> void:
 				m.map.close()
 				await _frames(20)
 				continue
+			if nm == "menu":      # SPOTS=menu:0 : the main menu as it opens
 				m.show_menu()
 				await _frames(60)
 				await _snap(dir, "menu")
@@ -2983,3 +2984,106 @@ func _dam(lv) -> void:
 	p.velocity = Vector2.ZERO
 	p.hp = p.max_hp
 	await _frames(5)
+
+
+## The settings for the on-screen buttons and the controller: Off hides the buttons and a tap on one does nothing,
+## On shows them without a touch, the kind of controller names its buttons, a button given to another action
+## swaps with it, the dead zone reaches the stick, and a finger swept across a menu chooses nothing.
+func _controls_settings(tap: Callable) -> void:
+	var kept: Dictionary = Game.save.duplicate(true)
+	var touch_layer: Control = null
+	for n in main.find_children("*", "Control", true, false):
+		if n.get_script() != null and str(n.get_script().resource_path).ends_with("ui/touch.gd"):
+			touch_layer = n
+	Game.save["touch_ctl"] = "off"
+	Game.touch = false
+	tap.call(0, Vector2(1206, 648), true)
+	await _frames(2)
+	var off_ok := not Input.is_action_pressed("jump") and not Game.touch and touch_layer != null and not touch_layer.visible
+	tap.call(0, Vector2(1206, 648), false)
+	await _frames(2)
+	_check(off_ok, "with the on-screen controls Off a tap shows no buttons and presses none")
+	Game.save["touch_ctl"] = "on"
+	await _frames(2)
+	_check(Game.touch_shown() and touch_layer.visible, "with them On they show before the screen is touched")
+	Game.save["touch_ctl"] = "auto"
+	await _frames(2)
+	_check(not Game.touch_shown() and not touch_layer.visible, "and on Auto they wait for a touch")
+	var named := [Game.style_of("Nintendo Switch Pro Controller"), Game.style_of("PS5 Controller"), Game.style_of("DualSense Wireless Controller"),
+			Game.style_of("Xbox Wireless Controller"), Game.style_of("Generic USB Gamepad")]
+	_check(named == ["nintendo", "ps", "ps", "xbox", "xbox"], "a controller's name tells its kind %s" % [named])
+	Game.pad = true
+	Game.save["pad_style"] = "nintendo"
+	Game.apply_pad()
+	var accept_right := InputMap.action_get_events("accept").any(func(e): return e is InputEventJoypadButton and e.button_index == JOY_BUTTON_B)
+	_check(Game.keys("J  staff") == "Y  staff" and Game.keys("Run, then Space") == "Run, then B" and accept_right and Game.pad_name("back") == "B",
+			"on a Nintendo pad the prompts name its letters, and its right button says yes (%s)" % Game.keys("J  staff"))
+	Game.save["pad_style"] = "ps"
+	_check(Game.keys("J  staff") == "□  staff" and Game.cap("Esc") == "Options", "on a PlayStation pad its shapes")
+	Game.save["pad_style"] = "xbox"
+	Game.apply_pad()
+	Game.set_pad("jump", JOY_BUTTON_Y)
+	var ev := InputEventJoypadButton.new()
+	ev.button_index = JOY_BUTTON_Y
+	ev.pressed = true
+	var ev_a := InputEventJoypadButton.new()
+	ev_a.button_index = JOY_BUTTON_A
+	ev_a.pressed = true
+	_check(InputMap.event_is_action(ev, "jump") and not InputMap.event_is_action(ev, "grab") and InputMap.event_is_action(ev_a, "grab")
+			and Game.keys("Space  jump") == "Y  jump" and Game.save["pad_map"]["grab"] == JOY_BUTTON_A,
+			"a button given to jump takes it from grab, and grab is given jump's old button")
+	Game.set_pad("lyre", 100 + JOY_AXIS_TRIGGER_LEFT)
+	var lt := InputEventJoypadMotion.new()
+	lt.axis = JOY_AXIS_TRIGGER_LEFT
+	lt.axis_value = 1.0
+	_check(InputMap.event_is_action(lt, "lyre") and Game.pad_name("lyre") == "LT", "a trigger can be given to an action")
+	Game.reset_pad()
+	_check(InputMap.event_is_action(ev_a, "jump") and not Game.save.has("pad_map"), "and Reset puts every button back")
+	Game.save["dead_zone"] = 0.25
+	Game.apply_pad()
+	_check(is_equal_approx(InputMap.action_get_deadzone("move_left"), 0.25), "the stick's dead zone is the one chosen")
+	Game.pad = false
+	# a finger swept across a menu list chooses nothing; lifted where it landed, it chooses
+	var picked: Array = []
+	var see := func(id: String) -> void: picked.append(id)
+	main.menu.chosen.connect(see)
+	main.menu.open("settings")
+	var row := -1
+	for i in main.menu.items.size():
+		if main.menu.items[i][0] == "pad_test":
+			row = i
+	var at := Vector2(640, main.menu._row_y(row) - 10.0)
+	tap.call(3, at, true)
+	var dr := InputEventScreenDrag.new()
+	dr.index = 3
+	dr.position = at + Vector2(0, 120)
+	main.get_viewport().push_input(dr, true)
+	tap.call(3, at + Vector2(0, 120), false)
+	await _frames(2)
+	var swiped_none := picked.is_empty()
+	tap.call(3, at, true)
+	tap.call(3, at, false)
+	await _frames(2)
+	_check(swiped_none and picked == ["pad_test"] and main.menu.mode == "pad_test", "a swipe across a menu chooses nothing, a tap chooses (%s)" % [picked])
+	main.menu.open("remap")
+	main.menu.listen_for("sling")
+	var press := InputEventJoypadButton.new()
+	press.button_index = JOY_BUTTON_X
+	press.pressed = true
+	main.get_viewport().push_input(press)
+	await _frames(2)
+	_check(Game.pad_code("sling") == JOY_BUTTON_X and Game.pad_code("attack") == JOY_BUTTON_B and main.menu.listen == "" and main.menu.mode == "remap",
+			"on the button screen the next button pressed is given to the action chosen")
+	main.menu.chosen.disconnect(see)
+	main.menu.close()
+	Game.pad = false
+	Game.save.clear()      # put back in the same dictionary: whatever holds it sees the journey as it was
+	Game.save.merge(kept)
+	Game.apply_settings()
+	var untold: Array = []
+	for w in ["On-screen controls", "Auto", "Controller", "Controller buttons", "Controller test", "Choose an action, then press its new button",
+			"Move: stick or D-pad", "Reset to preset", "Dead zone", "No controller found", "Press a button for %s", "a key or a tap: cancel",
+			"Left stick", "Right stick", "Press any button", "leave", "Walk", "Pause", "Button", "Choose"] + Game.PAD_ACTION_NAMES.values():
+		if not Game._ui_pt.has(w):
+			untold.append(w)
+	_check(untold.is_empty(), "the controller settings have their Portuguese %s" % [untold])

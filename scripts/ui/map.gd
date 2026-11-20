@@ -419,7 +419,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_start_walk()
 			return
-	elif event.is_action_pressed("pause") or event.is_action_pressed("map"):
+	elif event.is_action_pressed("pause") or event.is_action_pressed("map") or event.is_action_pressed("back"):
 		get_viewport().set_input_as_handled()
 		closed.emit()
 		return
@@ -582,13 +582,13 @@ func _draw() -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(1218, 90), Vector2(1212, 104), Vector2(1224, 104)]), ink)
 	var keys := Game.keys(Game.t(("Tap a place, and again to go there      Tab  the wider land      M or Esc  close" if Game.touch else "← →  or  1–8  choose a place      Enter  go there      Tab  the wider land      M or Esc  close") if view == "hills" else "Tab  back to the hills of Bethlehem      M or Esc  close"))
 	if Game.pad:
-		keys = Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close")
+		keys = _pad_line(Game.t("← →  choose a place      Back  the wider land      Start  close" if view == "hills" else "Back  back to the hills of Bethlehem      Start  close"))
 	if int(Game.save.get("unlocked", 0)) >= Game.chapter_start(1):      # Chapter Two: more views and more places, so the line is put together
 		var order := _order()
 		var nxt: String = Game.t(NEXT[order[(order.find(view) + 1) % order.size()]])
 		var gap := "      "
 		if Game.pad:
-			keys = ("" if ids.is_empty() else Game.t("← →  choose a place") + gap) + "Back  " + nxt + gap + Game.t("Start  close")
+			keys = _pad_line(("" if ids.is_empty() else Game.t("← →  choose a place") + gap) + "Back  " + nxt + gap + Game.t("Start  close"))
 		else:
 			var choose: String = "" if ids.is_empty() else (Game.t("Tap a place, and again to go there") if Game.touch else Game.t("← →  choose a place") + gap + Game.t("Enter  go there")) + gap
 			keys = Game.keys(choose + "Tab  " + nxt + gap + Game.t("M or Esc  close"))
@@ -997,3 +997,8 @@ func _decorate() -> void:
 	var town := MultiMeshInstance3D.new()
 	town.multimesh = hm
 	node.add_child(town)
+
+
+## A line written for an Xbox pad ("Back  ...", "Start  close") with the buttons named as they are on the pad in hand.
+func _pad_line(s: String) -> String:
+	return s.replace("Back  ", Game.pad_name("growth") + "  ").replace("Start  ", Game.pad_name("pause") + "  ")

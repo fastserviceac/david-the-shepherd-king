@@ -67,6 +67,7 @@ var add_mat: CanvasItemMaterial
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_input()
+	Input.joy_connection_changed.connect(func(_d, _c): apply_pad())
 	touch = OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
 	if "--phone" in OS.get_cmdline_user_args():      # try the phone layout on the computer
 		touch = true
@@ -129,14 +130,147 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.5):
 		pad = true
 		touch = false
+		if event.device != joy_dev:      # another controller: on Auto its kind may say yes with another button
+			joy_dev = event.device
+			apply_pad.call_deferred()
 	elif event is InputEventKey and not "--phone" in OS.get_cmdline_user_args():      # trying the phone layout: stay in it
 		pad = false
 		touch = false
 
 
-const PAD_KEYS := {"Space": "A", "Espaço": "A", "J": "X", "K": "B", "E": "Y", "L": "RB", "Shift": "LB", "Q": "LS", "Tab": "Back", "M": "RS", "R": "RT",
-		"Enter": "A", "Esc": "Start", "A": "", "D": "Stick"}
-const PAD_WORDS := {"Space": "A", "Espaço": "A", "Shift": "LB", "Tab": "Back", "Enter": "A", "Esc": "Start"}
+var joy_dev := 0          # the controller last used: its name says which kind it is
+
+## The keyboard key a prompt is written with, and the action it stands for: a controller names that action's button.
+const KEY_ACTION := {"Space": "jump", "Espaço": "jump", "J": "attack", "K": "sling", "E": "grab", "L": "roll", "Shift": "walk",
+		"Q": "call", "Tab": "growth", "M": "map", "R": "lyre", "Enter": "accept", "Esc": "pause"}
+const PAD_WORDS := ["Space", "Espaço", "Shift", "Tab", "Enter", "Esc"]
+
+## The actions a controller's buttons can be given to, in the order the button screen lists them, with the button
+## each has unless the player gives it another. A number under 100 is a button; 104 and 105 are the triggers.
+const PAD_ACTIONS := ["jump", "attack", "sling", "roll", "grab", "walk", "call", "lyre", "growth", "map", "pause"]
+const PAD_ACTION_NAMES := {"jump": "Jump", "attack": "Staff", "sling": "Sling", "roll": "Dodge", "grab": "Grab", "walk": "Walk",
+		"call": "Call", "lyre": "Lyre", "growth": "Growth", "map": "Map", "pause": "Pause"}
+const PAD_DEFAULT := {"jump": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "sling": JOY_BUTTON_B, "roll": JOY_BUTTON_RIGHT_SHOULDER,
+		"grab": JOY_BUTTON_Y, "walk": JOY_BUTTON_LEFT_SHOULDER, "call": JOY_BUTTON_LEFT_STICK, "lyre": 100 + JOY_AXIS_TRIGGER_RIGHT,
+		"growth": JOY_BUTTON_BACK, "map": JOY_BUTTON_RIGHT_STICK, "pause": JOY_BUTTON_START}
+const PAD_STYLES := ["auto", "xbox", "ps", "nintendo"]
+const PAD_STYLE_NAMES := {"auto": "Auto", "xbox": "Xbox", "ps": "PlayStation", "nintendo": "Nintendo"}
+## What is printed on each button. The game reads a button by where it sits (the bottom face button is always 0),
+## so on a Nintendo pad the bottom one is B and the right one A, the other way round from an Xbox pad.
+const PAD_NAMES := {
+	"xbox": {0: "A", 1: "B", 2: "X", 3: "Y", 4: "Back", 5: "Guide", 6: "Start", 7: "LS", 8: "RS", 9: "LB", 10: "RB", 104: "LT", 105: "RT"},
+	"ps": {0: "✕", 1: "○", 2: "□", 3: "△", 4: "Share", 5: "PS", 6: "Options", 7: "L3", 8: "R3", 9: "L1", 10: "R1", 104: "L2", 105: "R2"},
+	"nintendo": {0: "B", 1: "A", 2: "Y", 3: "X", 4: "−", 5: "Home", 6: "+", 7: "LS", 8: "RS", 9: "L", 10: "R", 104: "ZL", 105: "ZR"},
+}
+const DEAD_ZONES := [0.15, 0.25, 0.4, 0.55]
+const TOUCH_MODES := ["auto", "on", "off"]
+
+
+## Which kind of controller the button names are for: the one chosen in the settings, or, left on Auto, the one
+## the name of the controller in hand gives away.
+func pad_style() -> String:
+	var s := str(save.get("pad_style", "auto"))
+	if s != "auto" and PAD_NAMES.has(s):
+		return s
+	return style_of(Input.get_joy_name(joy_dev) if joy_dev in Input.get_connected_joypads() else
+			(Input.get_joy_name(Input.get_connected_joypads()[0]) if not Input.get_connected_joypads().is_empty() else ""))
+
+
+func style_of(joy_name: String) -> String:
+	var n := joy_name.to_lower()
+	for w in ["nintendo", "pro controller", "switch", "joy-con", "joycon"]:
+		if n.contains(w):
+			return "nintendo"
+	var ps := RegEx.create_from_string("\\b(ps[345]?|dualsense|dualshock|playstation|sony)\\b")
+	if ps.search(n) != null or n.contains("dualsense") or n.contains("dualshock"):
+		return "ps"
+	return "xbox"
+
+
+## The button (or trigger) an action is given to on a controller.
+func pad_code(action: String) -> int:
+	if action == "accept":       # Nintendo's way: the right button says yes, the bottom one goes back
+		return JOY_BUTTON_B if pad_style() == "nintendo" else JOY_BUTTON_A
+	if action == "back":
+		return JOY_BUTTON_A if pad_style() == "nintendo" else JOY_BUTTON_B
+	var m: Dictionary = save.get("pad_map", {})
+	return int(m.get(action, PAD_DEFAULT.get(action, -1)))
+
+
+func button_name(code: int) -> String:
+	var names: Dictionary = PAD_NAMES[pad_style()]
+	if names.has(code):
+		return str(names[code])
+	match code:
+		JOY_BUTTON_DPAD_UP: return "↑"
+		JOY_BUTTON_DPAD_DOWN: return "↓"
+		JOY_BUTTON_DPAD_LEFT: return "←"
+		JOY_BUTTON_DPAD_RIGHT: return "→"
+	return "%s %d" % [t("Button"), code]
+
+
+## The name on the button that does an action, for the controller in hand.
+func pad_name(action: String) -> String:
+	return button_name(pad_code(action))
+
+
+## Gives an action a button (or trigger). Whatever action had that button takes the one this action gave up,
+## so no button is ever left doing two things or none.
+func set_pad(action: String, code: int) -> void:
+	var m: Dictionary = save.get("pad_map", {}).duplicate()
+	var old := pad_code(action)
+	for a in PAD_ACTIONS:
+		if a != action and pad_code(a) == code:
+			m[a] = old
+	m[action] = code
+	save["pad_map"] = m
+	apply_pad()
+
+
+func reset_pad() -> void:
+	save.erase("pad_map")
+	apply_pad()
+
+
+func dead_zone() -> float:
+	return clampf(float(save.get("dead_zone", 0.4)), 0.05, 0.9)
+
+
+func touch_mode() -> String:
+	var m := str(save.get("touch_ctl", "auto"))
+	return m if m in TOUCH_MODES else "auto"
+
+
+## Whether the buttons on the screen are drawn: on Auto once the screen is touched, or always, or never.
+func touch_shown() -> bool:
+	match touch_mode():
+		"on": return true
+		"off": return false
+	return touch
+
+
+## Puts the controller's buttons where the player (or the kind of controller) wants them, and sets how far the
+## stick must lean before it counts. The keys are left as they are.
+func apply_pad() -> void:
+	for action in PAD_ACTIONS + ["accept", "back"]:
+		if not InputMap.has_action(action):
+			continue
+		for e in InputMap.action_get_events(action):
+			if e is InputEventJoypadButton or (e is InputEventJoypadMotion and (e.axis == JOY_AXIS_TRIGGER_LEFT or e.axis == JOY_AXIS_TRIGGER_RIGHT)):
+				InputMap.action_erase_event(action, e)
+		var code := pad_code(action)
+		if code >= 100:
+			var m := InputEventJoypadMotion.new()
+			m.axis = code - 100
+			m.axis_value = 1.0
+			InputMap.action_add_event(action, m)
+		elif code >= 0:
+			var b := InputEventJoypadButton.new()
+			b.button_index = code
+			InputMap.action_add_event(action, b)
+	for action in ["move_left", "move_right", "aim_up", "move_down"]:
+		InputMap.action_set_deadzone(action, dead_zone())
+
 
 ## A prompt as it should read for whatever the player is holding. Text is written for the keyboard ("J  staff");
 ## with a controller in hand the key at the front, and any key named in the words, becomes its button.
@@ -151,13 +285,24 @@ func keys(s: String) -> String:
 	if head != "":
 		var out: Array = []
 		for tok in head.split(" ", false):
-			var b: String = PAD_KEYS.get(tok, tok)
+			var b: String = _pad_key(tok)
 			if b != "" and not (b in out and b == "Stick"):
 				out.append(b)
 		head = " ".join(out)
 	for w in PAD_WORDS:
-		rest = rest.replace(w, PAD_WORDS[w])
+		rest = rest.replace(w, pad_name(KEY_ACTION[w]))
 	return head + rest
+
+
+## A keyboard key as the controller's button that does the same.
+func _pad_key(k: String) -> String:
+	if k == "A":
+		return ""
+	if k == "D":
+		return "Stick"
+	if KEY_ACTION.has(k):
+		return pad_name(KEY_ACTION[k])
+	return k
 
 
 const TOUCH_KEYS := {"Space": "Jump", "Espaço": "Jump", "Enter": "Tap", "J": "Staff", "K": "Sling", "L": "Dodge",
@@ -169,7 +314,7 @@ func cap(key: String) -> String:
 	if touch:
 		return t(str(TOUCH_KEYS.get(key, key)))
 	if pad:
-		return str(PAD_KEYS.get(key, key))
+		return _pad_key(key)
 	return key
 
 ## The same prompt for the on-screen controls: keys become the names on the buttons (in the player's language).
@@ -250,6 +395,7 @@ func _setup_input() -> void:
 	_bind("growth", [KEY_TAB], [JOY_BUTTON_BACK])
 	_bind("map", [KEY_M], [JOY_BUTTON_RIGHT_STICK])
 	_bind("accept", [KEY_ENTER, KEY_SPACE, KEY_Z, KEY_J], [JOY_BUTTON_A])
+	_bind("back", [KEY_BACKSPACE], [JOY_BUTTON_B])      # in the menus and the map only
 
 
 func _bind(action: String, keys: Array, buttons: Array = [], axis: Array = []) -> void:
@@ -469,6 +615,10 @@ func volume() -> float:
 
 
 func apply_settings() -> void:
+	apply_pad()
+	if touch_mode() == "off" and touch:      # no buttons on the screen: prompts name the controller's, or the keys
+		touch = false
+		pad = not Input.get_connected_joypads().is_empty()
 	var v := volume()
 	AudioServer.set_bus_mute(0, v <= 0.01)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(v, 0.01)))
