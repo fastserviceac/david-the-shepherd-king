@@ -1041,27 +1041,28 @@ func sfx(sound: String, volume_db: float = 0.0, pitch_vary: float = 0.07, pitch:
 
 
 ## The lyre's own sounds, from audio/sfx/lyre_*.mp3 once they are recorded:
-## "sit" he takes it up; "phrase" a phrase lands (`n` = which of three; the recorded phrases are played in turn);
-## "lost" a phrase let go too soon; "song" the third phrase, the song going out.
-## Until a recording exists the stand-in is played: three rising tones.
-var _lyre_next := 0
+## "sit" he takes it up; "phrase" a phrase lands (`n` = which part: n % 3 is the part of the tune, n / 3 the verse);
+## "lost" a phrase let go too soon; "song" the closing chord of a song that ends; "verse" the same chord, softer,
+## closing a verse he plays on from.
+## The tune is in D, from the recorded phrases (pitches measured): the opening rises A to E, the middle D to E and
+## stays open, the close falls G to D and comes home; the chord is a low D. Middle and close have two takes each,
+## which change with the verse.
+const LYRE_TUNE := [["lyre_phrase_00"], ["lyre_phrase_05", "lyre_phrase_10"], ["lyre_phrase_03", "lyre_phrase_08"]]
 
 func lyre(kind: String, n: int = 0) -> void:
 	if fast:
 		return
 	match kind:
 		"phrase":
-			var have: Array = []
-			while ResourceLoader.exists("res://audio/sfx/lyre_phrase_%02d.mp3" % have.size()):
-				have.append("lyre_phrase_%02d" % have.size())
-			if have.is_empty():
-				sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][clampi(n, 0, 2)])      # stand-in: three rising notes
+			var takes: Array = LYRE_TUNE[n % 3]
+			var take: String = takes[(n / 3) % takes.size()]
+			if ResourceLoader.exists("res://audio/sfx/%s.mp3" % take):
+				sfx(take, -2.0, 0.0)
 			else:
-				sfx(have[_lyre_next % have.size()], -2.0, 0.0)
-				_lyre_next += 1
-		"song":
+				sfx("gather", -4.0, 0.0, [1.0, 1.122, 1.335][n % 3])      # stand-in: three rising notes
+		"song", "verse":
 			if ResourceLoader.exists("res://audio/sfx/lyre_song.mp3"):
-				sfx("lyre_song", -4.0, 0.0)
+				sfx("lyre_song", -4.0 if kind == "song" else -9.0, 0.0)
 			else:
 				sfx("anoint", -12.0, 0.0)
 		"lost":

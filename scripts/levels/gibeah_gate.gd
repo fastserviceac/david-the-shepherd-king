@@ -231,8 +231,15 @@ func phrase(from: Vector2, feet: bool) -> void:
 		e["calm"] = float(e["hold"]) * float(Game.diff()["warning"]) * Game.song_hold()
 		e["hold"] = e["calm"]
 		e["was"] = true
-		Game.sfx("anoint", -14.0, 0.0)
+		if is_instance_valid(player):
+			player.end_song()      # he has eased: the tune comes home and the boy gets up
 		_quieted(who)
+
+
+## A man who has not yet eased is still listening: the song goes on in verses until he does.
+func plays_on(at: Vector2) -> bool:
+	var who := _ear_at(at.x)
+	return who != "" and float(ears[who]["calm"]) <= 0.0
 
 
 ## A phrase let go too soon: with a man, one that had landed is taken back.

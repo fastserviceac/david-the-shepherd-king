@@ -337,6 +337,7 @@ func _summons(lv) -> void:
 	_check(p.act == "play" and p.lyre_feet and absf(p.velocity.x) > 40.0, "begun while walking, he plays on his feet and walks on")
 	var x0: float = p.global_position.x
 	await _play_song(p, 3, true)
+	_check(p.act == "play" and p.verse == 1 and p.verse_rest > 0.0, "on his feet three phrases close a verse, and he plays on")
 	var follows := 0
 	for sh in lv.followers:
 		if sh.calm > 0.0 and is_nan(sh.stay):
@@ -543,11 +544,12 @@ func _gibeah_gate(lv) -> void:
 	await _frames(3)
 	_check(not lv.ask_task["on"] and not lv.enter_task["on"], "unplayed, he will be asked nothing and the gate stays shut")
 	await _play_song(p, 3)
-	_check(int(ge["heard"]) == 3 and ge["calm"] == 0.0, "three phrases, enough for a flock, do not quiet a man (%d heard)" % int(ge["heard"]))
+	_check(int(ge["heard"]) == 3 and ge["calm"] == 0.0 and p.act == "play" and p.lyre_end <= 0.0,
+			"three phrases, enough for a flock, do not quiet a man: the verse closes and he plays on (%d heard)" % int(ge["heard"]))
 	Input.action_press("lyre")
 	for i in 200:
 		await tree.physics_frame
-		if p.act == "play" and p.breath_v > 0.2 and p.breath_v < 0.7:
+		if p.act == "play" and p.verse_rest <= 0.0 and p.breath_v > 0.2 and p.breath_v < 0.7:
 			break
 	Input.action_release("lyre")
 	await _frames(3)
@@ -734,6 +736,8 @@ func _gather_nine(lv) -> void:
 
 ## Plays `n` phrases, each let go at the top of the breath. `held`: the key is already down.
 func _play_song(p, n: int, held: bool = false) -> void:
+	if not held:          # a song that has ended is let end: he gets up before he can begin another
+		await _until(func() -> bool: return p.lyre_end <= 0.0 and p.act != "play_up", 400)
 	for k in n:
 		if not held:
 			Input.action_press("lyre")
@@ -876,16 +880,36 @@ func _lyre(lv) -> void:
 		await _frames(3)
 		if round < 2:
 			landed += 1 if p.phrases == round + 1 else 0
+		if round == 0:
+			_check(ewe.heed_t > 0.0 or was_gathered, "a sheep in hearing lifts its head to the phrase")
+			Input.action_press("lyre")          # a stumble: let go too soon, and the song does not go back
+			await _frames(20)
+			Input.action_release("lyre")
+			await _frames(3)
+			_check(p.phrases == 1 and p.lyre_flash < 0.0 and p.act == "play", "let go too soon, the phrase does not land, and the one that did is kept")
 	_check(landed == 2, "letting go at the top of the breath lands a phrase (%d of the first two)" % landed)
+	_check(p.chord_in > 0.0 and p.phrases == 0 and p.verse == 1, "the third phrase closes the song: its last chord waits for the tune to come home")
 	_check(ewe.calm > 0.0 or was_gathered, "three phrases settle the sheep that hear them")
+	_check(ewe.settle_in > 0.0 or was_gathered, "and they go down as the chord reaches them, not before")
 	_check(Game.has_line("p23_pastures"), "and the line of the psalm comes to him there")
-	await _frames(150)
-	_check(p.act == "" and p.lyre_t == 0.0, "he gets up when he stops playing")
-	Input.action_press("lyre")
-	await _frames(20)
+	await _until(func() -> bool: return not Game.cinematic and p.act == "", 900)
+	var sat := false
+	for tries in 40:                # a second song, with nothing given after it
+		Input.action_press("lyre")
+		await _frames(2)
+		if p.act == "play":
+			sat = true
+			break
+		Input.action_release("lyre")
+		await _frames(10)
+	_check(sat, "he takes up the lyre again (%s %s %.0f)" % [p.act, Game.cinematic, p.velocity.x])
+	await _play_song(p, 3, true)
+	_check(p.act == "play" and p.lyre_end > 0.0 and p.phrases == 0, "a song ends: he stays a moment while the chord rings (%s %.2f)" % [p.act, p.lyre_end])
+	Input.action_press("lyre")          # pressed again as it ends: the song is over all the same
+	await _frames(int((p.SONG_END + p.LYRE_RISE) * 60.0) + 20)
+	_check(p.act == "" and p.lyre_t == 0.0 and p.glow_v < 0.3, "the song over, he lowers the lyre and gets up by himself (%s %.2f %.2f)" % [p.act, p.lyre_t, p.glow_v])
 	Input.action_release("lyre")
 	await _frames(3)
-	_check(p.phrases == 0 and p.lyre_flash < 0.0, "let go too soon, the phrase does not land")
 	Input.action_press("jump")
 	await _frames(3)
 	Input.action_release("jump")

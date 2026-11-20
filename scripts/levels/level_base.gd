@@ -1956,7 +1956,9 @@ func song(from: Vector2, reach: float, walking: bool = false) -> void:
 		if not is_instance_valid(s) or s.carried or absf(s.global_position.x - from.x) > reach \
 				or absf(s.global_position.y - from.y) > 260.0:
 			continue
-		s.settle(SETTLE * Game.song_hold(), not walking)
+		# they go down as the closing chord reaches them, the nearest first
+		var wait: float = (player.CHORD_AT if is_instance_valid(player) else 0.0) + 0.9 * clampf(absf(s.global_position.x - from.x) / reach, 0.0, 1.0)
+		s.settle(SETTLE * Game.song_hold(), not walking, wait)
 		n += 1
 	if n > 0 and not Game.fast:
 		if ResourceLoader.exists("res://audio/sfx/sheep_settle.mp3"):
@@ -1994,6 +1996,12 @@ func song_noise(_at: Vector2) -> float:
 ## How fast the breath line runs at this spot: 1 as it always does, above 1 hurried.
 func song_pace(_at: Vector2) -> float:
 	return 1.0
+
+
+## He is still being listened to here, beyond the sheep: the third phrase closes a verse and he plays on into the
+## next, rather than ending the song and getting up.
+func plays_on(_at: Vector2) -> bool:
+	return false
 
 
 ## The song place he is standing in, if any.

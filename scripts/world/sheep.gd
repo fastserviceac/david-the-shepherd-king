@@ -46,6 +46,9 @@ var name_t := 0.0         # seconds its name stays written over it
 var restless := false     # will not stand: it paces, and trots off from his hand, until the lyre quiets it
 var calm := 0.0           # seconds it stays settled by the song
 var held_x := NAN         # where the song stopped it while it was following him
+const HEAD_UP := 24       # the graze frame with the head raised, looking ahead
+var heed_t := 0.0         # seconds it stands with its head up, turned to the lyre
+var settle_in := 0.0      # seconds until the song's closing chord reaches it and it goes down
 var rest_t := -1.0        # seconds since it lay down to the song (-1: on its feet)
 var rise_t := -1.0        # seconds since it began to get up again (-1: not getting up)
 var pose := ""            # a frame set of its own the story has it play (art/sheep/anim/<pose>_NN.png): labour, tending, a newborn's first stand
@@ -68,8 +71,9 @@ func _ready() -> void:
 ## The song has reached it. A beast at it is forgotten for a moment; it stops bolting; it stands for his hand;
 ## and if it was following him it holds where it is until he calls or the quiet wears off.
 ## `hold` false: played on his feet, so one that is following him goes on following, quieted.
-func settle(seconds: float, hold: bool = true) -> void:
-	calm = seconds
+func settle(seconds: float, hold: bool = true, delay: float = 0.0) -> void:
+	settle_in = delay
+	calm = seconds + settle_in
 	bolt = 0.0
 	called = 0.0
 	worried = 0.0
@@ -78,8 +82,20 @@ func settle(seconds: float, hold: bool = true) -> void:
 	if hold and gathered and is_nan(stay) and leap < 0.0:
 		held_x = global_position.x
 		stay = held_x
+	if settle_in <= 0.0:
+		_settled_fx()
+
+
+func _settled_fx() -> void:
 	if not Game.fast and not Game.backdrop:
 		Game.burst(level, global_position + Vector2(0, -34.0 * size), Color(1.0, 0.9, 0.6, 0.7), 5, 50.0)
+
+
+## A phrase of the lyre has reached it: it lifts its head and turns to him.
+func heed(from_x: float) -> void:
+	heed_t = 1.6
+	if not moving and leap < 0.0 and not carried and absf(from_x - global_position.x) > 8.0:
+		face = signf(from_x - global_position.x)
 
 
 ## The quiet is over: it follows him again.
@@ -98,6 +114,11 @@ func rouse() -> void:
 func _process(delta: float) -> void:
 	t += delta
 	hop = maxf(0.0, hop - delta * 2.5)
+	heed_t = maxf(0.0, heed_t - delta)
+	if settle_in > 0.0:
+		settle_in -= delta
+		if settle_in <= 0.0:
+			_settled_fx()
 	name_t = maxf(0.0, name_t - delta)
 	if calm > 0.0:
 		calm -= delta
@@ -249,6 +270,8 @@ func _draw() -> void:
 		# getting up: its own lying down played back (the same cut sheep, so it leaves the rest pose exactly)
 		var up: Array = FA.frames(kind, "lie")
 		tex = up[clampi(up.size() - 1 - int(rise_t / RISE_S * up.size()), 0, up.size() - 1)]
+	elif (heed_t > 0.0 or settle_in > 0.0) and kind == "sheep" and FA.frames(kind, "graze").size() > HEAD_UP:
+		tex = FA.frames(kind, "graze")[HEAD_UP]      # listening: head up, turned to the lyre
 	elif calm > 0.0 and not FA.frames(kind, "lie").is_empty() and not FA.frames(kind, "rest").is_empty():
 		# quieted by the song and standing still: it lies down on its chest, then rests there, chewing
 		if rest_t < 0.0:
