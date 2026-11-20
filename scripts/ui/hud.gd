@@ -381,7 +381,7 @@ func _rest(level) -> void:
 var _trail: Array = []
 func _breath(player) -> void:
 	var cam: Camera2D = player.cam
-	var at: Vector2 = Vector2(640.0, 360.0) + (player.global_position - cam.get_screen_center_position()) * cam.zoom.x + Vector2(0.0, -188.0 * cam.zoom.y)
+	var at: Vector2 = get_viewport_rect().size * 0.5 + (player.global_position - cam.get_screen_center_position()) * cam.zoom.x + Vector2(0.0, -188.0 * cam.zoom.y)
 	at.y = maxf(at.y, 120.0)
 	var w := 132.0
 	var h := 44.0

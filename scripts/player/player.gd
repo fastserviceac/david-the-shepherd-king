@@ -112,6 +112,8 @@ const BLOCK_RAISE := 0.14 # seconds to bring it up
 const BLOCK_HOLD := 1.3   # and how long the arm can keep it there
 
 
+var _view_k := 1.0        # the closeness the camera was last set to for the shape of the screen (Game.view_k)
+
 func _ready() -> void:
 	_set_hearts()
 	hp = max_hp
@@ -140,7 +142,8 @@ func _ready() -> void:
 	cam.position_smoothing_enabled = true
 	cam.position_smoothing_speed = 5.0
 	add_child(cam)
-	cam.zoom = Vector2(1.18, 1.18)
+	cam.zoom = Vector2(1.18, 1.18) * Game.view_k()
+	_view_k = Game.view_k()
 	cam.make_current()
 
 
@@ -467,10 +470,13 @@ func _physics_process(delta: float) -> void:
 	anim_t += delta * (4.0 + absf(velocity.x) * 0.045)
 
 	shake = move_toward(shake, 0.0, delta * 30.0)
-	# with a strip for the controls under the picture the camera looks lower by half of it, and may go that much
-	# further down, so the picture above the strip is framed as it would be on a 16:9 screen
-	cam.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake) + Game.deck * 0.5)
-	cam.limit_bottom = 720 + int(Game.deck)
+	# a screen taller than 16:9 (an iPad) shows more of the sky and the hills above, not more earth below: the
+	# ground keeps to the same height off the bottom edge as on a phone, and the controls stand over the earth.
+	# (Looking lower by the extra height, as it once did, filled half an iPad with the dark under his feet.)
+	cam.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake))
+	if not is_equal_approx(Game.view_k(), _view_k):      # the screen changed shape (turned, or a window resized)
+		cam.zoom *= Game.view_k() / _view_k
+		_view_k = Game.view_k()
 	cam.position.x = lerpf(cam.position.x, facing * 70.0, delta * 2.0)
 	var before := ph
 	_update_pose(delta)

@@ -21,6 +21,13 @@ var stones_total := 0     # every smooth stone and every place there is to find,
 var places_total := 0
 var pad := false          # the last thing touched was a controller: prompts name its buttons, not keys
 var touch := false        # the screen was touched: the on-screen controls show, and prompts name them
+## How much closer the camera is on a screen taller than 16:9: enough that it shows the same height of the
+## world as a phone does, and the extra width of the phone is what is given up. The painted scenery is made to
+## a 16:9 frame; shown taller it ends in a hard line across the treetops.
+func view_k() -> float:
+	return (720.0 + deck) / 720.0
+
+
 var deck := 0.0           # height (in game pixels) of the strip under the picture that the touch controls stand in
 var gifting := false     # a gift is being given: the world holds still, but its name is shown
 var cinematic := false   # story scene playing: player and enemies hold still

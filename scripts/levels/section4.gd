@@ -271,7 +271,7 @@ func _anointing() -> void:
 	Game.sfx("anoint", 2.0, 0.0)
 	pour()
 	if not Game.fast:
-		create_tween().tween_property(player.cam, "zoom", Vector2(1.55, 1.55), 5.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		create_tween().tween_property(player.cam, "zoom", Vector2(1.55, 1.55) * Game.view_k(), 5.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await say(["1sam16_12", "1sam16_13"])
 	Game.cinematic = true
 	player.act = "kneel_up"       # he lifts his face
