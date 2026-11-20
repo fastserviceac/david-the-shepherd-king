@@ -275,7 +275,7 @@ func _shadow_down() -> void:
 	swell_on = 0.0
 	for i in GUTTER[wave]:
 		_gutter(i)
-	Game.sfx("anoint", -16.0, 0.0)
+	player.end_song()          # the wave is down: the tune comes home, and he gets up to the lamps
 	_tell_lull()
 
 

@@ -298,6 +298,11 @@ func song_pace(_at: Vector2) -> float:
 	return 1.0 + swell * swell_hurry if trial and swell_kind == 1 else 1.0
 
 
+## While the king is being played to the song goes on in verses; it ends when the shadow is down.
+func plays_on(at: Vector2) -> bool:
+	return trial and not rested and not turning and hears(at.x)
+
+
 func phrase(from: Vector2, _feet: bool) -> void:
 	if not trial or rested or turning:
 		return
@@ -354,7 +359,7 @@ func _rest() -> void:
 	trial = false
 	swell_on = 0.0
 	rest_t = 0.0
-	Game.sfx("anoint", -10.0, 0.0)
+	player.end_song()          # the tune comes home on its last chord
 	if not Game.fast:
 		await get_tree().create_timer(2.6).timeout
 	player.stop_lyre(true)

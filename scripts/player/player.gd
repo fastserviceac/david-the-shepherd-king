@@ -70,6 +70,8 @@ const CLINCH_TIME := 0.95
 const WALK := 132.0
 const WALK_CYCLE_PX := 150.0      # ground covered by one full walking cycle of two steps
 const ROLL_TIME := 0.66
+var torch_phase := 0.0   # where his arm is in its swing, as he walks: the torch swings with it
+const STRIKE_STOP := 2400.0   # how hard his feet plant for a blow on the ground (px/s each second)
 const CALL_TIME := 1.3
 var act_t := 0.0
 var call_cd := 0.0
@@ -93,6 +95,21 @@ var breath_noise := 0.0   # a beast near: the line will not hold still
 var phrases := 0          # phrases landed in this song, of three
 var lyre_flash := 0.0     # a phrase just landed (above zero) or was let go too soon (below)
 var lyre_feet := false    # this song is played on his feet (the Walking Song): he walks on, and what follows keeps following
+# a song has a shape: three phrases are the three parts of one tune, and the third comes home on a chord. In the
+# open the song then ends: he lowers the lyre and stands. Where he is still being listened to (a man, the king, a
+# beast led on the road) the chord closes a verse instead, a breath of rest, and he plays on into the next.
+var verse := 0            # verses closed in this sitting (which takes of the middle and closing parts are played)
+var verse_rest := 0.0     # seconds of rest left after a verse closed
+var lyre_end := 0.0       # seconds left of the song's last chord before he lowers the lyre and stands
+var lyre_queued := false  # pressed again while he was getting up: he takes it up again once he is free
+var song_wave := 0.0      # the closing chord going out over the ground, 1 to 0
+var glow_v := 0.0         # how far the warmth of the song has spread around him
+var song_glow: Sprite2D
+var chord_in := 0.0       # seconds until the closing chord sounds (it waits for the last phrase to come home)
+var chord_kind := ""
+const CHORD_AT := 1.7     # the closing phrase reaches its home note 1.7 s in (measured): the chord comes with it
+const VERSE_REST := 1.2
+const SONG_END := 3.1     # from the third phrase to his getting up: the phrase comes home, the chord rings
 const BREATH := 2.4       # seconds a breath takes to rise and fall
 const BREATH_TOP := 0.8   # let go above this and the phrase lands
 const LYRE_SIT := 0.5
@@ -136,6 +153,11 @@ func _ready() -> void:
 	aura.position = Vector2(0, -34)
 	aura.z_index = -1
 	add_child(aura)
+	song_glow = Game.glow(Color(1.0, 0.8, 0.48, 0.0), 128.0)      # the warmth of the song, spreading over the ground
+	song_glow.position = Vector2(0, -16)
+	song_glow.z_index = -1
+	song_glow.visible = false
+	add_child(song_glow)
 
 	cam = Camera2D.new()
 	cam.position = Vector2(0, -110)
@@ -214,15 +236,34 @@ func _update_block(delta: float, able: bool) -> void:
 
 func _update_lyre(delta: float, free: bool, able: bool) -> void:
 	lyre_flash = move_toward(lyre_flash, 0.0, delta * 1.5)
+	song_wave = maxf(0.0, song_wave - delta / 1.1)
+	if chord_in > 0.0:
+		chord_in -= delta
+		if chord_in <= 0.0:
+			song_wave = 1.0
+			glow_v = 1.45            # the bloom of the closing chord
+			Game.lyre(chord_kind)
+	_song_glow(delta)
+	if not Input.is_action_pressed("lyre"):
+		lyre_queued = false
 	if act == "play_up":
+		if Input.is_action_just_pressed("lyre"):
+			lyre_queued = true
 		if act_t >= LYRE_RISE:
 			act = ""
 		return
 	if act != "play":
 		lyre_t = 0.0
+		lyre_end = 0.0           # whatever took him from the lyre (a gift, a fall) took the song with it
+		verse_rest = 0.0
 		# begun at a stand he sits to it, as he always has. With the Walking Song, begun while walking he plays on his feet
 		var walking: bool = Game.has("walksong") and absf(velocity.x) >= 40.0
-		if free and Game.has("lyre") and Input.is_action_just_pressed("lyre") and (walking or absf(velocity.x) < 90.0):
+		var take: bool = Input.is_action_just_pressed("lyre") or (lyre_queued and Input.is_action_pressed("lyre"))
+		if free and Game.has("lyre") and take and (walking or absf(velocity.x) < 90.0):
+			lyre_queued = false
+			verse = 0
+			verse_rest = 0.0
+			lyre_end = 0.0
 			lyre_feet = walking
 			act = "play"
 			act_t = 0.0
@@ -242,6 +283,20 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 	if not able or Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("attack") \
 			or Input.is_action_just_pressed("roll") or Input.is_action_just_pressed("sling"):
 		stop_lyre(false)
+		return
+	if lyre_end > 0.0:        # the last chord rings; then he lowers the lyre and gets up
+		lyre_end -= delta
+		lyre_held = false
+		breath_v = move_toward(breath_v, 0.0, delta * 1.2)
+		if lyre_end <= 0.0:
+			stop_lyre(true)
+		return
+	if verse_rest > 0.0:      # a verse has closed: a breath of rest before the next begins
+		verse_rest -= delta
+		breath = 0.0
+		breath_v = move_toward(breath_v, 0.0, delta * 1.8)
+		lyre_idle = 0.0
+		lyre_held = Input.is_action_pressed("lyre")      # letting go in the rest loses nothing
 		return
 	breath_noise = 0.0
 	for n in get_tree().get_nodes_in_group("enemies"):
@@ -266,14 +321,22 @@ func _update_lyre(delta: float, free: bool, able: bool) -> void:
 			phrases += 1
 			lyre_flash = 1.0
 			Game.buzz(14)
-			Game.lyre("phrase", phrases - 1)
+			Game.lyre("phrase", phrases - 1 + 3 * verse)      # the next part of the tune, not any phrase
+			glow_v = maxf(glow_v, 0.3 + 0.7 * phrases / 3.0 + 0.15)
+			_heed_sheep()
 			if level != null and level.has_method("phrase"):
 				level.phrase(global_position, lyre_feet)
-			if phrases >= 3:
+			if phrases >= 3 and act == "play" and lyre_end <= 0.0:
 				phrases = 0
-				ring_t = 1.0
-				lyre_idle = 0.9          # he plays on a moment, then gets up
-				Game.lyre("song")
+				var on: bool = lyre_feet or (level != null and level.has_method("plays_on") and level.plays_on(global_position))
+				verse += 1
+				chord_in = CHORD_AT
+				if on:
+					verse_rest = VERSE_REST
+					chord_kind = "verse"
+				else:
+					lyre_end = SONG_END
+					chord_kind = "song"
 				if level != null and level.has_method("song"):
 					level.song(global_position, Game.song_reach(), lyre_feet)
 		else:
@@ -297,8 +360,46 @@ func stop_lyre(rising: bool) -> void:
 	lyre_t = 0.0
 	lyre_held = false
 	phrases = 0
+	verse = 0
+	verse_rest = 0.0
+	lyre_end = 0.0
 	if not Game.cinematic:
 		Game.duck(false)
+
+
+## What he was playing for has come to pass (a man quieted, the king at rest): the tune comes home on its last
+## chord wherever it had got to, and he lowers the lyre and gets up.
+func end_song() -> void:
+	if act != "play" or lyre_end > 0.0:
+		return
+	phrases = 0
+	verse_rest = 0.0
+	lyre_end = SONG_END
+	chord_in = CHORD_AT
+	chord_kind = "song"
+
+
+## Each sheep in hearing lifts its head to a phrase and turns to him.
+func _heed_sheep() -> void:
+	var reach: float = Game.song_reach()
+	for s in get_tree().get_nodes_in_group("sheep"):
+		if is_instance_valid(s) and s.has_method("heed") and not s.carried and absf(s.global_position.x - global_position.x) < reach \
+				and absf(s.global_position.y - global_position.y) < 260.0:
+			s.heed(global_position.x)
+
+
+## The warmth of the song on the ground around him: it grows with each phrase, blooms on the closing chord, and
+## goes as he gets up.
+func _song_glow(delta: float) -> void:
+	var aim := 0.0
+	if act == "play" and (lyre_end <= 0.0 or chord_in > 0.0):
+		aim = 1.0 if verse_rest > 0.0 or chord_in > 0.0 else 0.3 + 0.7 * phrases / 3.0
+	glow_v = move_toward(glow_v, aim, delta * (0.9 if glow_v > aim else 1.5))
+	song_glow.visible = glow_v > 0.01 and not Game.backdrop
+	if song_glow.visible:
+		var size: float = Game.song_reach() * (0.55 + 0.75 * minf(glow_v, 1.2))
+		song_glow.scale = Vector2(size, size * 0.42) / 128.0
+		song_glow.modulate.a = 0.1 + 0.16 * glow_v
 
 
 ## Called when a sheep comes to him: he turns and calls it, if he is standing free.
@@ -388,6 +489,14 @@ func _physics_process(delta: float) -> void:
 	if hop_t > 0.0:
 		dir = 0.0
 		velocity.x = move_toward(velocity.x, 0.0, 500.0 * delta)
+	# a blow struck on the ground is struck from planted feet: the run carries him one short step into it, no more
+	# (the strike pictures do not walk, so going on at a run slid him along the ground)
+	if on_floor:
+		torch_phase = fmod(torch_phase + absf(velocity.x) * delta * TAU / 130.0, TAU)
+	var striking: bool = on_floor and attack_t > 0.0 and plunge == 0
+	if striking:
+		dir = 0.0
+		velocity.x = move_toward(velocity.x, 0.0, STRIKE_STOP * delta)
 	# He sets off at a walk and breaks into a run if he keeps going. Shift holds him to a walk.
 	if absf(dir) > 0.1:
 		move_t += delta
@@ -674,6 +783,21 @@ func _update_sling(delta: float, can_act: bool) -> void:
 			charging = false
 			sling_cd = 0.3
 			_fire()
+
+
+## Where he grips a torch he carries, from his feet: the hand of his hanging arm, a little before him at the
+## hip, swinging with his stride (his pictures hold nothing, so the torch is put in that hand, not in the air).
+func torch_grip() -> Vector2:
+	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
+	var sw := sin(torch_phase) * (5.0 - 1.5 * run) if is_on_floor() else 0.0      # running, his arms fly about: the torch is held steadier than they swing
+	var ahead := 10.0 if facing > 0 else 2.0      # his pictures are not even: facing left the hand hangs nearer his body (judged from shots)
+	return Vector2(facing * (ahead + sw), -51.0 - 3.0 * run)
+
+
+## How far the torch leans forward from upright, signed by the way he faces: more as he hurries.
+func torch_tilt() -> float:
+	var run := clampf(absf(velocity.x) / RUN, 0.0, 1.0)
+	return facing * (0.3 + 0.18 * run + 0.06 * sin(torch_phase) * run)
 
 
 func _hand() -> Vector2:
@@ -1168,6 +1292,15 @@ func _draw() -> void:
 			var r := reach * clampf(q * 1.25 - k * 0.12, 0.0, 1.0)
 			if r > 4.0:
 				draw_arc(Vector2(0, -60), r, PI * 1.08, PI * 1.92, 40, Color(1.0, 0.93, 0.75, 0.32 * ring_t), 2.5 - k * 0.6, true)
+	if song_wave > 0.0:      # the closing chord going out over the ground, as far as the song is heard
+		var q := 1.0 - song_wave
+		var sr: float = Game.song_reach()
+		draw_set_transform(Vector2(0, -14), 0.0, Vector2(1.0, 0.32))
+		for k in 3:
+			var r := sr * clampf(1.0 - pow(1.0 - clampf(q * 1.15 - k * 0.1, 0.0, 1.0), 2.0), 0.0, 1.0)
+			if r > 6.0:
+				draw_arc(Vector2.ZERO, r, 0.0, TAU, 64, Color(1.0, 0.88, 0.58, 0.55 * song_wave * (1.0 - k * 0.3)), 5.0 - k * 1.5, true)
+		draw_set_transform(Vector2.ZERO)
 	if leap_t > 0.0 and not is_on_floor():      # the running leap leaves a streak
 		for k in 5:
 			draw_circle(Vector2(-facing * (16.0 + k * 13.0), -34.0 + k * 3.0), 5.0 - k * 0.7, Color(1.0, 0.92, 0.7, 0.16 * leap_t))

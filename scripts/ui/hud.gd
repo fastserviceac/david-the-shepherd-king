@@ -393,32 +393,47 @@ func _breath(player) -> void:
 	_trail.append(v)
 	while _trail.size() > 54:
 		_trail.pop_front()
+	# the song closing: the marks stay lit and the line goes; at the end of a song all of it fades as he gets up,
+	# after a verse the line comes back for the next
+	var ending: bool = player.lyre_end > 0.0
+	var closed: bool = ending or player.verse_rest > 0.0
+	var a := 1.0
+	if ending:
+		a = clampf(player.lyre_end / 1.2, 0.0, 1.0)
+	var la := a * (0.35 if closed else 1.0)      # the line itself, dimmed while the song is closing
 	var top := at.y - h
 	var band: float = h * (1.0 - player.BREATH_TOP)
-	var hot: bool = v >= player.BREATH_TOP and player.lyre_held
-	draw_rect(Rect2(at.x - w * 0.5 - 8.0, top - 8.0, w + 16.0, h + 30.0), Color(0.03, 0.03, 0.07, 0.42))
-	draw_rect(Rect2(at.x - w * 0.5, top, w, band), Color(gold.r, gold.g, gold.b, 0.5 if hot else 0.2))
-	draw_line(Vector2(at.x - w * 0.5, top + band), Vector2(at.x + w * 0.5, top + band), Color(gold.r, gold.g, gold.b, 0.55), 1.0)
-	draw_line(Vector2(at.x - w * 0.5, at.y), Vector2(at.x + w * 0.5, at.y), Color(cream.r, cream.g, cream.b, 0.25), 1.0)
+	var hot: bool = v >= player.BREATH_TOP and player.lyre_held and not closed
+	draw_rect(Rect2(at.x - w * 0.5 - 8.0, top - 8.0, w + 16.0, h + 30.0), Color(0.03, 0.03, 0.07, 0.42 * a))
+	draw_rect(Rect2(at.x - w * 0.5, top, w, band), Color(gold.r, gold.g, gold.b, (0.5 if hot else 0.2) * la))
+	draw_line(Vector2(at.x - w * 0.5, top + band), Vector2(at.x + w * 0.5, top + band), Color(gold.r, gold.g, gold.b, 0.55 * la), 1.0)
+	draw_line(Vector2(at.x - w * 0.5, at.y), Vector2(at.x + w * 0.5, at.y), Color(cream.r, cream.g, cream.b, 0.25 * la), 1.0)
 	var pts := PackedVector2Array()
 	var n := _trail.size()
 	var head_x := at.x + w * 0.5 - 14.0
 	for i in n:
 		pts.append(Vector2(head_x - (n - 1 - i) * ((w - 14.0) / 53.0), at.y - float(_trail[i]) * h))
 	if pts.size() >= 2:
-		draw_polyline(pts, Color(cream.r, cream.g, cream.b, 0.8), 2.0, true)
+		draw_polyline(pts, Color(cream.r, cream.g, cream.b, 0.8 * la), 2.0, true)
 	var head := Vector2(head_x, at.y - v * h)
-	draw_circle(head, 7.5 if hot else 5.0, Color(gold.r, gold.g, gold.b, 0.35))
-	draw_circle(head, 4.2 if hot else 3.2, gold if hot else cream)
+	draw_circle(head, 7.5 if hot else 5.0, Color(gold.r, gold.g, gold.b, 0.35 * la))
+	draw_circle(head, 4.2 if hot else 3.2, Color(gold.r, gold.g, gold.b, la) if hot else Color(cream.r, cream.g, cream.b, la))
 	var fl: float = player.lyre_flash
 	if fl > 0.0:            # a phrase landed: a ring opens from the head of the line
-		draw_arc(head, 8.0 + (1.0 - fl) * 26.0, 0.0, TAU, 28, Color(gold.r, gold.g, gold.b, fl), 2.0, true)
-	for k in 3:             # the three phrases of a song
-		var c := Vector2(at.x - 16.0 + k * 16.0, at.y + 12.0)
-		var lit: bool = k < int(player.phrases)
-		draw_circle(c, 4.0, Color(gold.r, gold.g, gold.b, 0.95) if lit else Color(1, 1, 1, 0.18))
+		draw_arc(head, 8.0 + (1.0 - fl) * 26.0, 0.0, TAU, 28, Color(gold.r, gold.g, gold.b, fl * a), 2.0, true)
+	var lit_n: int = 3 if closed else int(player.phrases)
+	var bloom: float = player.song_wave         # the closing chord: the three marks flare together
+	var shake := 0.0
+	if fl < 0.0:            # let go too soon: the marks stumble, and nothing is lost
+		shake = sin(Time.get_ticks_msec() * 0.06) * 3.0 * -fl
+	for k in 3:             # the three parts of the song
+		var c := Vector2(at.x - 16.0 + k * 16.0 + shake, at.y + 12.0)
+		var lit: bool = k < lit_n
+		if lit and bloom > 0.0:
+			draw_circle(c, 4.0 + 7.0 * bloom, Color(gold.r, gold.g, gold.b, 0.35 * bloom * a))
+		draw_circle(c, 4.0, Color(gold.r, gold.g, gold.b, 0.95 * a) if lit else Color(1, 1, 1, 0.18 * a))
 		if not lit:
-			draw_arc(c, 4.0, 0.0, TAU, 14, Color(1, 1, 1, 0.4 if fl >= 0.0 else 0.4 + 0.5 * -fl), 1.0, true)
+			draw_arc(c, 4.0, 0.0, TAU, 14, Color(1, 1, 1, (0.4 if fl >= 0.0 else 0.4 + 0.5 * -fl) * a), 1.0, true)
 
 
 ## The second page of the journal: Psalm 23 as far as it has come to him, in the psalm's own order. A line not

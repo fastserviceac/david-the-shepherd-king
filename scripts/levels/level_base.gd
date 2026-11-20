@@ -1957,7 +1957,9 @@ func song(from: Vector2, reach: float, walking: bool = false) -> void:
 		if not is_instance_valid(s) or s.carried or absf(s.global_position.x - from.x) > reach \
 				or absf(s.global_position.y - from.y) > 260.0:
 			continue
-		s.settle(SETTLE * Game.song_hold(), not walking)
+		# they go down as the closing chord reaches them, the nearest first
+		var wait: float = (player.CHORD_AT if is_instance_valid(player) else 0.0) + 0.9 * clampf(absf(s.global_position.x - from.x) / reach, 0.0, 1.0)
+		s.settle(SETTLE * Game.song_hold(), not walking, wait)
 		n += 1
 	if n > 0 and not Game.fast:
 		if ResourceLoader.exists("res://audio/sfx/sheep_settle.mp3"):
@@ -1995,6 +1997,12 @@ func song_noise(_at: Vector2) -> float:
 ## How fast the breath line runs at this spot: 1 as it always does, above 1 hurried.
 func song_pace(_at: Vector2) -> float:
 	return 1.0
+
+
+## He is still being listened to here, beyond the sheep: the third phrase closes a verse and he plays on into the
+## next, rather than ending the song and getting up.
+func plays_on(_at: Vector2) -> bool:
+	return false
 
 
 ## The song place he is standing in, if any.
@@ -2187,7 +2195,7 @@ func add_light(pos: Vector2, r: float) -> Dictionary:
 func light_torch() -> void:
 	torch_t = torch_max
 	Game.sfx("fire", -2.0)
-	Game.burst(self, player.global_position + Vector2(player.facing * 20.0, -78), Color(1.0, 0.7, 0.3, 0.9), 12, 120.0)
+	Game.burst(self, player.global_position + player.torch_grip() + Vector2(0, -40), Color(1.0, 0.7, 0.3, 0.9), 12, 120.0)
 
 
 func _update_dark(delta: float) -> void:
@@ -2213,7 +2221,11 @@ func _update_dark(delta: float) -> void:
 			stick.position = Vector2(0, 16)
 			stick.show_behind_parent = true
 			torch_node.add_child(stick)
-		torch_node.position = player.global_position + Vector2(player.facing * 22.0, -92.0)
+		# held in his hand, the handle's foot in his grip and the head leaning forward (the flame is 38 above the grip)
+		var tilt: float = player.torch_tilt()
+		torch_node.rotation = tilt
+		torch_node.get_node("fire").rotation = -tilt          # the flame still burns upward
+		torch_node.position = player.global_position + player.torch_grip() - Vector2(0.0, 38.0).rotated(tilt)
 		torch_node.get_node("g").visible = torch_t > 0.0
 		torch_node.get_node("stick").visible = torch_t > 0.0
 		var low := clampf(torch_t / (torch_max * 0.3), 0.3, 1.0) * (0.7 if draught > 1.5 else 1.0)
