@@ -116,7 +116,26 @@ func play(film: String = FILM, cue_file: String = CUES) -> void:
 	await finished
 
 
+## A screen taller than 16:9 (an iPad): the film keeps its 16:9 frame in the middle of the height and the
+## black runs above and below it, over the whole screen, so the place behind it does not show under the film.
+var _laid_for := Vector2.ZERO
+func _lay_out() -> void:
+	var vs := get_viewport_rect().size
+	if vs == _laid_for:
+		return
+	var dy := (vs.y - 720.0) * 0.5 - ((_laid_for.y - 720.0) * 0.5 if _laid_for != Vector2.ZERO else 0.0)
+	_laid_for = vs
+	position = Vector2.ZERO
+	size = vs
+	shade.position = Vector2.ZERO
+	shade.size = vs
+	for c in get_children():
+		if c != shade:
+			c.position.y += dy
+
+
 func _process(delta: float) -> void:
+	_lay_out()
 	if not running:
 		return
 	t += delta

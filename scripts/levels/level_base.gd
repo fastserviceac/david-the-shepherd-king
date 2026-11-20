@@ -1873,7 +1873,8 @@ func _process(_delta: float) -> void:
 		var s: float = L["s"]
 		var node: Node2D = L["node"]
 		if L.has("flat"):
-			node.position = Vector2(c.x * (1.0 - s), c.y + 360.0 / player.cam.zoom.y - 720.0)
+			# pinned to the foot of the screen, whatever its height (on an iPad the screen is taller than 720)
+			node.position = Vector2(c.x * (1.0 - s), c.y + get_viewport_rect().size.y * 0.5 / player.cam.zoom.y - 720.0)
 		else:
 			node.position = Vector2(c.x * (1.0 - s), (c.y - 360.0) * (1.0 - s * 0.6))
 	if motes:
@@ -2240,18 +2241,18 @@ func _update_dark(delta: float) -> void:
 	var arr := PackedVector3Array()
 	if player_light > 0.0:
 		var sp: Vector2 = xf * (player.global_position + Vector2(0, -60))
-		arr.append(Vector3(sp.x / view.x, sp.y / view.y, player_light * zoom / 720.0))
+		arr.append(Vector3(sp.x / view.x, sp.y / view.y, player_light * zoom / view.y))
 	for i in cp_fires.size():
 		if cp_fires[i] != null and cp_fires[i].visible:
 			var fp: Vector2 = xf * cp_fires[i].position
-			arr.append(Vector3(fp.x / view.x, fp.y / view.y, 250.0 * zoom / 720.0))
+			arr.append(Vector3(fp.x / view.x, fp.y / view.y, 250.0 * zoom / view.y))
 	for l in lights:
 		if not l["on"] or arr.size() >= 12:
 			continue
 		var lp: Vector2 = xf * l["pos"]
 		if lp.x < -view.x or lp.x > view.x * 2.0:
 			continue
-		arr.append(Vector3(lp.x / view.x, lp.y / view.y, float(l["r"]) * zoom / 720.0))
+		arr.append(Vector3(lp.x / view.x, lp.y / view.y, float(l["r"]) * zoom / view.y))
 	var n := arr.size()
 	while arr.size() < 12:
 		arr.append(Vector3(-9, -9, 0.0))

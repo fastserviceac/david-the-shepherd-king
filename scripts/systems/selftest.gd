@@ -794,9 +794,13 @@ func _lambing(m) -> void:
 	_check(lv.rachel.who == "rachel" and lv.lamb.who == "lamb" and lv.flock.size() == 7 and not "rachel" in lv.flock.map(func(s): return s.who),
 			"seven ewes are in the fold, Rachel is out among the rocks, and the lamb is not yet born")
 	_check(lv.tasks.any(func(tk): return tk["text"] == "take a brand from the fire"), "a brand can be taken from the fire")
-	await _goto(lv.FOLD)
+	await _goto(lv.FOLD + 200.0)
 	await _frames(20)
-	_check(lv.part == 1, "at the fold he counts them, and one is missing")
+	_check(lv.part == 0, "walking past the fold does not count them")
+	await _hold(lv, lv.count_task)
+	await _until(func() -> bool: return lv.part == 1, 600)
+	await _frames(240)
+	_check(lv.part == 1, "held at the fold, he counts them, and one is missing")
 	await _goto(lv.BIRTH_X - 120.0)
 	await _frames(10)
 	_check(lv.part == 2 and lv.song_spot["on"], "he finds her lambing, and the lyre is asked for")
@@ -1194,6 +1198,7 @@ func _s1(lv) -> void:
 	ja.held = 5.0
 	jb.held = 5.0
 	await _frames(20)
+	lv.player.facing = 1          # jb is the one in front: which way he faced last depends on the save the test began from
 	Input.action_press("attack")
 	await _frames(45)
 	Input.action_release("attack")
@@ -1800,6 +1805,20 @@ func placeshots(m, dir: String) -> void:
 			var nm := spot.get_slice(":", 0)
 			var sx := float(spot.get_slice(":", 1))
 			if nm == "menu":      # SPOTS=menu:0 : the main menu as it opens
+			if nm == "film":      # SPOTS=film:c2_summons : a story film, a few seconds in
+				m.intro.play_story(spot.get_slice(":", 1))
+				await _frames(240)
+				await _snap(dir, "film_" + spot.get_slice(":", 1))
+				m.intro._end()
+				await _frames(30)
+				continue
+			if nm == "map":      # SPOTS=map:0 : the map, opened over the place he is in
+				m.map.open(false, int(Game.save.get("section", 0)))
+				await _frames(90)
+				await _snap(dir, "map")
+				m.map.close()
+				await _frames(20)
+				continue
 				m.show_menu()
 				await _frames(60)
 				await _snap(dir, "menu")

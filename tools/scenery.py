@@ -76,6 +76,16 @@ def pier(im, wide=96):
 PIER = {'c2_gibeah'}
 FEATHER = {'c2_gate', 'c2_gate_open', 'c2_hall_door'}
 
+def fade_top(im, part=0.22):
+    """A midground whose painting runs off its top edge (the olive crowns at the watch) would end in a straight line
+    across the trees wherever the sky above it shows: the top fades out instead, into the backdrop's sky."""
+    a = np.asarray(im).astype(np.float32)
+    f = int(a.shape[0] * part)
+    t = np.arange(f, dtype=np.float32) / f
+    a[:f, :, 3] *= (t * t * (3 - 2 * t))[:, None]
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
+FADE_TOP = {'watch'}
+
 names = sys.argv[1:] or sorted({os.path.basename(f).rsplit('_', 1)[0] for f in glob.glob(SRC + '/*_backdrop.png') + glob.glob(SRC + '/*_mid.png')})
 for n in names:
     p = '%s/%s_backdrop.png' % (SRC, n)
@@ -83,7 +93,7 @@ for n in names:
         (lambda m: fade_foot(m, floor=FADE[n]) if n in FADE else m)(fit(Image.open(p).convert('RGB'), 5120, 2880)).save('art/%s_backdrop.png' % n); print('backdrop', n)
     p = '%s/%s_mid.png' % (SRC, n)
     if os.path.exists(p):
-        (lambda m: pier(m) if n in PIER else m)((lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440)))).save('art/%s_mid.png' % n); print('mid', n)
+        (lambda m: fade_top(m) if n in FADE_TOP else m)((lambda m: pier(m) if n in PIER else m)((lambda m: defringe(m) if n in DEFRINGE else m)(key_magenta(fit(Image.open(p).convert('RGB'), 2560, 1440))))).save('art/%s_mid.png' % n); print('mid', n)
 
 # props: tools/src/art_in/props/<name>.png on magenta -> art/props/<name>.png, cut out and trimmed to the object
 for p in sorted(glob.glob(SRC + '/props/*.png')):

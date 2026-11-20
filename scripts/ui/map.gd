@@ -453,6 +453,9 @@ func _draw() -> void:
 		ink = Color(0.98, 0.94, 0.84)
 	else:
 		draw_texture_rect(tex[view], Rect2(0, 0, 1280, 720), false)
+	var below := get_viewport_rect().size.y - 720.0
+	if below > 0.5:      # an iPad: the map keeps its 16:9 frame at the top, and the strip under it (where the
+		draw_rect(Rect2(0, 720, 1280, below), Color(0.03, 0.02, 0.03))      # buttons stand) is dark, not the place behind
 	var v: Dictionary = data["views"][view]
 	for lb in data["labels"]:
 		if view in lb["views"]:

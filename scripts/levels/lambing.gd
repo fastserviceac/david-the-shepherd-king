@@ -17,6 +17,7 @@ const LABOUR_S := 30.0        # seconds of quiet, with him by her, that the birt
 const GATHER_S := 4.0
 
 var flock: Array = []          # the seven in the fold
+var count_task: Dictionary     # held at the fold: he touches each ewe in turn, and comes to seven
 var rachel                     # the ewe that went off alone: Shai's mother
 var lamb                       # Shai, once born
 var part := 0                  # 0 at the fold, 1 searching, 2 labour, 3 born and still, 4 breathing, 5 with its mother, 6 carrying home, 7 home
@@ -155,7 +156,7 @@ func _populate() -> void:
 	for tx in [260.0, 1180.0, 2300.0, 3800.0]:
 		add_tree(tx, rng.randf_range(0.8, 1.15), rng.randf() < 0.5)
 	add_hint(FIRE - 120.0, 150.0, "E  take a brand from the fire")
-	add_trigger(FOLD - 140.0, FOLD + 160.0, _count, false)
+	count_task = add_task(FOLD, "count the ewes", 0.8, _count, 140.0)
 	add_trigger(BIRTH_X - 260.0, BIRTH_X + 200.0, _found_her)
 
 
@@ -163,11 +164,21 @@ func begin() -> void:
 	await say(["n_s1_intro", "n_lamb_intro", "gen31_40"])
 
 
-## At the fold he counts them, and one is missing.
+## At the fold he counts them, one by one under his hand as a shepherd does, and comes to seven of eight.
 func _count() -> void:
 	if part != 0:
 		return
 	part = 1
+	for i in flock.size():          # the tips are the count (a scene would hide them, so he is not held still)
+		var s = flock[i]
+		if is_instance_valid(s):
+			s.hop = 0.7
+			s.name_t = 0.0
+			Game.sfx("sheep", -12.0, 0.15)
+		show_tip(str(i + 1), 1.0)
+		if not Game.fast:
+			await get_tree().create_timer(0.45).timeout
+	show_tip("Seven.  There should be eight", 4.0)
 	await say(["n_lamb_alone"])
 	add_tracks(FOLD + 300.0, BIRTH_X - 240.0)
 
