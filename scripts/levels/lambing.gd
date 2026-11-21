@@ -1,5 +1,5 @@
 extends "res://scripts/levels/level_base.gd"
-## 1.0 Lambing Night. Late winter, weeks before the evening of the Pastures. The ewes are near their time; one has
+## 1.1 Lambing Night. The night after the Pastures, at the fold the flock was brought into at dusk. The ewes are near their time; one has
 ## gone off alone among the rocks, which is how a shepherd knows. He takes a brand from the watchfire and goes after
 ## her, keeps a wolf off while she labours (the lyre keeps her quiet; a wolf near her undoes it), rubs the still
 ## lamb dry with grass until it breathes, lays it at its mother's head so she knows it by its smell, and carries it
@@ -13,7 +13,7 @@ const FIRE := 780.0
 const EMBERS := 2080.0
 const GRASS_X := 3020.0       # dry grass, kept from the frost under a rock shelf
 const BIRTH_X := 3420.0       # where she has gone to lamb, in the lee of the rocks
-const LABOUR_S := 30.0        # seconds of quiet, with him by her, that the birth takes
+const LABOUR_S := 18.0        # seconds of quiet, with him by her, that the birth takes: less than one song holds her
 const GATHER_S := 4.0
 
 var flock: Array = []          # the seven in the fold
@@ -30,6 +30,8 @@ var fire_light: Dictionary
 var bleat_t := 3.0
 var spooked_t := 0.0           # seconds since the wolf last broke her quiet (for the tip)
 var told_wolf := false
+var told_restless := false
+var told_going := false
 var grass_task: Dictionary
 var rub_task: Dictionary
 var lay_head_task: Dictionary
@@ -161,7 +163,7 @@ func _populate() -> void:
 
 
 func begin() -> void:
-	await say(["n_s1_intro", "n_lamb_intro", "gen31_40"])
+	await say(["n_lamb_intro", "gen31_40"])      # the Pastures, just played, has said who he is and where
 
 
 ## At the fold he counts them, one by one under his hand as a shepherd does, and comes to seven of eight.
@@ -205,6 +207,11 @@ func _wolf_near(x: float, reach: float) -> bool:
 func _spawn_wolf(x: float) -> void:
 	wolves += 1
 	wolf = add_beast("wolf", x, {"edge_x": width})
+	if wolf != null:
+		# a lone wolf at a birth, not a pack at the fold: one blow of the staff or one stone sends it off for good,
+		# and it gives ground more slowly than he runs, so he can come up with it
+		wolf.hp = 1
+		wolf.speed = 125.0
 	Game.music("battle", 1.0)
 	Game.sfx("jackal_snarl", -6.0)
 
@@ -218,18 +225,27 @@ func _labour(delta: float) -> void:
 			spooked_t = 0.0
 			if not told_wolf:
 				told_wolf = true
-				show_tip("A wolf.  She will not be quiet while it is near: drive it off, then play again", 6.5)
+				show_tip("A wolf.  She will not be quiet while it is near.  Go at it and strike it (J), then play to her again", 7.0)
 		rachel.pose_fps = 12.0       # she strains and throws her head
 		return
 	rachel.pose_fps = 6.0
-	if wolf != null and is_instance_valid(wolf) and wolf.fleeing:
+	if wolf != null and (not is_instance_valid(wolf) or wolf.fleeing):      # driven off for good (or gone from the night)
 		wolf = null
 		Game.music(mood, 2.5)
+		show_tip("It is gone.  Play to her again (R)", 5.0)
 	if rachel.calm > 0.0 and near_her:
+		var was := labour
 		labour = minf(1.0, labour + delta / LABOUR_S)
+		told_restless = false
+		if was < 0.6 and labour >= 0.6 and wolf == null and not told_going:
+			told_going = true
+			show_tip("Her breathing slows.  Stay by her", 4.0)
+	elif labour > 0.0 and labour < 1.0 and wolf == null and not told_restless and rachel.calm <= 0.0:
+		told_restless = true      # the quiet has worn off before the lamb came: he is told to play again
+		show_tip("She is restless again.  Play to her (R)", 5.0)
 	if labour >= 0.3 and wolves == 0 and not Game.fast:
 		_spawn_wolf(width - 160.0)
-	if labour >= 1.0 and wolf == null:
+	if labour >= 1.0 and (wolf == null or not is_instance_valid(wolf)):
 		_born()
 
 

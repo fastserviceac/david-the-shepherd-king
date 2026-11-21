@@ -11,7 +11,14 @@
           "title": "The Pastures",
           "script": "res://scripts/levels/section1.gd",
           "aim": "Bring the flock into the fold before dark.",
-          "why": "They are his father's sheep, not his own. A shepherd answers for every one of them.",
+          "why": "They are his father's sheep, not his own. A shepherd answers for every one of them."
+        },
+        {
+          "title": "The Well",
+          "script": "res://scripts/levels/well.gd",
+          "film": "well",
+          "aim": "Water the flock at the well, and count them in.",
+          "why": "Sheep not watered at evening will not last the next day's heat. And the count is how a shepherd learns that one is gone.",
           "then": {
               "title": "Lambing Night",
               "script": "res://scripts/levels/lambing.gd",
@@ -29,13 +36,6 @@
                   "frames:david/cradle"
               ]
           }
-        },
-        {
-          "title": "The Well",
-          "script": "res://scripts/levels/well.gd",
-          "film": "well",
-          "aim": "Water the flock at the well, and count them in.",
-          "why": "Sheep not watered at evening will not last the next day's heat. And the count is how a shepherd learns that one is gone."
         },
         {
           "title": "The Lost Lamb",

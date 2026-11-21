@@ -217,10 +217,11 @@ func _chapters() -> void:
 	main.menu.chapter = 0
 	main.menu.open("sections")
 	var rows: Array = main.menu.items.map(func(it): return it[0])
-	var night: bool = Game.interlude_ready(0)      # the lambing night is listed before the Pastures once it is painted
-	_check(rows[0] == ("interlude_0" if night else "section_0"), "the lambing night is listed before the Pastures once its pictures exist (%s)" % str(night))
+	var night: bool = Game.interlude_ready(1)      # the lambing night is listed after the Pastures, before the Well, once it is painted
+	_check(rows[0] == "section_0" and rows[1] == ("interlude_1" if night else "section_1"),
+			"the lambing night is listed after the Pastures, before the Well, once its pictures exist (%s)" % str(night))
 	if night:
-		rows.remove_at(0)
+		rows.remove_at(1)
 	_check(rows.slice(0, first) == range(first).map(func(i): return "section_%d" % i) and ("chapter_1" in rows) == lacks.is_empty(),
 			"the menu lists Chapter One's sections, and Chapter Two only when it can be walked into")
 	Game.force_ready = true
@@ -771,9 +772,10 @@ func _old_save() -> void:
 	_check(Game.has("lyre") and Game.flock().size() == 9 and str(Game.flock()[0]["id"]) == "lamb", "and is given the lyre and his nine sheep")
 	_check(Game.has_line("p23_pastures") and Game.has_line("p23_waters") and Game.has_line("p23_valley") and not Game.has_line("p23_rod") and not Game.has_line("p23_goodness"),
 			"and the lines of the psalm from the places he has been through")
-	_check(Game.save.get("lamb_born") == true and not Game.interlude_due(0), "a journey begun before the lambing night has Shai already, and is not sent back to it")
+	_check(Game.save.get("lamb_born") == true and not Game.interlude_due(1), "a journey begun before the lambing night has Shai already, and is not sent back to it")
 	Game.take_save({})
-	_check(Game.save.get("lamb_born") == false and Game.interlude_due(0), "a new journey begins with the lambing night")
+	_check(Game.save.get("lamb_born") == false and not Game.interlude_due(0) and Game.interlude_due(1) and Game.interlude(0).is_empty(),
+			"a new journey begins on the Pastures, and the lambing night comes before the Well")
 	var again: Dictionary = Game.save.duplicate(true)
 	again["psalm"] = ["p23_waters"]
 	again["flock"][2]["at"] = "section1"
@@ -784,17 +786,17 @@ func _old_save() -> void:
 	Game.save = kept
 
 
-## The lambing night before the Pastures: the count at the fold, the ewe found among the rocks, the labour kept
+## The lambing night after the Pastures, before the Well: the count at the fold, the ewe found among the rocks, the labour kept
 ## quiet by the lyre and undone by a wolf, the lamb rubbed dry, laid at its mother's head, carried home at her pace.
 func _lambing(m) -> void:
-	print("Lambing Night (before section 1)")
+	print("Lambing Night (before section 2)")
 	Game.backdrop = false
 	Game.cinematic = false
 	var born_was = Game.save.get("lamb_born", false)
 	Game.save["lamb_born"] = false
-	await m.load_level(0, 0, true)
+	await m.load_level(1, 0, true)
 	var lv = m.level
-	_check(m.in_interlude and lv.section_name() == "lambing" and m.here()["title"] == "Lambing Night", "the night before the Pastures loads as its own place")
+	_check(m.in_interlude and lv.section_name() == "lambing" and m.here()["title"] == "Lambing Night", "the night before the Well loads as its own place")
 	lv.begin()
 	await _frames(5)
 	_check(lv.rachel.who == "rachel" and lv.lamb.who == "lamb" and lv.flock.size() == 7 and not "rachel" in lv.flock.map(func(s): return s.who),
@@ -812,21 +814,29 @@ func _lambing(m) -> void:
 	_check(lv.part == 2 and lv.song_spot["on"], "he finds her lambing, and the lyre is asked for")
 	await _frames(30)
 	_check(lv.labour == 0.0, "without the lyre the labour does not go on")
-	lv.rachel.settle(30.0, false)
-	await _frames(60)
+	# played as a player plays it: the lyre by her, the wolf struck with the staff, the lyre again
+	var p = lv.player
+	await _play_song(p, 3)
+	await _until(func() -> bool: return lv.labour > 0.05, 600)
 	_check(lv.labour > 0.0, "quieted by the song, with him beside her, it goes on")
-	lv._spawn_wolf(lv.BIRTH_X + 300.0)
+	await _until(func() -> bool: return lv.labour >= 0.3, 900)
+	if lv.wolf == null:      # the tests run fast, where the night sends no beast of its own
+		lv._spawn_wolf(lv.width - 160.0)
 	await _frames(5)
 	var before: float = lv.labour
+	await _until(func() -> bool: return lv._wolf_near(lv.BIRTH_X, 560.0), 600)
 	await _frames(30)
-	_check(lv.wolf != null and lv.rachel.calm <= 0.0 and lv.labour == before and lv.song_noise(lv.rachel.global_position) > 0.0,
+	_check(lv.wolf != null and lv.rachel.calm <= 0.0 and absf(lv.labour - before) < 0.02 and lv.song_noise(lv.rachel.global_position) > 0.0,
 			"a wolf near her breaks the quiet and stops the labour")
-	lv.wolf.drive_off()
-	await _frames(10)
-	lv.rachel.settle(30.0, false)
-	lv.labour = 0.999
-	await _frames(30)
-	_check(lv.part == 3 and lv.lamb.visible and lv.rub_task["on"], "the wolf gone and the labour done, the lamb lies still")
+	var struck := await _chase_strike(lv)
+	_check(struck and lv.wolf == null, "one blow of the staff sends the wolf off for good (%s)" % str(struck))
+	await _goto(lv.BIRTH_X - 120.0)
+	await _play_song(p, 3)
+	var born := await _until(func() -> bool: return lv.part == 3, 60 * 40)
+	_check(born and lv.lamb.visible and lv.rub_task["on"], "played to again with the wolf gone, the labour comes to its end and the lamb lies still (labour %.2f)" % lv.labour)
+	if not born:
+		lv.labour = 1.0
+		await _until(func() -> bool: return lv.part == 3, 120)
 	await _hold(lv, lv.rub_task)
 	await _frames(5)
 	_check(lv.part == 3, "it cannot be rubbed dry with bare hands")
@@ -862,6 +872,29 @@ func _lambing(m) -> void:
 	m.in_interlude = false
 
 
+## He goes at the wolf as a player does, running at it and striking with the staff when it is in reach.
+## True once it has been sent off for good.
+func _chase_strike(lv) -> bool:
+	var p = lv.player
+	for i in 60 * 30:
+		if lv.wolf == null or not is_instance_valid(lv.wolf) or lv.wolf.fleeing:
+			break
+		var dx: float = lv.wolf.global_position.x - p.global_position.x
+		Input.action_release("move_left")
+		Input.action_release("move_right")
+		Input.action_release("attack")
+		if absf(dx) < 70.0 and i % 12 == 0:
+			p.facing = 1 if dx > 0.0 else -1
+			Input.action_press("attack")
+		elif absf(dx) >= 50.0:
+			Input.action_press("move_right" if dx > 0.0 else "move_left")
+		await tree.physics_frame
+	for a in ["move_left", "move_right", "attack"]:
+		Input.action_release(a)
+	await _frames(5)
+	return lv.wolf == null or not is_instance_valid(lv.wolf) or lv.wolf.fleeing
+
+
 ## The lyre, played by holding the key and letting go at the top of the breath: three phrases, and the sheep
 ## that hear them settle. Run at the start of the Pastures, beside the restless ewe.
 func _lyre(lv) -> void:
@@ -869,7 +902,9 @@ func _lyre(lv) -> void:
 	var lines: Array = Game.psalm().duplicate()
 	Game.give("lyre", true)
 	Game.save["psalm"] = []
-	_check(lv.flock_here.size() == 9 and lv.sheep_total == 9, "the nine of the Pastures are his own nine (%d)" % lv.flock_here.size())
+	var own_n := 9 if Game.save.get("lamb_born", false) else 8      # Shai is born the night after the Pastures
+	_check(lv.flock_here.size() == own_n and lv.sheep_total == own_n and (own_n == 9) == ("lamb" in lv.flock_here),
+			"the sheep of the Pastures are his own, and Shai is among them only once born (%d of %d)" % [lv.flock_here.size(), own_n])
 	var ewe = lv.restless_ewe
 	_check(ewe.named == "Devorah" and ewe.who == "devorah" and is_equal_approx(ewe.size, float(Game.flock_one("devorah")["size"])), "a named ewe wears her own look")
 	var was_gathered: bool = ewe.gathered
@@ -1266,7 +1301,7 @@ func _s1(lv) -> void:
 			lv.player.position = s.position
 			lv.player.velocity = Vector2.ZERO
 			await _frames(10)
-	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == 9, "all nine sheep gathered")
+	_check(lv.sheep_count == lv.sheep_total and lv.sheep_total == (9 if Game.save.get("lamb_born", false) else 8), "all his sheep gathered (%d)" % lv.sheep_total)
 	for b in tree.get_nodes_in_group("hittable"):
 		b.hit(1, 1, "staff")
 		b.hit(1, 1, "staff")

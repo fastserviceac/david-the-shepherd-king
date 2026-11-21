@@ -53,7 +53,8 @@ func _populate() -> void:
 	for tx in [120.0, 860.0, 1560.0, 2600.0, 2760.0, 3020.0, 4420.0]:
 		add_tree(tx, rng.randf_range(0.8, 1.3), rng.randf() < 0.4)
 
-	add_sheep(700.0, null, true)      # the flock is nine: eight ewes and this year's lamb, in every section
+	if Game.save.get("lamb_born", false):      # the flock is nine: eight ewes and this year's lamb, once Shai is born
+		add_sheep(700.0, null, true)      # (the first time through, the lambing night that follows is when he is born)
 	# one that will not stand: she paces under the olive and trots off from his hand. The lyre is what quiets her,
 	# and the first place he has reason to take it up
 	restless_ewe = add_sheep(905.0, null, false, "devorah")
@@ -113,7 +114,8 @@ func _at_fold() -> void:
 	if sheep_count < sheep_total:
 		await say(["n_s1_missing"])
 		return
-	await say(["n_s1_to_well"])
+	if not Game.interlude_due(1):      # the night at the fold comes first: they go down to the well after it
+		await say(["n_s1_to_well"])
 	await line_here("p23_pastures")      # if the lyre never brought it to him out on the hill, it comes at the fold
 	complete()
 
@@ -186,4 +188,4 @@ func _goal_now() -> String:
 		return "Call the wild ewe (Q)"
 	if _far >= 780.0 and _far < 2150.0 and Game.has("lyre") and is_instance_valid(restless_ewe) and not restless_ewe.gathered and restless_ewe.calm <= 0.0:
 		return "Quiet the restless ewe with the lyre (R)"
-	return "Gather the nine sheep"
+	return "Gather the nine sheep" if sheep_total >= 9 else "Gather the eight sheep"
