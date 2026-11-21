@@ -57,6 +57,7 @@ func _ready() -> void:
 	ui.add_child(map)
 	ui.move_child(map, menu.get_index() + 1)
 	map.closed.connect(_map_closed)
+	Game.save_failed.connect(_save_failed)
 
 	var touch_layer := CanvasLayer.new()      # the on-screen controls sit above everything else
 	touch_layer.layer = 40
@@ -71,12 +72,12 @@ func _ready() -> void:
 		if a == "--smoke":
 			testing = true
 			Game.fast = true
-			tester = preload("res://scripts/systems/selftest.gd").new()
+			tester = load("res://scripts/systems/selftest.gd").new()
 			tester.smoke(self)
 			return
 		if a.begins_with("--flow"):
 			testing = false
-			tester = preload("res://scripts/systems/selftest.gd").new()
+			tester = load("res://scripts/systems/selftest.gd").new()
 			tester.flow(self, a.trim_prefix("--flow").trim_prefix("="))
 			return
 		if a.begins_with("--stuck="):
@@ -106,7 +107,7 @@ func _ready() -> void:
 		if a.begins_with("--shots="):
 			testing = true
 			Game.fast = true
-			tester = preload("res://scripts/systems/selftest.gd").new()
+			tester = load("res://scripts/systems/selftest.gd").new()
 			get_window().size = Vector2i(2560, 1440)      # the size the game is really seen at
 			tester.shots(self, a.trim_prefix("--shots="))
 			return
@@ -116,6 +117,14 @@ func _ready() -> void:
 			return
 	get_window().mode = Window.MODE_FULLSCREEN
 	show_menu()
+
+
+## The journey could not be written: said on screen, and "Save again" stands at the top of the menus until it is.
+func _save_failed(_why: String) -> void:
+	if is_instance_valid(level) and state == "play":
+		level.show_tip(Game.t("The journey could not be saved.  Pause, then Save again"), 8.0)
+	if menu.visible:
+		menu.open(menu.mode, menu.index)
 
 
 func load_level(idx: int, checkpoint: int = 0, night: bool = false) -> void:
@@ -185,6 +194,10 @@ func show_menu() -> void:
 
 
 func start_section(idx: int, checkpoint: int = 0, seen_film: bool = false) -> void:
+	if not Game.section_ready(idx):      # its pictures are not all there: back to the menu, not into half a place
+		push_warning("Section %d is not ready: %s" % [idx, str(Game.section_lacks(idx))])
+		show_menu()
+		return
 	if checkpoint == 0 and tester == null and Game.interlude_due(idx) and not after_interlude:
 		start_interlude(idx)      # its night comes first
 		return
@@ -240,7 +253,7 @@ func complete_section() -> void:
 		return
 	var next := section_idx + 1
 	var ch := Game.chapter_of(section_idx)
-	if next < Game.sections().size() and Game.chapter_of(next) == ch:
+	if next < Game.sections().size() and Game.chapter_of(next) == ch and Game.section_ready(next):
 		var hearts_before := Game.earned_hearts()
 		Game.save["unlocked"] = maxi(int(Game.save.get("unlocked", 0)), next)
 		if Game.earned_hearts() > hearts_before:
@@ -287,6 +300,9 @@ func complete_section() -> void:
 
 func _on_menu(id: String) -> void:
 	match id:
+		"save_again":
+			Game.save_game()
+			menu.open(menu.mode)
 		"continue":
 			if Game.save.get("interlude", false) and Game.interlude_ready(int(Game.save["section"])):
 				start_interlude(int(Game.save["section"]))

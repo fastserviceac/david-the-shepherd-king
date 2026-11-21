@@ -1,2 +1,2 @@
 #!/bin/zsh
-/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/andrefaleiros/AI Projects/Game" >/dev/null 2>&1 &
+/Applications/Godot.app/Contents/MacOS/Godot --path "$(cd "$(dirname "$0")" && pwd)" >/dev/null 2>&1 &

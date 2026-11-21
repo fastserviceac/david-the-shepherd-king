@@ -102,6 +102,8 @@ func open(new_mode: String, at: int = -1) -> void:
 			items.append(["restart", "Back to the last watchfire", true])
 			items.append(["settings", "Settings", true])
 			items.append(["menu", "Main Menu", true])
+	if Game.save_error != "" and (mode == "main" or mode == "pause"):
+		items.insert(0, ["save_again", "Not saved: Save again", true])
 	index = 1 if mode == "difficulty" else 0
 	if at >= 0 and at < items.size():
 		index = at

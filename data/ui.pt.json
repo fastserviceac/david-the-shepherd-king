@@ -782,5 +782,7 @@
  "Walk": "Andar",
  "Pause": "Pausa",
  "Button": "Botão",
- "Choose": "Escolher"
+ "Choose": "Escolher",
+ "Not saved: Save again": "Não salvo: Salvar de novo",
+ "The journey could not be saved.  Pause, then Save again": "Não foi possível salvar a jornada.  Pause e escolha Salvar de novo"
 }

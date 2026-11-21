@@ -8,7 +8,7 @@ const RES := 2.0      # frame images hold this many pixels per game unit
 static var _cache := {}
 
 
-static var _pending: Array = []      # sets being read in the background: [id, [paths]]
+static var _pending: Array = []      # sets being read in the background: [id, [paths], wanted]
 
 
 static func _paths(who: String, anim: String) -> Array:
@@ -41,10 +41,17 @@ static func warm(who: String, sets: Array) -> void:
 		var id: String = who + "/" + str(anim)
 		if _cache.has(id):
 			continue
+		var queued := false
+		for e in _pending:
+			if e[0] == id:
+				e[2] = true      # asked for again after being let go: kept when it is in
+				queued = true
+		if queued:
+			continue
 		var paths := _paths(who, str(anim))
 		for path in paths:
 			ResourceLoader.load_threaded_request(path)
-		_pending.append([id, paths])
+		_pending.append([id, paths, true])
 
 
 ## Call every frame: takes over the sets the background thread has finished. Returns true while any are left.
@@ -60,18 +67,22 @@ static func pump() -> bool:
 				arr.append(ResourceLoader.load_threaded_get(path))
 			else:
 				arr.append(load(path))
-		if not _cache.has(e[0]):
+		if e[2] and not _cache.has(e[0]):      # a set let go while it was being read is taken off the reader, not kept
 			_cache[e[0]] = arr
 		_pending.pop_front()
 	return false
 
 
 ## Lets go of every set except those of the figures named, so the pictures of a place left behind (the bear,
-## the lion, the prophet) do not stay in memory for the rest of the session. Sets still being read are left alone.
+## the lion, the prophet) do not stay in memory for the rest of the session. Sets still being read are finished
+## (the reader must be emptied) but not kept.
 static func keep_only(whos: Array) -> void:
 	for id in _cache.keys():
 		if not str(id).get_slice("/", 0) in whos:
 			_cache.erase(id)
+	for e in _pending:
+		if not str(e[0]).get_slice("/", 0) in whos:
+			e[2] = false
 
 
 ## Draws a frame with its ground point (centre of the feet) at the origin.
@@ -92,6 +103,8 @@ static func draw(ci: CanvasItem, tex: Texture2D, facing: float, sc: float, col: 
 ## Forward then backward through a set, so a non-looping clip plays smoothly forever.
 static func pingpong(arr: Array, clock: float, fps: float) -> Texture2D:
 	var n := arr.size()
+	if n == 0:
+		return null
 	if n <= 1:
 		return arr[0]
 	var k := int(clock * fps) % (2 * n - 2)

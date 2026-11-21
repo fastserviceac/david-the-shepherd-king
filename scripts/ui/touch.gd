@@ -64,8 +64,17 @@ func _process(_delta: float) -> void:
 		visible = Game.touch_shown()
 		if not visible:
 			_release_all()
-	if visible:
-		queue_redraw()
+	if visible:      # drawn again only when something it shows has changed, not every frame
+		var m = Game.main
+		var look := [Game.cinematic, get_tree().paused, _stick_touch, _stick_from, _stick_at, _held_by.duplicate(),
+				_ui_open(), m.menu.mode if m != null and m.menu != null else "", Game.has("voice"), Game.has("lyre"),
+				Game.deck, Game.lang()]
+		if look != _drawn:
+			_drawn = look
+			queue_redraw()
+
+
+var _drawn: Array = []
 
 
 func _input(event: InputEvent) -> void:

@@ -78,8 +78,6 @@ func _ready() -> void:
 	# what he does in the first seconds of any session, in the order he is likely to do it
 	FA.warm("david", ["idle", "walk", "run", "jump", "attack", "roll", "hop", "sway", "duck", "hurt", "flinch",
 		"sling", "throw", "attack2", "attack3", "attack4", "spin", "call", "pickup", "clinch"])
-	if has("favour"):      # in the king's house he may be given the king's shield to bear
-		FA.warm("david", ["bear", "bear_idle", "block"])
 	FA.warm("jackal", ["walk", "run", "lunge"])
 	FA.warm("sheep", ["walk", "graze", "run", "lie", "rest", "uneasy"])
 	for i in 2:
@@ -103,6 +101,8 @@ func _ready() -> void:
 	_voice.finished.connect(func(): duck(false))
 	_load_data()
 	load_game()
+	if has("favour"):      # in the king's house he may be given the king's shield to bear (only known once the save is read)
+		FA.warm("david", FAVOUR_SETS)
 
 
 func _setup_resources() -> void:
@@ -176,13 +176,17 @@ func pad_style() -> String:
 			(Input.get_joy_name(Input.get_connected_joypads()[0]) if not Input.get_connected_joypads().is_empty() else ""))
 
 
+var _ps_re: RegEx      # compiled once: prompts ask for button names every frame
+var _key_re: RegEx
+
 func style_of(joy_name: String) -> String:
 	var n := joy_name.to_lower()
 	for w in ["nintendo", "pro controller", "switch", "joy-con", "joycon"]:
 		if n.contains(w):
 			return "nintendo"
-	var ps := RegEx.create_from_string("\\b(ps[345]?|dualsense|dualshock|playstation|sony)\\b")
-	if ps.search(n) != null or n.contains("dualsense") or n.contains("dualshock"):
+	if _ps_re == null:
+		_ps_re = RegEx.create_from_string("\\b(ps[345]?|dualsense|dualshock|playstation|sony)\\b")
+	if _ps_re.search(n) != null or n.contains("dualsense") or n.contains("dualshock"):
 		return "ps"
 	return "xbox"
 
@@ -335,8 +339,9 @@ func _touch_keys(s: String) -> String:
 	else:
 		rest = head + rest
 		head = ""
-	var re := RegEx.new()
-	re.compile("(?<![\\p{L}])(Space|Espaço|Enter|Shift|Tab|Esc|[JKLQEM])(?![\\p{L}])")
+	if _key_re == null:
+		_key_re = RegEx.create_from_string("(?<![\\p{L}])(Space|Espaço|Enter|Shift|Tab|Esc|[JKLQEM])(?![\\p{L}])")
+	var re := _key_re
 	var out_s := ""
 	var at := 0
 	for m in re.search_all(rest):
@@ -504,14 +509,17 @@ func section_lacks(idx: int) -> Array:
 	if idx < 0 or idx >= _sections.size():
 		return out
 	for need in _sections[idx].get("needs", []):
-		var n := str(need)
-		if n.begins_with("frames:"):
-			var parts := n.trim_prefix("frames:").split("/")
-			if parts.size() != 2 or FA._paths(parts[0], parts[1]).is_empty():
-				out.append(n)
-		elif not ResourceLoader.exists(n):
-			out.append(n)
+		if _lacks(str(need)):
+			out.append(str(need))
 	return out
+
+
+## A need is a frame set ("frames:who/name") or a file ("res://..."): true while it is not there.
+func _lacks(n: String) -> bool:
+	if n.begins_with("frames:"):
+		var parts := n.trim_prefix("frames:").split("/")
+		return parts.size() != 2 or FA._paths(parts[0], parts[1]).is_empty()
+	return not ResourceLoader.exists(n)
 
 
 ## The night played before a section, once, when there is one ("then" in chapters.json: its own script, title,
@@ -527,8 +535,7 @@ func interlude(idx: int) -> Dictionary:
 func interlude_lacks(idx: int) -> Array:
 	var out: Array = []
 	for need in interlude(idx).get("needs", []):
-		var parts := str(need).trim_prefix("frames:").split("/")
-		if parts.size() != 2 or FA._paths(parts[0], parts[1]).is_empty():
+		if _lacks(str(need)):
 			out.append(str(need))
 	return out
 
@@ -562,8 +569,7 @@ func load_game() -> void:
 		on_disk = _read_json(SAVE_PATH + ".bak")
 	take_save(on_disk)
 	apply_settings()
-	if Engine.has_singleton("GameCenter"):
-		Engine.get_singleton("GameCenter").authenticate()
+	_gc_sign_in()
 
 
 ## Makes a journey read from disk the one being played. Whatever it holds is kept; whatever a newer game needs
@@ -630,37 +636,64 @@ func buzz(ms: int = 18) -> void:
 		Input.vibrate_handheld(ms)
 
 
-func save_game() -> void:
+signal save_failed(reason: String)
+var save_error := ""          # why the last save did not reach the disk; "" when it did
+var save_path := SAVE_PATH    # the automated tests point this at a file of their own
+
+
+## Writes the journey to disk. False (and `save_failed`) when it could not be written: the file there before is
+## left as it was, and the player is told, with the chance to try again.
+func save_game() -> bool:
 	if fast:
-		return
+		return true
 	check_deeds()
-	# Written beside the journey and then put in its place, so being closed mid-write cannot leave half a file;
-	# the journey as it stood before is kept as a second copy.
-	var tmp := SAVE_PATH + ".tmp"
+	save_error = write_save(save_path, save)
+	if save_error != "":
+		push_warning("The journey could not be saved: " + save_error)
+		save_failed.emit(save_error)
+	return save_error == ""
+
+
+## Written beside the file and then put in its place, so being closed mid-write cannot leave half a file. The
+## file as it stood before is first kept as a second copy (.bak); if that copy cannot be made the file is not
+## replaced. Returns "" when the journey is on disk, or the step that failed.
+func write_save(path: String, data: Dictionary) -> String:
+	var tmp := path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
-		return
-	f.store_string(JSON.stringify(save))
+		return "write: " + error_string(FileAccess.get_open_error())
+	var wrote := f.store_string(JSON.stringify(data))
 	f.close()
-	if _read_json(tmp).is_empty():
-		return
-	if not _read_json(SAVE_PATH).is_empty():
-		DirAccess.copy_absolute(SAVE_PATH, SAVE_PATH + ".bak")
-	DirAccess.rename_absolute(tmp, SAVE_PATH)
+	if not wrote or _read_json(tmp).is_empty():
+		return "write: the new copy does not read back"
+	if not _read_json(path).is_empty():
+		var e := DirAccess.copy_absolute(path, path + ".bak")
+		if e != OK:
+			return "backup: " + error_string(e)
+	var e2 := DirAccess.rename_absolute(tmp, path)
+	if e2 != OK:
+		return "replace: " + error_string(e2)
+	return ""
 
+
+## What a new journey keeps of the old one: how the game is set up to be played, not anything he has done.
+const PREFS := ["lang", "difficulty", "volume", "film_subs", "haptics", "touch_ctl", "pad_style", "pad_map", "dead_zone",
+		"deeds_told"]
 
 func new_game() -> void:
 	var unlocked: int = save.get("unlocked", 0)
 	var finished: bool = save.get("finished", false)
-	var difficulty: int = int(save.get("difficulty", 1))
-	var language := lang()
+	var keep := {}
+	for k in PREFS:
+		if save.has(k):
+			keep[k] = save[k].duplicate(true) if (save[k] is Dictionary or save[k] is Array) else save[k]
 	save = default_save()      # a new journey: his crafts begin again
-	save["difficulty"] = difficulty
-	save["lang"] = language
+	save.merge(keep, true)
 	save["unlocked"] = unlocked
 	save["finished"] = finished
 	save["started"] = true
 	_from_the_start()
+	apply_settings()
 	save_game()
 
 
@@ -781,12 +814,16 @@ func song_hold() -> float:
 
 
 ## A gift is given: once, and for good.
+const FAVOUR_SETS := ["bear", "bear_idle", "block"]
+
 func give(id: String, quiet: bool = false) -> void:
 	if has(id) or not GIFTS.has(id):
 		return
 	var list: Array = save.get("gifts", [])
 	list.append(id)
 	save["gifts"] = list
+	if id == "favour":      # the shield is borne from now on: its pictures are read before he first lifts it
+		FA.warm("david", FAVOUR_SETS)
 	if id == "sling":
 		save["has_sling"] = true
 	if not quiet:
@@ -1002,19 +1039,74 @@ func deeds_done() -> int:
 	return n
 
 
-## Tells the record of achievements each deed newly done. Safe to call at any time, and as often as wanted.
-func check_deeds() -> void:
+## Tells the record of achievements each deed done and not yet taken in by it. A deed is earned when it is done
+## (deed_done); it is only marked told ("deeds_told") once Game Center answers that it has it. Until then it is
+## sent again: when the player signs in, and when the game comes back to the front (the network may be back).
+## Safe to call at any time, and as often as wanted.
+var gc_override: Object = null      # the automated tests stand a pretend Game Center in here
+var _gc_signed_in := false
+var _deeds_sent: Array = []        # sent and not yet answered, in the order sent
+
+func _gc() -> Object:
+	if gc_override != null:
+		return gc_override
+	return Engine.get_singleton("GameCenter") if Engine.has_singleton("GameCenter") else null
+
+
+func deeds_pending() -> Array:
 	var told: Array = save.get("deeds_told", [])
-	for id in DEEDS:
-		if deed_done(id) and not id in told:
-			told.append(id)
-			_report_deed(id)
-	save["deeds_told"] = told
+	return DEEDS.filter(func(id): return deed_done(id) and not id in told)
 
 
-func _report_deed(id: String) -> void:
-	if Engine.has_singleton("GameCenter"):
-		Engine.get_singleton("GameCenter").award_achievement({"name": "david." + id, "progress": 100.0, "show_completion_banner": true})
+func check_deeds() -> void:
+	var gc := _gc()
+	if gc == null or not _gc_signed_in:
+		return
+	for id in deeds_pending():
+		if id in _deeds_sent:
+			continue
+		if gc.award_achievement({"name": "david." + id, "progress": 100.0, "show_completion_banner": true}) == OK:
+			_deeds_sent.append(id)
+
+
+## Game Center's answers: sign-in, and each achievement taken in or refused.
+func _gc_events() -> void:
+	var gc := _gc()
+	if gc == null:
+		return
+	while gc.get_pending_event_count() > 0:
+		var ev: Dictionary = gc.pop_pending_event()
+		match str(ev.get("type", "")):
+			"authentication":
+				_gc_signed_in = str(ev.get("result", "")) == "ok"
+				_deeds_sent.clear()
+				check_deeds()
+			"award_achievement":
+				var id := str(ev.get("name", "")).trim_prefix("david.")
+				if not id in _deeds_sent:
+					id = "" if _deeds_sent.is_empty() else str(_deeds_sent[0])      # answers that do not say which: the oldest sent
+				_deeds_sent.erase(id)
+				if str(ev.get("result", "")) == "ok" and id != "":
+					var told: Array = save.get("deeds_told", [])
+					if not id in told:
+						told.append(id)
+					save["deeds_told"] = told
+					save_game()
+
+
+func _gc_sign_in() -> void:
+	var gc := _gc()
+	if gc != null:
+		gc.authenticate()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_RESUMED or what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_deeds_sent.clear()      # whatever was in flight when the game went to the back is sent again
+		if _gc() != null and not _gc_signed_in:
+			_gc_sign_in()
+		else:
+			check_deeds()
 
 
 ## Hearts are earned. He begins with few, and each time he brings the flock through something, one more is his
@@ -1095,9 +1187,22 @@ func hitstop(seconds: float = 0.06) -> void:
 	if fast:
 		return
 	buzz(18)
-	Engine.time_scale = 0.05
+	hold_time(0.05, seconds)
+
+
+## Slows the world for a while. Holds may overlap (a blow's hitstop inside a beast's slow motion): the world runs
+## at the slowest of those still running, and at full speed only once the last has ended.
+var _time_holds := {}
+var _time_next := 0
+
+func hold_time(scale: float, seconds: float) -> void:
+	_time_next += 1
+	var id := _time_next
+	_time_holds[id] = scale
+	Engine.time_scale = _time_holds.values().min()
 	await get_tree().create_timer(seconds, true, false, true).timeout
-	Engine.time_scale = 1.0
+	_time_holds.erase(id)
+	Engine.time_scale = 1.0 if _time_holds.is_empty() else _time_holds.values().min()
 
 
 ## One-shot burst of soft particles.
@@ -1131,9 +1236,7 @@ func music(mood: String, seconds: float = 2.0) -> void:
 	var old_p: AudioStreamPlayer = _players[_active]
 	_active = 1 - _active
 	var new_p: AudioStreamPlayer = _players[_active]
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(old_p, "volume_db", -60.0, seconds)
-	tw.chain().tween_callback(old_p.stop)
+	fade(old_p, -60.0, seconds, true)
 	var path := "res://audio/music/%s.mp3" % mood
 	if mood == "" or not ResourceLoader.exists(path):
 		return
@@ -1143,7 +1246,23 @@ func music(mood: String, seconds: float = 2.0) -> void:
 	new_p.stream = stream
 	new_p.volume_db = -60.0
 	new_p.play()
-	create_tween().tween_property(new_p, "volume_db", DUCK_DB if _duck else MUSIC_DB, seconds)
+	fade(new_p, DUCK_DB if _duck else MUSIC_DB, seconds)      # also ends the fade (and stop) it had for the mood before last
+
+
+## The one volume fade a player has (music, ambience). Starting another ends it, and the stop it would have made
+## at its end: a player taken up again for another track is never stopped by a fade from before.
+var _fades := {}
+
+func fade(p: AudioStreamPlayer, to_db: float, seconds: float, stop_after: bool = false) -> Tween:
+	var old: Tween = _fades.get(p)
+	if old != null and old.is_valid():
+		old.kill()
+	var tw := create_tween()
+	tw.tween_property(p, "volume_db", to_db, maxf(seconds, 0.001))
+	if stop_after:
+		tw.tween_callback(p.stop)
+	_fades[p] = tw
+	return tw
 
 
 ## Lower the music under the narrator's voice.
@@ -1151,7 +1270,7 @@ func duck(on: bool) -> void:
 	_duck = on
 	var p: AudioStreamPlayer = _players[_active]
 	if p.playing:
-		create_tween().tween_property(p, "volume_db", DUCK_DB if on else MUSIC_DB, 0.6)
+		fade(p, DUCK_DB if on else MUSIC_DB, 0.6)
 
 
 const DIFFICULTY := [
@@ -1169,9 +1288,7 @@ func diff() -> Dictionary:
 func slowmo(scale: float = 0.3, seconds: float = 0.9) -> void:
 	if fast:
 		return
-	Engine.time_scale = scale
-	await get_tree().create_timer(seconds, true, false, true).timeout
-	Engine.time_scale = 1.0
+	hold_time(scale, seconds)
 
 
 ## Plays a sound effect from audio/sfx. Pitch varies a little each time so
@@ -1254,20 +1371,27 @@ func ambience(kind: String) -> void:
 	var path := "res://audio/sfx/amb_%s.mp3" % kind
 	for i in _beds.size():
 		var bed: AudioStreamPlayer = _beds[i]
-		create_tween().tween_property(bed, "volume_db", -60.0, 1.5)
 		if kind == "" or not ResourceLoader.exists(path):
+			fade(bed, -60.0, 1.5, true)      # faded out and stopped, not left playing unheard
 			continue
 		var stream: AudioStream = load(path).duplicate()
+		stream.resource_name = kind      # the copy has no path of its own: this says which place's bed it is
 		if stream is AudioStreamMP3:
 			stream.loop = true
-		bed.stream = stream
-		bed.pitch_scale = [0.82, 1.0][i]      # two copies out of step with each other hide the loop
-		bed.play()
-		create_tween().tween_property(bed, "volume_db", -25.0 - i * 2.0, 2.5)
+		# the old bed fades out first, then the new one is put in and fades up: never both on one player at once
+		var tw := fade(bed, -60.0, 1.2 if bed.playing else 0.0)
+		var pitch: float = [0.82, 1.0][i]      # two copies out of step with each other hide the loop
+		tw.tween_callback(func() -> void:
+			bed.stream = stream
+			bed.pitch_scale = pitch
+			bed.volume_db = -60.0
+			bed.play())
+		tw.tween_property(bed, "volume_db", -25.0 - i * 2.0, 2.5)
 
 
 func _process(delta: float) -> void:
 	FA.pump()
+	_gc_events()
 	if _ambience == "" or get_tree().paused:
 		return
 	_next_event -= delta

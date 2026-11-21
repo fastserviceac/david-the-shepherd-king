@@ -173,6 +173,8 @@ func smoke(m) -> void:
 	Game.save["lang"] = "pt"
 	_check(Game.t("The Well") == "O Poço" and str(Game.line("ps23_1")["text"]).begins_with("O SENHOR"), "Portuguese is shown when it is chosen")
 	Game.save["lang"] = "en"
+	if not OS.has_environment("SMOKE_ONLY") or "reliability" in OS.get_environment("SMOKE_ONLY"):
+		await _reliability(m)
 	_old_save()
 	_chapters()
 	print("SMOKE %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
@@ -3150,3 +3152,239 @@ func _controls_settings(tap: Callable) -> void:
 		if not Game._ui_pt.has(w):
 			untold.append(w)
 	_check(untold.is_empty(), "the controller settings have their Portuguese %s" % [untold])
+
+
+# ------------------------------------------------------------------ reliability
+## A pretend Game Center: it remembers what it was sent, and answers only when told to.
+class FakeGC:
+	var sent: Array = []
+	var events: Array = []
+	func authenticate() -> int:
+		events.append({"type": "authentication", "result": "ok"})
+		return OK
+	func award_achievement(d: Dictionary) -> int:
+		sent.append(str(d["name"]))
+		return OK
+	func get_pending_event_count() -> int:
+		return events.size()
+	func pop_pending_event() -> Dictionary:
+		return events.pop_front()
+
+
+func _secs(t: float) -> void:
+	await tree.create_timer(t, true, false, true).timeout
+
+
+## Settings, saving, achievements, sound fades, slow motion, sling stones and the frame reader: each fault the
+## outside audits named, checked against the game as it is (and failing on the code as it was).
+func _reliability(m) -> void:
+	print("Reliability")
+	var keep: Dictionary = Game.save.duplicate(true)
+
+	# --- a new journey keeps how the game is set up to be played
+	Game.save["volume"] = 0.5
+	Game.save["film_subs"] = true
+	Game.save["haptics"] = false
+	Game.save["touch_ctl"] = "off"
+	Game.save["pad_style"] = "ps"
+	Game.save["dead_zone"] = 0.25
+	Game.save["lang"] = "pt"
+	Game.save["difficulty"] = 2
+	Game.set_pad("jump", JOY_BUTTON_Y)
+	Game.save["growth"] = {"feet": 9.0}
+	Game.new_game()
+	var kept := true
+	for pair in [["volume", 0.5], ["film_subs", true], ["haptics", false], ["touch_ctl", "off"], ["pad_style", "ps"],
+			["dead_zone", 0.25], ["lang", "pt"], ["difficulty", 2]]:
+		if Game.save.get(pair[0]) != pair[1]:
+			kept = false
+			print("    not kept: %s = %s" % [pair[0], str(Game.save.get(pair[0]))])
+	_check(kept and Game.pad_code("jump") == JOY_BUTTON_Y and Game.save["growth"].is_empty(),
+			"New Game keeps volume, subtitles, vibration, on-screen controls, controller, buttons and dead zone, and nothing he had done")
+	var jump_pad := false
+	for e in InputMap.action_get_events("jump"):
+		if e is InputEventJoypadButton and e.button_index == JOY_BUTTON_Y:
+			jump_pad = true
+	_check(jump_pad and is_equal_approx(InputMap.action_get_deadzone("move_left"), 0.25)
+			and is_equal_approx(AudioServer.get_bus_volume_db(0), linear_to_db(0.5)) and not Game.touch_shown(),
+			"after New Game the buttons, dead zone, volume and on-screen controls work as the settings show")
+
+	# --- saving: every step checked, the file before kept, the player told, and a second try
+	var dir := "user://selftest_save"
+	DirAccess.make_dir_recursive_absolute(dir + "/bak_block.json.bak")
+	DirAccess.make_dir_recursive_absolute(dir + "/dir_block.json")
+	var f := FileAccess.open(dir + "/bak_block.json.bak/x", FileAccess.WRITE)
+	f.store_string("x")
+	f.close()
+	f = FileAccess.open(dir + "/dir_block.json/x", FileAccess.WRITE)
+	f.store_string("x")
+	f.close()
+	var good := dir + "/good.json"
+	var e1 := Game.write_save(good, {"n": 1})
+	var e2 := Game.write_save(good, {"n": 2})
+	_check(e1 == "" and e2 == "" and int(Game._read_json(good).get("n", 0)) == 2 and int(Game._read_json(good + ".bak").get("n", 0)) == 1,
+			"a save is written whole, and the one before is kept beside it")
+	_check(Game.write_save(dir + "/no_such_folder/save.json", {"n": 3}).begins_with("write"), "a save that cannot be opened is reported")
+	Game.write_save(dir + "/bak_block.json", {"n": 1})      # no .bak yet can be made: the folder in its way
+	var eb := Game.write_save(dir + "/bak_block.json", {"n": 2})
+	_check(eb.begins_with("backup") and int(Game._read_json(dir + "/bak_block.json").get("n", 0)) == 1,
+			"when the copy of the save before cannot be made, that save is left as it was (%s)" % eb)
+	_check(Game.write_save(dir + "/dir_block.json", {"n": 1}).begins_with("replace"), "a save that cannot be put in place is reported")
+	var told_fail := [""]
+	var on_fail := func(why: String) -> void: told_fail[0] = why
+	Game.save_failed.connect(on_fail)
+	Game.fast = false
+	Game.save_path = dir + "/no_such_folder/save.json"
+	var ok1 := Game.save_game()
+	m.menu.open("pause")
+	var offered: bool = m.menu.items[0][0] == "save_again"
+	Game.save_path = dir + "/retry.json"
+	m._on_menu("save_again")
+	Game.fast = true
+	Game.save_path = Game.SAVE_PATH
+	Game.save_failed.disconnect(on_fail)
+	_check(not ok1 and told_fail[0] != "" and offered and Game.save_error == "" and FileAccess.file_exists(dir + "/retry.json"),
+			"a failed save is told, Save again is offered in the menu, and it saves when tried again")
+	m.menu.open("pause")
+	_check(m.menu.items[0][0] != "save_again", "once saved, Save again is gone from the menu")
+	m.menu.close()
+	for path in ["/good.json", "/good.json.bak", "/good.json.tmp", "/bak_block.json", "/bak_block.json.tmp", "/bak_block.json.bak/x",
+			"/bak_block.json.bak", "/dir_block.json/x", "/dir_block.json", "/dir_block.json.tmp", "/retry.json", "/retry.json.tmp", ""]:
+		DirAccess.remove_absolute(dir + path)
+
+	# --- achievements: earned is not told until Game Center says it has it
+	var gc := FakeGC.new()
+	Game.gc_override = gc
+	Game._gc_signed_in = false
+	Game._deeds_sent.clear()
+	Game.save["deeds_told"] = []
+	Game.save["gifts"] = ["voice"]
+	Game.check_deeds()
+	var before_sign_in: bool = gc.sent.is_empty() and "gift_voice" in Game.deeds_pending()
+	Game._gc_sign_in()
+	Game._gc_events()
+	var sent_once: bool = gc.sent.count("david.gift_voice") == 1 and not "gift_voice" in Game.save["deeds_told"]
+	Game.check_deeds()
+	var not_twice: bool = gc.sent.count("david.gift_voice") == 1
+	gc.events.append({"type": "award_achievement", "result": "error"})
+	Game._gc_events()
+	var still_pending: bool = "gift_voice" in Game.deeds_pending()
+	Game._notification(Node.NOTIFICATION_APPLICATION_RESUMED)      # back in front: what was refused goes again
+	var resent: bool = gc.sent.count("david.gift_voice") == 2
+	gc.events.append({"type": "award_achievement", "result": "ok"})
+	Game._gc_events()
+	_check(before_sign_in and sent_once and not_twice and still_pending and resent and "gift_voice" in Game.save["deeds_told"],
+			"an achievement waits for sign-in, is sent once, is sent again after a refusal, and is marked only when taken in")
+	Game.gc_override = null
+	Game._gc_signed_in = false
+	Game._deeds_sent.clear()
+
+	# --- music and ambience: a fade from before never stops a player taken up again
+	Game.fast = false
+	Game.music("")
+	await _secs(0.3)
+	Game.music("dusk", 0.4)
+	Game.music("pastures", 0.4)
+	Game.music("dusk", 0.4)
+	await _secs(0.8)
+	var mp: AudioStreamPlayer = Game._players[Game._active]
+	_check(mp.playing and str(mp.stream.resource_path).ends_with("dusk.mp3") and mp.volume_db > -20.0,
+			"music changed back and forth quickly still plays the last mood (playing %s, %.0f dB)" % [str(mp.playing), mp.volume_db])
+	Game.music("")
+	Game.ambience("dusk")
+	Game.ambience("dawn")
+	await _secs(3.2)
+	var beds_ok := true
+	for b in Game._beds:
+		beds_ok = beds_ok and b.playing and b.stream.resource_name == "dawn" and b.volume_db > -30.0
+	Game.ambience("")
+	await _secs(1.8)
+	var beds_quiet := true
+	for b in Game._beds:
+		beds_quiet = beds_quiet and not b.playing
+	_check(beds_ok and beds_quiet, "ambience changed quickly plays the last place's, and stops when there is none")
+
+	# --- slow motion: a blow's hitstop inside it does not end it
+	Game.slowmo(0.3, 0.5)
+	await _secs(0.1)
+	Game.hitstop(0.05)
+	await _secs(0.15)
+	var still_slow := is_equal_approx(Engine.time_scale, 0.3)
+	await _secs(0.5)
+	_check(still_slow and is_equal_approx(Engine.time_scale, 1.0), "a hitstop inside slow motion leaves it slow, and both end (%.2f)" % Engine.time_scale)
+	Game.fast = true
+
+	# --- the frame reader: one request per set, nothing let go comes back, and an empty set is no crash
+	_check(Game.FA.pingpong([], 0.3, 8.0) == null, "an empty frame set gives no picture rather than an error")
+	Game.FA.keep_only(["david", "sheep", "jackal"])
+	Game.FA.warm("lion", ["pant", "pant"])
+	Game.FA.warm("lion", ["pant"])
+	var queued: int = Game.FA._pending.filter(func(e): return e[0] == "lion/pant").size()
+	Game.FA.keep_only(["david", "sheep", "jackal"])
+	for i in 600:
+		if not Game.FA.pump():
+			break
+		await tree.process_frame
+	_check(queued == 1 and not Game.FA._cache.has("lion/pant"), "a set asked for twice is read once, and one let go while being read is not kept")
+	var src := FileAccess.get_file_as_string("res://scripts/systems/game.gd")
+	var r0 := src.find("func _ready()")
+	_check(src.find("FA.warm(\"david\", FAVOUR_SETS)", r0) > src.find("\tload_game()", r0), "the king's-shield frames are warmed after the save is read")
+	Game.FA._cache.erase("david/bear")
+	Game.save["gifts"] = []
+	Game.give("favour", true)
+	_check(Game.FA._cache.has("david/bear") or Game.FA._pending.any(func(e): return e[0] == "david/bear"), "the shield's frames are read as soon as it is given")
+
+	# --- a night's needs may name a file, as a section's do
+	var sec: Dictionary = Game._sections[0]
+	var had_then := sec.has("then")
+	var night: Dictionary = sec.get("then", {}).duplicate(true)
+	sec["then"] = {"needs": ["res://scripts/systems/game.gd", "res://no_such_file.png"]}
+	_check(Game.interlude_lacks(0) == ["res://no_such_file.png"], "a night's needs may be files, not only frame sets")
+	if had_then:
+		sec["then"] = night
+	else:
+		sec.erase("then")
+
+	# --- a sling stone strikes what it meets first: a beast just in front of a rock face, not the rock
+	_check(is_equal_approx(preload("res://scripts/player/stone.gd").seg_box(Vector2(0, 0), Vector2(100, 0), Vector2(50, 0), Vector2(10, 10)), 0.4)
+			and preload("res://scripts/player/stone.gd").seg_box(Vector2(0, 0), Vector2(100, 0), Vector2(50, 30), Vector2(10, 10)) < 0.0,
+			"a stone's path finds where it enters a beast's reach")
+	var lv = m.level
+	var y := -4000.0
+	var wall := StaticBody2D.new()
+	wall.collision_layer = 1
+	var cs := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(20, 400)
+	cs.shape = rect
+	wall.add_child(cs)
+	wall.position = Vector2(150, y)
+	lv.add_child(wall)
+	var gs := GDScript.new()
+	gs.source_code = "extends Node2D\nvar hit_r := 4.0\nvar hit_h := 0.0\nvar hits := 0\nfunc hit(_d, _dir, _k = \"\"):\n\thits += 1\n"
+	gs.reload()
+	var tgt: Node2D = gs.new()
+	tgt.position = Vector2(118, y)
+	tgt.add_to_group("hittable")
+	lv.add_child(tgt)
+	var far: Node2D = gs.new()      # one standing beyond the rock: the rock keeps it from being struck
+	far.position = Vector2(190, y)
+	far.add_to_group("hittable")
+	lv.add_child(far)
+	await tree.physics_frame
+	var st = preload("res://scripts/player/stone.gd").new()
+	st.vel = Vector2(4800, 0)      # 80 a frame: the beast and the rock face both lie inside one step
+	st.position = Vector2(60, y)
+	lv.add_child(st)
+	await _frames(3)
+	_check(tgt.hits == 1 and far.hits == 0, "a stone strikes a beast standing just in front of a rock face, and not one behind it")
+	var st2 = preload("res://scripts/player/stone.gd").new()
+	st2.vel = Vector2(-4800, 0)
+	st2.position = Vector2(260, y)
+	lv.add_child(st2)
+	await _frames(3)
+	_check(far.hits == 1 and tgt.hits == 1, "a stone thrown from the far side strikes the near beast there, not through the rock")
+	for n in [wall, tgt, far]:
+		n.queue_free()
+	Game.save = keep
+	Game.apply_settings()
